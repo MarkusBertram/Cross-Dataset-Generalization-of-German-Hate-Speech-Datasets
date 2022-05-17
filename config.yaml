@@ -1,0 +1,15 @@
+datasets:
+  - germeval2018
+  - germeval2019
+  - hasoc2018
+  - hasoc2019
+non-hate-label:
+  germeval2018:
+    - none
+  germeval2019:
+    - neither
+  hasoc2018:
+    - normal
+    - SPAM
+  hasoc2019:
+    - NOT
