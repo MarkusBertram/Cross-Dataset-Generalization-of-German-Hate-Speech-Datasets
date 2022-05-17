@@ -1,0 +1,10 @@
+{
+    "experiments": [
+        {
+        "labeled_target_size": 100
+        },
+        {
+        "labeled_target_size": 200
+        }
+    ]
+}

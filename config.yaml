@@ -1,15 +1,28 @@
 datasets:
-  - germeval2018
-  - germeval2019
-  - hasoc2018
-  - hasoc2019
-non-hate-label:
   germeval2018:
-    - none
+    labeled-dataset: germeval2018
+    unlabeled-dataset:
+    non-hate-label:
   germeval2019:
-    - neither
+    labeled-dataset: germeval2019
+    unlabeled-dataset:
+    non-hate-label: none
   hasoc2018:
-    - normal
-    - SPAM
+    labeled-dataset: hasoc2018
+    unlabeled-dataset:
+    non-hate-label: none
   hasoc2019:
-    - NOT
+    labeled-dataset: hasoc2019
+    unlabeled-dataset:
+    non-hate-label: none
+  telegram:
+    labeled-dataset: telegram_labeled
+    unlabeled-dataset: telegram_unlabeled
+    non-hate-label: none 
+models:
+  single-source unsupervised:
+    - ADDA
+  single-source semi-supervised:
+    - MME
+  multi-source unsupervised:
+    - DCTN
