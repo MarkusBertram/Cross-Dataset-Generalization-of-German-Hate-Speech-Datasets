@@ -1,23 +1,18 @@
 datasets:
   germeval2018:
-    labeled-dataset: germeval2018
     unlabeled-dataset:
-    non-hate-label:
+    non-hate-label: HOF
   germeval2019:
-    labeled-dataset: germeval2019
     unlabeled-dataset:
     non-hate-label: none
   hasoc2018:
-    labeled-dataset: hasoc2018
     unlabeled-dataset:
     non-hate-label: none
   hasoc2019:
-    labeled-dataset: hasoc2019
     unlabeled-dataset:
     non-hate-label: none
   telegram:
-    labeled-dataset: telegram_labeled
-    unlabeled-dataset: telegram_unlabeled
+    unlabeled-dataset: telegram_unlabeled.txt
     non-hate-label: none 
 models:
   single-source unsupervised:
