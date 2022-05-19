@@ -8,7 +8,7 @@ train = data_path + "germeval2018.training.txt"
 
 test = data_path + "germeval2018.test.txt"
 
-#unlabeled = data_path + "HS_Dataset1_unlabeled.txt"
+#unlabeled = data_path + "germeval2018.test.txt"
 
 def read_file(filename):
     read_data=list()
@@ -19,8 +19,8 @@ def read_file(filename):
         for row in reader:
             entry=dict()
             entry['text'] = row[0]
-            entry['label_task1'] = row[1]
-            entry['label_task2'] = row[2]
+            entry['label'] = row[1]
+            entry['label2'] = row[2]
             read_data.append(entry)
 
     return read_data
@@ -28,17 +28,16 @@ def read_file(filename):
     
     
 def get_data():
-    full_data = dict()
-    
-    # get train
-    read_data = read_file(train)
-    full_data["train"] = read_data
+    full_data = dict()    
+    dset_list = list()    
 
-    # get test
-    read_data = read_file(test)
-    full_data["test"] = read_data
+    for dset in [train, test]:
+        read_data = read_file(dset)
+        dset_list.extend(read_data)
 
-    ## get unlabeled
+    full_data["labeled"] = dset_list
+
+    #get unlabeled
     #read_data = read_file(unlabeled)
     #full_data["unlabeled"] = read_data
 
