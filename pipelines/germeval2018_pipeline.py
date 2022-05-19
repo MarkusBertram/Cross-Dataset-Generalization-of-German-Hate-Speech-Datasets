@@ -4,9 +4,9 @@ import csv
 
 data_path = "../data/HS_Dataset1/"
 
-train = data_path + "HS_Dataset1_train.txt"
+train = data_path + "germeval2018.training.txt"
 
-test = data_path + "HS_Dataset1_test.txt"
+test = data_path + "germeval2018.test.txt"
 
 #unlabeled = data_path + "HS_Dataset1_unlabeled.txt"
 
