@@ -18,17 +18,13 @@ retweet_1_re = re.compile(r'^RT ')
 retweet_2_re = re.compile(r'^RT ')
 
 
-def preprocess_text(text,language='english'):
+def preprocess_text(text):
     if not isinstance(text,str):
         return ''
     text = clean_text(text)
-    
-    # language specific peprocessing
-    if language == "arabic":
-        text = preprocessing_arabic.normalize_text(text)
-    
+        
     # remove stop words
-    text = remove_stop_words(text, language=language)
+    text = remove_stop_words(text)
     return text
 
 def clean_text(text):
@@ -40,17 +36,14 @@ def clean_text(text):
     text = retweet_1_re.sub("",text)
     text = retweet_2_re.sub("",text)
     text = text.replace('\n', ' ')
-    text = text.lower()
+    #text = text.lower()
     return text
 
-def remove_stop_words(text,language='english'):
-    if language=='arabic':
-        stop_words = preprocessing_arabic.get_arabic_stopwords()
-        text_tokens = wordpunct_tokenize(text)
-    else:   
-        stop_words = set(stopwords.words('english'))  
-        # tokenize document
-        text_tokens = word_tokenize(text)
+def remove_stop_words(text):
+     
+    stop_words = set(stopwords.words('english'))  
+    # tokenize document
+    text_tokens = word_tokenize(text)
     
     # remove stop words
     tokens_without_sw = [word for word in text_tokens if not word in stop_words]

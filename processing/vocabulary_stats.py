@@ -1,4 +1,4 @@
-import fasttext.util
+from transformers import AutoTokenizer, AutoModelForMaskedLM
 import processing.vocabulary_stats as vs
 import processing.basic_stats
 import processing.user_stats
@@ -103,16 +103,21 @@ def transform_to_embed_fasttext(dataset, dset_name,fasttext):
     return averaged_tag_embeddings, tag_labels
     
 
-def transform_to_embed_sentence_fasttext(dataset, dset_name,fasttext):
+def transform_to_embed_sentence_fasttext(dataset, dset_name,model):
     dataset_tag_embedding = list()
-
+    #tokenizer = AutoTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
+    # deepset/gbert-base
+    tokenizer = AutoTokenizer.from_pretrained("deepset/gbert-base")
     # get sentence vector
     for tweet in dataset:
         if not isinstance(tweet['text'], str):
             continue
         text = preprocessing_multilingual.clean_text(tweet['text'])
-        tweet_embedding = fasttext.get_sentence_vector(text.strip())
-
+        # add [CLS] token before text
+        # tokenize text
+        encoded_input = tokenizer(text)
+        #tweet_embedding = model.get_sentence_vector(text.strip())
+        tweet_embedding = model(encoded_input)
         label = dset_name + "_" + str(tweet['label'])
         dataset_tag_embedding.append((tweet_embedding, label))
  
@@ -137,7 +142,8 @@ def transform_to_embed_sentence_fasttext(dataset, dset_name,fasttext):
 def getInterClassSimilarityMultiple(datasets,dataset_names,embedding_path,filter_classes=None):
     # load embedding
     #word_vectors = KeyedVectors.load_word2vec_format(embedding_path, binary=False)
-    word_vectors = fasttext.load_model(embedding_path)
+    word_vectors =  AutoModelForMaskedLM.from_pretrained("deepset/gbert-base")
+
     
     dataset_embeddings = []
     dataset_labels = []

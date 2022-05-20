@@ -5,10 +5,9 @@ import nltk
 import re
 import seaborn as sns
 import matplotlib.pyplot as plt
-import arabic_reshaper
 import processing.preprocessing_multilingual as preprocessing_multilingual
 
-from bidi.algorithm import get_display
+#from bidi.algorithm import get_display
 from collections import defaultdict
 from processing import cluwords_evaluation
 from utils import embedding_utils, dataset_sampling
