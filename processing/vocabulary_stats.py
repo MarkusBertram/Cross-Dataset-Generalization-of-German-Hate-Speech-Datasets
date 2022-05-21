@@ -121,22 +121,23 @@ def transform_to_embed_sentence_fasttext(dataset, dset_name,model):
         label = dset_name + "_" + str(tweet['label'])
         dataset_tag_embedding.append((tweet_embedding, label))
  
-    tag_embeddings = dict()
-    tag_count = defaultdict(int)
-    for entry in dataset_tag_embedding:
-        if entry[1] in tag_embeddings:
-            tag_embeddings[entry[1]] += entry[0]
-        else:
-            tag_embeddings[entry[1]] = entry[0]
-        tag_count[entry[1]] += 1
+    # tag_embeddings = dict()
+    # tag_count = defaultdict(int)
+    # for entry in dataset_tag_embedding:
+    #     if entry[1] in tag_embeddings:
+    #         tag_embeddings[entry[1]] += entry[0]
+    #     else:
+    #         tag_embeddings[entry[1]] = entry[0]
+    #     tag_count[entry[1]] += 1
         
     # average vectors
-    averaged_tag_embeddings = list()
-    tag_labels = list()
-    for key, value in tag_embeddings.items():
-        averaged_tag_embeddings.append(value / tag_count[key])
-        tag_labels.append(key)
-    return averaged_tag_embeddings, tag_labels
+    # averaged_tag_embeddings = list()
+    # tag_labels = list()
+    # for key, value in tag_embeddings.items():
+    #     averaged_tag_embeddings.append(value / tag_count[key])
+    #     tag_labels.append(key)
+    # return averaged_tag_embeddings, tag_labels
+    return dataset_tag_embedding
 
 
 def getInterClassSimilarityMultiple(datasets,dataset_names,embedding_path,filter_classes=None):
