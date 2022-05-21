@@ -10,3 +10,4 @@ test_notebook
 *.eps
 *.cpython
 pipelines/__pycache__/*
+test_notebook.ipynb
