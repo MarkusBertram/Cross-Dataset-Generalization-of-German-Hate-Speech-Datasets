@@ -5,15 +5,25 @@ datasets:
   germeval2019:
     unlabeled-dataset: False
     non-hate-label: none
-  hasoc2018:
+  Davidson:
     unlabeled-dataset: False
-    non-hate-label: none
-  hasoc2019:
+    non-hate-label: neither
+  vidgen:
     unlabeled-dataset: False
-    non-hate-label: none
-  telegram:
-    unlabeled-dataset: True
-    non-hate-label: none 
+    non-hate-label:
+      - none
+      - prejudice
+      - criticism
+      - counter
+  #hasoc2018:
+  #  unlabeled-dataset: False
+  #  non-hate-label: none
+  # hasoc2019:
+  #   unlabeled-dataset: False
+  #   non-hate-label: none
+  # telegram:
+  #   unlabeled-dataset: True
+  #   non-hate-label: none 
 models:
   single-source unsupervised:
     - ADDA

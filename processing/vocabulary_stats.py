@@ -1,3 +1,4 @@
+from sklearn.metrics import SCORERS
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 import processing.vocabulary_stats as vs
 import processing.basic_stats
@@ -276,13 +277,13 @@ def plotIntraDatasetSimilarityMultiple(title,subtitles,datasets,rows=2,cols=1,sy
     global_max = 0
     all_similarity_scores = []
     for dataset in datasets:
-        scores = getSimilarityScores(dataset["labeled"])
+        scores = getSimilarityScores(dataset)
         all_similarity_scores.append(scores)
         for entry in scores.values():
             for ef in entry.values():
                 global_min = min(global_min,ef)
                 global_max = max(global_max,ef)
-
+    print(scores)
     m = 0
     ax = []
     for k in range(rows):
@@ -299,7 +300,7 @@ def plotIntraDatasetSimilarityMultiple(title,subtitles,datasets,rows=2,cols=1,sy
                 #ax.append(fig2.add_subplot(spec2[k, l]))
                 # define colors and style
                 labels = all_similarity_scores[m].keys() 
-            
+                print(labels)
                 sheat = sns.heatmap(t_list, annot=True, fmt=".2f",
                                     ax=ax[m],square=False, label=subtitles[m], 
                                     xticklabels=labels, yticklabels=labels,
