@@ -276,7 +276,7 @@ def plotIntraDatasetSimilarityMultiple(title,subtitles,datasets,rows=2,cols=1,sy
     global_max = 0
     all_similarity_scores = []
     for dataset in datasets:
-        scores = getSimilarityScores(dataset)
+        scores = getSimilarityScores(dataset["labeled"])
         all_similarity_scores.append(scores)
         for entry in scores.values():
             for ef in entry.values():
