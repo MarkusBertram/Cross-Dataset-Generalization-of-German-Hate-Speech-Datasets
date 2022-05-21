@@ -1,2 +1,4 @@
 .venv
-test_notebook.ipynb
+test_notebook
+data/germeval2018/
+data/germeval2019/
