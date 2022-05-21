@@ -2,3 +2,5 @@
 test_notebook
 data/germeval2018
 data/germeval2019
+*.txt
+*training.txt
