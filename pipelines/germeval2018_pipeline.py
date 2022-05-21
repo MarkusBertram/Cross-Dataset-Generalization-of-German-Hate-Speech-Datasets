@@ -1,12 +1,15 @@
 import json
 import pickle
 import csv
+from pathlib import Path
 
-data_path = "../data/HS_Dataset1/"
+parent_folder = Path(__file__).resolve().parents[1]
 
-train = data_path + "germeval2018.training.txt"
+data_path = parent_folder / 'data' / 'germeval2018'
 
-test = data_path + "germeval2018.test.txt"
+train = data_path / "germeval2018.training.txt"
+
+test = data_path / "germeval2018.test.txt"
 
 #unlabeled = data_path + "germeval2018.test.txt"
 
@@ -19,17 +22,16 @@ def read_file(filename):
         for row in reader:
             entry=dict()
             entry['text'] = row[0]
-            entry['label'] = row[1]
-            entry['label2'] = row[2]
+            entry['binary_label'] = row[1]
+            entry['fine-grained_label'] = row[2]
             read_data.append(entry)
 
     return read_data
     
     
-    
 def get_data():
     full_data = dict()    
-    dset_list = list()    
+    dset_list = list()     
 
     for dset in [train, test]:
         read_data = read_file(dset)
