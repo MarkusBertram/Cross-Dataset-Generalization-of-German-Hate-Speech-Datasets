@@ -31,13 +31,7 @@ def get_labeled_data():
             #entry['fine-grained_label'] = row[2]
             dset_list.append(entry)
 
-    #df = pd.read_pickle(data_path)
-    # for index,row in df.iterrows():
-    #     entry = dict()
-    #     entry['text'] = row['text']
-    #     entry['label'] = shortenLabel(row['expert'])
-    #     dset_list.append(entry)
-    return dset_list
+    return dset_list[1:]
 
 def get_data_binary():
     dset_list = list()
