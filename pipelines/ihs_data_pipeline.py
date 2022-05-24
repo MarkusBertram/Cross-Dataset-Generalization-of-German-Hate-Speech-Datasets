@@ -41,5 +41,3 @@ def get_data_binary():
                 entry['label'] = row[-2]
             dset_list.append(entry)
     return dset_list
-
-get_labeled_data()

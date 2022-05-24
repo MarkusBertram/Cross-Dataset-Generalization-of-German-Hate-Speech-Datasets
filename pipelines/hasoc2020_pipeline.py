@@ -33,5 +33,3 @@ def get_labeled_data():
     #full_data["unlabeled"] = read_data
 
     return dset_list
-
-get_labeled_data()
