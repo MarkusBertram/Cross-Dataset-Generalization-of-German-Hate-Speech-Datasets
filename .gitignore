@@ -13,3 +13,4 @@ pipelines/__pycache__/*
 test_notebook.ipynb
 *.xlsx
 !requirements.txt
+!results

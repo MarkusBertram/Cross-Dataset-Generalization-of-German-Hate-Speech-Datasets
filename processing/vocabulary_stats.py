@@ -283,7 +283,7 @@ def plotIntraDatasetSimilarityMultiple(title,subtitles,datasets,rows=2,cols=1,sy
             for ef in entry.values():
                 global_min = min(global_min,ef)
                 global_max = max(global_max,ef)
-    print(scores)
+
     m = 0
     ax = []
     for k in range(rows):
