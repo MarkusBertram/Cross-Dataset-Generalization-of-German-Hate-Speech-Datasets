@@ -15,11 +15,9 @@ test = data_path / "hasoc_2020_de_test_new.xlsx"
 def read_file(filename):
     read_data=list()
 
-    excel_file = pd.read_excel(filename, usecols = "B:D")
+    excel_file = pd.read_excel(filename, header = 0, names = ['text', 'label', 'fine-grained_label'], usecols = "B,C,D", dtype={'text': str, 'label': str, 'fine-grained_label': str})
 
-    data = pd.DataFrame(excel_file, columns=['text', 'label', 'fine-grained_label'])
-
-    return data.to_dict('records')
+    return excel_file.to_dict('records')
     
     
 def get_labeled_data():  
@@ -35,3 +33,5 @@ def get_labeled_data():
     #full_data["unlabeled"] = read_data
 
     return dset_list
+
+get_labeled_data()

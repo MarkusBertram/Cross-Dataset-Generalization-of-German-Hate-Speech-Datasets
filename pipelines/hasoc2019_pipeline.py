@@ -24,7 +24,7 @@ def read_file(filename):
             entry['fine-grained_label'] = row[3]
             read_data.append(entry)
 
-    return read_data
+    return read_data[1:]
     
     
 def get_labeled_data():  
