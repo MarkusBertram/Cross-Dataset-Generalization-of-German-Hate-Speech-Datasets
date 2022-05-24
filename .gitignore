@@ -11,3 +11,4 @@ test_notebook
 *.cpython
 pipelines/__pycache__/*
 test_notebook.ipynb
+*.xlsx

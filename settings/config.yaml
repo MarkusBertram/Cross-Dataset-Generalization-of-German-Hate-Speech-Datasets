@@ -15,12 +15,12 @@ datasets:
       - prejudice
       - criticism
       - counter
-  #hasoc2018:
-  #  unlabeled-dataset: False
-  #  non-hate-label: none
-  # hasoc2019:
-  #   unlabeled-dataset: False
-  #   non-hate-label: none
+  hasoc2019:
+    unlabeled-dataset: False
+    non-hate-label: none
+  hasoc2020:
+    unlabeled-dataset: False
+    non-hate-label: none
   # telegram:
   #   unlabeled-dataset: True
   #   non-hate-label: none 
