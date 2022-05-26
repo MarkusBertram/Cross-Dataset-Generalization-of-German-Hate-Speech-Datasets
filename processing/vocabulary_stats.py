@@ -219,103 +219,23 @@ def plot_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,l
     return fig
 
 
-def getSimilarityScores(data):
-    class_separated_dicts = separate_text_by_classes(data)
-    labels = list(class_separated_dicts.keys())
-    total_corpus = list()
-    for label in labels:
-        total_corpus.append(processing.basic_stats.filter_corpus(class_separated_dicts[label]))
-        
-    ### CLASS SIMILARITIES
-    dictionary = corpora.Dictionary([item for sublist in total_corpus for item in sublist])
-    corpus = [dictionary.doc2bow(text) for text in [item for sublist in total_corpus for item in sublist]]
-    #LSI similarity
-    lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=16)
-    index = similarities.MatrixSimilarity(lsi[corpus])
-    #index.save('waseem_hatespeech.index')
-
-    similarity_scores = dict()
-    for i, entry in enumerate(labels):
-        #print(i,labels)
-        scores = processing.basic_stats.get_total_sim_score(i, total_corpus, labels, dictionary, lsi, index)
-        similarity_scores[entry] = scores
-        #print(scores)
-    return similarity_scores
-
-
-
-def plot_similarity_scores(similarity_scores):
-    t_list = list()
-    for entry in similarity_scores.values():
-        a_list = list()
-        for ef in entry.values():
-            a_list.append(ef)
-        t_list.append(a_list)
-    total_sim = np.asarray(t_list)
-    x_labels = [0] + list(similarity_scores.keys())
-    fig, ax = plt.subplots()
-    ax.matshow(total_sim, cmap=plt.cm.plasma)
-    ax.set_xticklabels(x_labels)
-    ax.set_yticklabels(x_labels)
-    for (i, j), z in np.ndenumerate(total_sim,):
-        ax.text(j, i, '{:0.3f}'.format(z), ha='center', va='center',
-               bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.9', alpha=0.8))
-    plt.show()
-
-
-
-
-def plotIntraDatasetSimilarityMultiple(title,subtitles,datasets,rows=2,cols=1,sync_scaling=False,cmap = "Blues",width=12,height=6):
-    # path for storing image
-    path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(subtitles).replace(" ","_")
-    
-    fig2 = plt.figure(constrained_layout=True,figsize=(width, height))
-    fig2.suptitle(title,y=1.05,fontsize=16)
-    spec2 = gridspec.GridSpec(ncols=cols, nrows=rows, figure=fig2)
-    
-    global_min = 1
-    global_max = 0
-    all_similarity_scores = []
-    for dataset in datasets:
-        scores = getSimilarityScores(dataset)
-        all_similarity_scores.append(scores)
-        for entry in scores.values():
-            for ef in entry.values():
-                global_min = min(global_min,ef)
-                global_max = max(global_max,ef)
-    print(all_similarity_scores)
-    m = 0
-    ax = []
-    for k in range(rows):
-        for l in range(cols):
-            if m < len(datasets):
-                t_list = list()
-                for entry in all_similarity_scores[m].values():
-                    a_list = list()
-                    for ef in entry.values():
-                        a_list.append(ef)
-                    t_list.append(a_list)
-
-                ax.append(fig2.add_subplot(spec2[k, l]))
-                #ax.append(fig2.add_subplot(spec2[k, l]))
-                # define colors and style
-                labels = all_similarity_scores[m].keys() 
-                print(labels)
-                sheat = sns.heatmap(t_list, annot=True, fmt=".2f",
-                                    ax=ax[m],square=False, label=subtitles[m], 
-                                    xticklabels=labels, yticklabels=labels,
-                                    vmin=global_min, vmax=global_max,
-                                    cmap=cmap,cbar=False)
-                sheat.set_xticklabels(labels, rotation=45, ha='center')
-                sheat.set_yticklabels(labels, rotation=0, ha='right')
-                #ax[m].xaxis.set_label_text(subtitles[m])
-                ax[m].set_title(subtitles[m])
-                #ax.set_title(subtitles[m])
-                
-                m += 1
-    fig2.savefig(path_fig + "-vocab_intra-dataset-sim.pdf", bbox_inches='tight', dpi=300)
-    fig2.savefig(path_fig + "-vocab_intra-dataset-sim.png", bbox_inches='tight', dpi=300)
-    fig2.savefig(path_fig + "-vocab_intra-dataset-sim.eps", bbox_inches='tight', dpi=600)
+# def plot_similarity_scores(similarity_scores):
+#     t_list = list()
+#     for entry in similarity_scores.values():
+#         a_list = list()
+#         for ef in entry.values():
+#             a_list.append(ef)
+#         t_list.append(a_list)
+#     total_sim = np.asarray(t_list)
+#     x_labels = [0] + list(similarity_scores.keys())
+#     fig, ax = plt.subplots()
+#     ax.matshow(total_sim, cmap=plt.cm.plasma)
+#     ax.set_xticklabels(x_labels)
+#     ax.set_yticklabels(x_labels)
+#     for (i, j), z in np.ndenumerate(total_sim,):
+#         ax.text(j, i, '{:0.3f}'.format(z), ha='center', va='center',
+#                bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.9', alpha=0.8))
+#     plt.show()
 
 def getMatrix(X):
     cv = CountVectorizer(max_df=0.95, 
