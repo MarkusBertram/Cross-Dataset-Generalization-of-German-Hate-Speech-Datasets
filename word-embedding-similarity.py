@@ -192,11 +192,7 @@ if __name__ == "__main__":
     for i,dataset in enumerate(datasets):
         embedding, labels = transform_to_embed_sentence(dataset, dataset_names[i], model, tokenizer)
         #embedding, labels = transform_to_embed_sentence_fasttext(dataset, dataset_names[i],word_vectors)
-        print(len(embedding))
-        print(len(labels))
-        print(type(embedding[0]))
-        print(type(labels[0]))
-        sys.exit(0)
+        
         dataset_embeddings.append(embedding)
         dataset_labels.append(labels)
         labels_count.append(len(labels))
