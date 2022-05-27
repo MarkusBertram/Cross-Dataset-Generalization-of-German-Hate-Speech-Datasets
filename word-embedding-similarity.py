@@ -150,18 +150,18 @@ def transform_to_embed_sentence(dataset, dset_name, model, tokenizer):
 
             # cls_embeddings = last_hidden_state
             #label = dset_name + "_" + str(le.inverse_transform(y.detach().cpu().numpy()))
-            dataset_tag_embedding.extend((cls_embeddings.detach().cpu().numpy(), label))
-
-    print(len(dataset_tag_embedding))
+            dataset_tag_embedding.append((cls_embeddings.detach().cpu().numpy(), label))
     
     tag_embeddings = dict()
     tag_count = defaultdict(int)
+    
     for entry in dataset_tag_embedding:
-        if entry[1] in tag_embeddings:
-            tag_embeddings[entry[1]] += entry[0]
-        else:
-            tag_embeddings[entry[1]] = entry[0]
-        tag_count[entry[1]] += 1
+        for i in range(len(entry[1])):
+            if entry[1][i] in tag_embeddings:
+                tag_embeddings[entry[1][i]] += entry[0][i]
+            else:
+                tag_embeddings[entry[1][i]] = entry[0][i]
+            tag_count[entry[1][i]] += 1
 
     #average vectors
     averaged_tag_embeddings = list()
