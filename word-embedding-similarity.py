@@ -146,10 +146,13 @@ def transform_to_embed_sentence(dataset, dset_name, model, tokenizer):
             outputs = model(input_ids = input_id, attention_mask = attention_masks, output_hidden_states=True)
 
             cls_embeddings = outputs.hidden_states[0][:, 0]
+    
             # cls_embeddings = last_hidden_state
             label = dset_name + "_" + str(le.inverse_transform(y.detach().cpu().numpy()))
-            dataset_tag_embedding.append((cls_embeddings.detach().cpu().numpy(), label))
+            dataset_tag_embedding.extend((cls_embeddings.detach().cpu().numpy(), label))
 
+    print(len(dataset_tag_embedding))
+    
     tag_embeddings = dict()
     tag_count = defaultdict(int)
     for entry in dataset_tag_embedding:
@@ -192,21 +195,20 @@ if __name__ == "__main__":
     labels_count = []
     for i,dataset in enumerate(datasets):
         embedding, labels = transform_to_embed_sentence(dataset, dataset_names[i], model, tokenizer)
-        #embedding, labels = transform_to_embed_sentence_fasttext(dataset, dataset_names[i],word_vectors)
-        dataset_embeddings.append(embedding)
-        dataset_labels.append(labels)
+        #dataset_embeddings.append(embedding)
+        #dataset_labels.append(labels)
         labels_count.append(len(labels))
-        #averaged_tag_embeddings += embedding
+        averaged_tag_embeddings += embedding
         tag_labels +=labels
     
-    # print("\n embedding:\n")
-    # print(len(embedding))
-    # print(type(embedding))
-    # #print(embedding[0])
-    # print("\n labels:\n")
-    # print(len(labels))
-    # print(type(labels))
-    # #print(labels[0])
+    print("\n embedding:\n")
+    print(len(embedding))
+    print(type(embedding))
+    print(len(embedding[0]))
+    print("\n labels:\n")
+    print(len(labels))
+    print(type(labels))
+    print(len(labels[0]))
 
     # print("\n dataset_embeddings \n")
     # print(len(dataset_embeddings))
@@ -218,23 +220,23 @@ if __name__ == "__main__":
     # print(type(dataset_labels))
     # #print(dataset_labels[0])
 
-    # print("\n labels_count \n")
-    # print(len(labels_count))
-    # print(type(labels_count))
-    # #print(labels_count[0])
+    print("\n labels_count \n")
+    print(len(labels_count))
+    print(type(labels_count))
+    print(len(labels_count[0]))
 
-    # print("\n averaged_tag_embeddings \n")
-    # print(len(averaged_tag_embeddings))
-    # print(type(averaged_tag_embeddings))
-    # #print(averaged_tag_embeddings[0])
+    print("\n averaged_tag_embeddings \n")
+    print(len(averaged_tag_embeddings))
+    print(type(averaged_tag_embeddings))
+    print(len(averaged_tag_embeddings[0]))
 
-    # print("\n tag_labels \n")
-    # print(len(tag_labels))
-    # print(type(tag_labels))
-    # #print(tag_labels[0])
+    print("\n tag_labels \n")
+    print(len(tag_labels))
+    print(type(tag_labels))
+    print(len(tag_labels[0]))
 
-    #n_averaged_tag_embeddings = np.nan_to_num(averaged_tag_embeddings)
-    n_averaged_tag_embeddings = np.nan_to_num(dataset_embeddings) 
+    n_averaged_tag_embeddings = np.nan_to_num(averaged_tag_embeddings)
+    #n_averaged_tag_embeddings = np.nan_to_num(dataset_embeddings) 
     # set labels
     y_encode, label_encoding = encode_labels(tag_labels)
     label_text = label_encoding.keys()
