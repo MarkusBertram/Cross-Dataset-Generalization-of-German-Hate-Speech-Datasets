@@ -165,6 +165,7 @@ def transform_to_embed_sentence(dataset, dset_name, model, tokenizer):
     for key, value in tag_embeddings.items():
         averaged_tag_embeddings.append(value / tag_count[key])
         tag_labels.append(key)
+    
     return averaged_tag_embeddings, tag_labels
 
 if __name__ == "__main__":
@@ -192,13 +193,47 @@ if __name__ == "__main__":
     for i,dataset in enumerate(datasets):
         embedding, labels = transform_to_embed_sentence(dataset, dataset_names[i], model, tokenizer)
         #embedding, labels = transform_to_embed_sentence_fasttext(dataset, dataset_names[i],word_vectors)
-        
         dataset_embeddings.append(embedding)
         dataset_labels.append(labels)
         labels_count.append(len(labels))
         averaged_tag_embeddings += embedding
         tag_labels +=labels
     
+    print("\n embedding:\n")
+    print(len(embedding))
+    print(type(embedding))
+    print(embedding[0])
+    print("\n labels:\n")
+    print(len(labels))
+    print(type(labels))
+    print(labels[0])
+
+    print("\n dataset_embeddings \n")
+    print(len(dataset_embeddings))
+    print(type(dataset_embeddings))
+    print(dataset_embeddings[0])
+
+    print("\n dataset_labels \n")
+    print(len(dataset_labels))
+    print(type(dataset_labels))
+    print(dataset_labels[0])
+
+    print("\n labels_count \n")
+    print(len(labels_count))
+    print(type(labels_count))
+    print(labels_count[0])
+
+    print("\n averaged_tag_embeddings \n")
+    print(len(averaged_tag_embeddings))
+    print(type(averaged_tag_embeddings))
+    print(averaged_tag_embeddings[0])
+
+    print("\n tag_labels \n")
+    print(len(tag_labels))
+    print(type(tag_labels))
+    print(tag_labels[0])
+    sys.exit(0)
+
     n_averaged_tag_embeddings = np.nan_to_num(averaged_tag_embeddings)
        
     # set labels
