@@ -138,7 +138,6 @@ def transform_to_embed_sentence(dataset, dset_name, model, tokenizer):
     accelerator = Accelerator()
     device = accelerator.device
     model, data = accelerator.prepare(model, data)
-    
     with torch.no_grad():
         for x, y in data:
             input_id = x[:, 0].to(device)
@@ -146,9 +145,11 @@ def transform_to_embed_sentence(dataset, dset_name, model, tokenizer):
             outputs = model(input_ids = input_id, attention_mask = attention_masks, output_hidden_states=True)
 
             cls_embeddings = outputs.hidden_states[0][:, 0]
-    
+
+            label = le.inverse_transform(y.detach().cpu().numpy()).tolist()
+
             # cls_embeddings = last_hidden_state
-            label = dset_name + "_" + str(le.inverse_transform(y.detach().cpu().numpy()))
+            #label = dset_name + "_" + str(le.inverse_transform(y.detach().cpu().numpy()))
             dataset_tag_embedding.extend((cls_embeddings.detach().cpu().numpy(), label))
 
     print(len(dataset_tag_embedding))
