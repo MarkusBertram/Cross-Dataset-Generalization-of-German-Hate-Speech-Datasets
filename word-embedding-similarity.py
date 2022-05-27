@@ -62,7 +62,12 @@ def encode_labels(y_labels):
     return y_encoded, encoding
 
 def plot_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,labels_count,axis_labels,dataset_names,palette = "colorblind"):
-    path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(dataset_names).replace(" ","_")
+    now = datetime.now()
+    results_dir = "./results/"+"word_embeddings_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+    if os.path.exists(results_dir) == False:
+        os.makedirs(results_dir)
+    # path for storing image
+    path_fig = results_dir + "-".join(dataset_names).replace(" ","_")
     colors = sns.color_palette(palette, len(labels_count))
     sns.set_palette(palette, len(labels_count))
     
@@ -82,7 +87,6 @@ def plot_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,l
         for j in range(start,end):
             texts.append(plt.text(emb_x[j], emb_y[j], annotation_text[j],fontdict={'color':colors[i],'size': 12}))
         offset = end
-        
 
     iterations = adjust_text(texts,lim=2000,arrowprops=dict(arrowstyle='-', color='grey'))
     print(iterations)
@@ -186,7 +190,6 @@ if __name__ == "__main__":
     config = AutoConfig.from_pretrained("deepset/gbert-base")
     model =  AutoModelForMaskedLM.from_pretrained("deepset/gbert-base", config = config)
     model.eval()
-    #tokenizer = AutoTokenizer.from_pretrained("dbmdz/bert-base-german-cased")
     tokenizer = AutoTokenizer.from_pretrained("deepset/gbert-base")
     
     dataset_embeddings = []
@@ -196,48 +199,11 @@ if __name__ == "__main__":
     labels_count = []
     for i,dataset in enumerate(datasets):
         embedding, labels = transform_to_embed_sentence(dataset, dataset_names[i], model, tokenizer)
-        #dataset_embeddings.append(embedding)
-        #dataset_labels.append(labels)
         labels_count.append(len(labels))
         averaged_tag_embeddings += embedding
         tag_labels +=labels
-    
-    print("\n embedding:\n")
-    print(len(embedding))
-    print(type(embedding))
-    #print(len(embedding[0]))
-    print("\n labels:\n")
-    print(len(labels))
-    print(type(labels))
-    #print(len(labels[0]))
-
-    # print("\n dataset_embeddings \n")
-    # print(len(dataset_embeddings))
-    # print(type(dataset_embeddings))
-    # #print(dataset_embeddings[0])
-
-    # print("\n dataset_labels \n")
-    # print(len(dataset_labels))
-    # print(type(dataset_labels))
-    # #print(dataset_labels[0])
-
-    print("\n labels_count \n")
-    print(len(labels_count))
-    print(type(labels_count))
-    #print(len(labels_count[0]))
-
-    print("\n averaged_tag_embeddings \n")
-    print(len(averaged_tag_embeddings))
-    print(type(averaged_tag_embeddings))
-    #print(len(averaged_tag_embeddings[0]))
-
-    print("\n tag_labels \n")
-    print(len(tag_labels))
-    print(type(tag_labels))
-    #print(len(tag_labels[0]))
 
     n_averaged_tag_embeddings = np.nan_to_num(averaged_tag_embeddings)
-    #n_averaged_tag_embeddings = np.nan_to_num(dataset_embeddings) 
     # set labels
     y_encode, label_encoding = encode_labels(tag_labels)
     label_text = label_encoding.keys()
