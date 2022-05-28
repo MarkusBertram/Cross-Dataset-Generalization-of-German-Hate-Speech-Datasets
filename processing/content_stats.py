@@ -101,17 +101,17 @@ def plot_tsne_embedding_annotate(tsne_embedded, labels, label_text, annotation_t
     fig.savefig(path_fig + "-content_tsne.eps", bbox_inches='tight', dpi=600)
     return plt
 
-def tweet_cleaner(tweets,m_names,f_names,extended_vocab ):
-    c_samples = list()
-    for tweet in tweets:
-        new_tweet = list()
-        for word in tweet:
-            word = re.sub(r'[^\w\s]','',word)
-            if len(word) > 4 or word in extended_vocab and not word.isnumeric():
-                if word not in m_names and word not in f_names:
-                    new_tweet.append(word)
-        c_samples.append(new_tweet)
-    return c_samples
+# def tweet_cleaner(tweets,m_names,f_names,extended_vocab ):
+#     c_samples = list()
+#     for tweet in tweets:
+#         new_tweet = list()
+#         for word in tweet:
+#             word = re.sub(r'[^\w\s]','',word)
+#             if len(word) > 4 or word in extended_vocab and not word.isnumeric():
+#                 if word not in m_names and word not in f_names:
+#                     new_tweet.append(word)
+#         c_samples.append(new_tweet)
+#     return c_samples
 
 
 def get_cluword_labels(cluword_path, num_topics):
