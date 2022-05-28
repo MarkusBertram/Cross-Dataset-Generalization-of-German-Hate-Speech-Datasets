@@ -237,60 +237,60 @@ def plot_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,l
 #                bbox=dict(boxstyle='round', facecolor='white', edgecolor='0.9', alpha=0.8))
 #     plt.show()
 
-def getMatrix(X):
-    cv = CountVectorizer(max_df=0.95, 
-                         min_df=2,                 
-                         max_features=10000, 
-                         binary=True)
+# def getMatrix(X):
+#     cv = CountVectorizer(max_df=0.95, 
+#                          min_df=2,                 
+#                          max_features=10000, 
+#                          binary=True)
     
-    X_vec = cv.fit_transform(X)
-    words = cv.get_feature_names()
-    return X_vec,words
+#     X_vec = cv.fit_transform(X)
+#     words = cv.get_feature_names()
+#     return X_vec,words
 
-def getPmisPerClass(X_vec,Y,words):
-    # get labels
-    labels = set(Y)
-    # create empty dict for results
-    pmis_per_class = dict()
-    for label in labels:
-        pmis_per_class[label] = dict()
+# def getPmisPerClass(X_vec,Y,words):
+#     # get labels
+#     labels = set(Y)
+#     # create empty dict for results
+#     pmis_per_class = dict()
+#     for label in labels:
+#         pmis_per_class[label] = dict()
 
-    X_matrix = np.array(X_vec.toarray())
-    Y = np.array(Y)
-    for i in range(len(X_matrix[0,:])):
-        pmis = []
-        for label in labels:
-            p_label = np.sum(Y == label) / len(Y)
-            select_y = Y == label
-            column = X_matrix[:,i]
-            select_column = column[select_y]
-            p_label_x = np.sum(select_column) / len(select_column)
-            if p_label_x <= 0:
-                pass
-                #pmis_per_class[label][words[i]] = 0
-            else:
-                pmi = log((p_label_x/p_label))
-                pmis_per_class[label][words[i]] = pmi
-    return pmis_per_class
+#     X_matrix = np.array(X_vec.toarray())
+#     Y = np.array(Y)
+#     for i in range(len(X_matrix[0,:])):
+#         pmis = []
+#         for label in labels:
+#             p_label = np.sum(Y == label) / len(Y)
+#             select_y = Y == label
+#             column = X_matrix[:,i]
+#             select_column = column[select_y]
+#             p_label_x = np.sum(select_column) / len(select_column)
+#             if p_label_x <= 0:
+#                 pass
+#                 #pmis_per_class[label][words[i]] = 0
+#             else:
+#                 pmi = log((p_label_x/p_label))
+#                 pmis_per_class[label][words[i]] = pmi
+#     return pmis_per_class
 
-def getTopWordOfClasses(data_sets_text,dataset_names,exclude, n=10, language='english'):
-    content_table = dict()
-    for dataset,dataset_name,exclude_labels in zip(data_sets_text,dataset_names,exclude):
-        X = [preprocessing_multilingual.preprocess_text(x['text'],language=language) for x in dataset]
-        Y = [x['label'] for x in dataset]
+# def getTopWordOfClasses(data_sets_text,dataset_names,exclude, n=10, language='english'):
+#     content_table = dict()
+#     for dataset,dataset_name,exclude_labels in zip(data_sets_text,dataset_names,exclude):
+#         X = [preprocessing_multilingual.preprocess_text(x['text'],language=language) for x in dataset]
+#         Y = [x['label'] for x in dataset]
 
-        X_vec,words = getMatrix(X)
+#         X_vec,words = getMatrix(X)
 
-        pmis_per_class = getPmisPerClass(X_vec,Y,words)
-        for label in pmis_per_class.keys():
-            if label in exclude_labels:
-                continue
-            sorted_dict = dict(sorted(pmis_per_class[label].items(), key=lambda item: item[1],reverse=True))
-            column = []
-            for i,word in enumerate(sorted_dict.keys()):
-                if i >= n:
-                    break
-                column.append(word)
+#         pmis_per_class = getPmisPerClass(X_vec,Y,words)
+#         for label in pmis_per_class.keys():
+#             if label in exclude_labels:
+#                 continue
+#             sorted_dict = dict(sorted(pmis_per_class[label].items(), key=lambda item: item[1],reverse=True))
+#             column = []
+#             for i,word in enumerate(sorted_dict.keys()):
+#                 if i >= n:
+#                     break
+#                 column.append(word)
 
-            content_table[dataset_name + " - " + label] = column
-    return pd.DataFrame.from_dict(content_table)
+#             content_table[dataset_name + " - " + label] = column
+#     return pd.DataFrame.from_dict(content_table)

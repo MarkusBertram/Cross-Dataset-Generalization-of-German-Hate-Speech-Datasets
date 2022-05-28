@@ -14,3 +14,5 @@ test_notebook.ipynb
 *.xlsx
 !requirements.txt
 !results
+german_stop_words.py
+!german_stop_words.txt

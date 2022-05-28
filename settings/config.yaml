@@ -1,10 +1,10 @@
 datasets:
   germeval2018:
     unlabeled-dataset: False
-    non-hate-label: HOF
+    non-hate-label: OTHER
   germeval2019:
     unlabeled-dataset: False
-    non-hate-label: none
+    non-hate-label: OTHER
   Davidson:
     unlabeled-dataset: False
     non-hate-label: neither
