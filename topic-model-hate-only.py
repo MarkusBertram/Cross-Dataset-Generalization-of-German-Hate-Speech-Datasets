@@ -99,6 +99,7 @@ if __name__ == "__main__":
     n = 2000
     on_distribution=False
     components = 20
+    file_suffix = 'all'
     fname = strftime("%y%m%d", gmtime()) + "-" + "-".join(dataset_names).replace(" ","_")
     result_file = 'tools/cluwords/cluwords/multi_embedding/results/{}/matrix_w.txt'.format(fname)
     cluword_path = 'tools/cluwords/cluwords/multi_embedding/results/{}/result_topic_10.txt'.format(fname)
