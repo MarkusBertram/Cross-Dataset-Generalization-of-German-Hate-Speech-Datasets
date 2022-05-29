@@ -13,6 +13,7 @@ from pprint import pprint
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import nltk
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -24,7 +25,7 @@ from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 from gensim.test.utils import datapath, get_tmpfile
 from matplotlib import cm
-from torch.utils.datasets import Dataset, DataLoader
+#from torch.utils.datasets import Dataset, DataLoader
 from nltk.corpus import stopwords
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import CountVectorizer
@@ -36,10 +37,10 @@ import processing.basic_stats
 import processing.emoji as emoji
 import processing.preprocessing_multilingual as preprocessing_multilingual
 import processing.user_stats
-from torch.utils.datasets import Dataset, TensorDataset
+#from torch.utils.datasets import Dataset, TensorDataset
 import processing.vocabulary_stats as vs
 from utils import dataset_sampling, embedding_utils
-from torch.utils.datasets import Dataset
+#from torch.utils.datasets import Dataset
 from processing.preprocessing_multilingual import preprocess_text
 from sklearn import preprocessing
 from utils.utils import fetch_import_module
@@ -50,10 +51,24 @@ from spacy.tokenizer import Tokenizer
 from spacy.lang.de import German
 nltk.download('punkt')
 nltk.download('stopwords')
-
+import fasttext
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', 1000) 
 sns.set_style("dark", {'axes.grid' : True, 'axes.linewidth':1})
+
+def nth_repl(s, sub, repl, n):
+    find = s.find(sub)
+    # If find is not -1 we have found at least one match for the substring
+    i = find != -1
+    # loop util we find the nth or we find no match
+    while find != -1 and i != n:
+        # find + 1 means we start searching from after the last match
+        find = s.find(sub, find + 1)
+        i += 1
+    # If i is equal to n we found nth match so replace
+    if i == n:
+        return s[:find] + repl + s[find+len(sub):]
+    return s
 
 def tweet_cleaner(tweets,m_names,f_names,extended_vocab ):
     c_samples = list()
@@ -76,6 +91,68 @@ def get_cluword_labels(cluword_path, num_topics):
         cluword_labels.append(entry.rstrip())
     return cluword_labels
 
+
+def plot_tsne_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,separators,file_suffix,components=20):
+    path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(label_text).replace(" ","_") + file_suffix
+    #colors
+    palette = "colorblind"
+    colors = sns.color_palette(palette, len(label_text))
+    sns.set_palette(palette, len(label_text))
+    sns.set_style("dark")
+    # set font
+
+    fig = plt.figure(figsize=(24,18))
+    ax = fig.add_subplot(111)
+    
+    emb_x = tsne_embedded[:,0]
+    emb_y = tsne_embedded[:,1]
+    
+    markers = ['x','^','*','+','p','>','2','v','H','<','>']
+    sizes = [60,90,200,60,60,60,60,60,60,60,60]
+    legend_elemens = []
+    
+    previous_end = 0
+    for i,subset in enumerate(separators):
+        start = previous_end
+        end = start + subset
+        previous_end = end
+        
+        s_sizes = [sizes[i]] * subset
+        int_labels = labels[start:end]
+        scatter = ax.scatter(x=emb_x[start:end], y=emb_y[start:end], 
+                             s=s_sizes, c=[colors[i]], edgecolors='w', 
+                             marker=markers[i],label=label_text[i])
+    
+    # topic centers
+    s_sizes = [100] * components
+    int_labels = labels[-1*components:]
+    scatter2 = ax.scatter(x=emb_x[-1*components:], y=emb_y[-1*components:], 
+                         s=s_sizes, c="black", edgecolors='w', marker='o', cmap=cm.jet,label="Topic center")
+    
+    texts = []
+    label_counter = 0
+    for i, text in zip(range(len(labels)-components,len(labels)), annotation_text):
+        label_counter += 1
+        test_to_add = nth_repl(text," ","\n",15)
+        test_to_add = nth_repl(text," ","\n",12)
+        test_to_add = nth_repl(text," ","\n",9)
+        test_to_add = nth_repl(test_to_add," ","\n",6)
+        test_to_add = nth_repl(test_to_add," ","\n",3)
+        test_to_add = f"(T{label_counter}) {test_to_add}"
+
+        texts.append(plt.text(emb_x[i], emb_y[i], 
+                              test_to_add,fontdict={'size': 16}, 
+                              bbox=dict(boxstyle='round', fc='white', ec='w', alpha=0.7))) 
+    # adjust text to avoid overlapping boxes
+    iterations = adjust_text(texts,lim=5000)
+    
+    ax.legend( loc="upper right", title="Datasets")
+    fig.savefig(path_fig + "-content_tsne.pdf", bbox_inches='tight', dpi=300)
+    fig.savefig(path_fig + "-content_tsne.png", bbox_inches='tight', dpi=300)
+    fig.savefig(path_fig + "-content_tsne.eps", bbox_inches='tight', dpi=600)
+    return plt
+
+
 if __name__ == "__main__":
     config = yaml.safe_load(open("settings/config.yaml"))
 
@@ -94,12 +171,13 @@ if __name__ == "__main__":
             pass
     
     print("\n --- Calculating Cross-Dataset topic model... ---")
-
+    nltk.download('names')
     # constants
     n = 2000
-    on_distribution=False
+    on_distribution=True
     components = 20
     file_suffix = 'all'
+    embedding_path = "embeddings/cc.de.300.bin"
     fname = strftime("%y%m%d", gmtime()) + "-" + "-".join(dataset_names).replace(" ","_")
     result_file = 'tools/cluwords/cluwords/multi_embedding/results/{}/matrix_w.txt'.format(fname)
     cluword_path = 'tools/cluwords/cluwords/multi_embedding/results/{}/result_topic_10.txt'.format(fname)
@@ -154,7 +232,7 @@ if __name__ == "__main__":
     
     ## generating topic model
     ### default parameters: embedding_bin=False, threads=4, components=20, algorithm='knn_cosine'
-    cluwords_path = cluwords_launcher.generate_cluwords(sample_path, embedding_path, components=components)
+    cluwords_path = cluwords_launcher.generate_cluwords(sample_path, embedding_path, embedding_bin=True, components=components)
     
     ## loading topics from file
     
@@ -210,5 +288,4 @@ if __name__ == "__main__":
                                  cluword_labels,
                                  separators,
                                  file_suffix,
-                                 components=components,
-                                 language=language).show()
+                                 components=components).show()

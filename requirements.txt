@@ -17,3 +17,5 @@ shap
 torch
 tqdm
 transformers
+nltk
+accelerate

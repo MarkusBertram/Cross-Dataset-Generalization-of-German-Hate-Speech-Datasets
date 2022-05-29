@@ -1,6 +1,6 @@
 import os
 from time import time
-
+import fasttext
 from gensim.models import KeyedVectors
 from sklearn.feature_extraction.text import CountVectorizer
 
@@ -82,8 +82,10 @@ class CreateEmbeddingModels:
 
     def _read_embedding(self, embedding_file_path, binary):
         t0 = time()
-        self.model = KeyedVectors.load_word2vec_format(
-            embedding_file_path, binary=binary)
+        # self.model = KeyedVectors.load_word2vec_format(
+        #     embedding_file_path, binary=binary)
+        #self.model = KeyedVectors.load(embedding_file_path)
+        self.model = fasttext.load_model("embeddings/cc.de.300.bin")
         print('Embedding model read in %0.3fs.' % (time() - t0))
 
     def _read_raw_dataset(self, document_path, dataset):

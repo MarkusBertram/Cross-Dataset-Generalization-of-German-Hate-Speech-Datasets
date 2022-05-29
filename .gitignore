@@ -16,3 +16,7 @@ test_notebook.ipynb
 !results
 german_stop_words.py
 !german_stop_words.txt
+embeddings/cc.de.300.bin
+cluwords.npz
+document_distribution_220529-germeval2018-germeval2019
+one_hot_topics_220529-germeval2018-germeval2019.npz

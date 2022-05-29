@@ -5,9 +5,9 @@ datasets:
   germeval2019:
     unlabeled-dataset: False
     non-hate-label: OTHER
-  Davidson:
-    unlabeled-dataset: False
-    non-hate-label: neither
+  # Davidson:
+  #   unlabeled-dataset: False
+  #   non-hate-label: neither
   # vidgen:
   #   unlabeled-dataset: False
   #   non-hate-label:
