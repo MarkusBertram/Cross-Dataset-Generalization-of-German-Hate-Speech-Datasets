@@ -3,7 +3,7 @@ from time import time
 import fasttext
 from gensim.models import KeyedVectors
 from sklearn.feature_extraction.text import CountVectorizer
-
+import sys
 
 class CreateEmbeddingModels:
     """
@@ -45,9 +45,10 @@ class CreateEmbeddingModels:
         n_words: int
             Number of words of dataset present in the pre-treined model.
         """
+        
         documents = self._read_raw_dataset(
             self.document_path, dataset)
-
+        
         # Count the words in dataset
         dataset_cv = CountVectorizer().fit(documents)
         dataset_words = dataset_cv.get_feature_names()

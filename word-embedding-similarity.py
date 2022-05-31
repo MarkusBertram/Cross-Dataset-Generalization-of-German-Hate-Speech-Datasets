@@ -67,7 +67,7 @@ def plot_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,l
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     # path for storing image
-    path_fig = results_dir + "-".join(dataset_names).replace(" ","_")
+    path_fig = results_dir
     colors = sns.color_palette(palette, len(labels_count))
     sns.set_palette(palette, len(labels_count))
     

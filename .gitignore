@@ -9,7 +9,9 @@ test_notebook
 *.png
 *.eps
 *.cpython
+*.npz
 pipelines/__pycache__/*
+document_distribution_*
 test_notebook.ipynb
 *.xlsx
 !requirements.txt

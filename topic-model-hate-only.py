@@ -92,65 +92,65 @@ def get_cluword_labels(cluword_path, num_topics):
     return cluword_labels
 
 
-def plot_tsne_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,separators,file_suffix,components=20):
-    path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(label_text).replace(" ","_") + file_suffix
-    #colors
-    palette = "colorblind"
-    colors = sns.color_palette(palette, len(label_text))
-    sns.set_palette(palette, len(label_text))
-    sns.set_style("dark")
-    # set font
+# def plot_tsne_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,separators,file_suffix,components=20):
+#     path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(label_text).replace(" ","_") + file_suffix
+#     #colors
+#     palette = "colorblind"
+#     colors = sns.color_palette(palette, len(label_text))
+#     sns.set_palette(palette, len(label_text))
+#     sns.set_style("dark")
+#     # set font
 
-    fig = plt.figure(figsize=(24,18))
-    ax = fig.add_subplot(111)
+#     fig = plt.figure(figsize=(24,18))
+#     ax = fig.add_subplot(111)
     
-    emb_x = tsne_embedded[:,0]
-    emb_y = tsne_embedded[:,1]
+#     emb_x = tsne_embedded[:,0]
+#     emb_y = tsne_embedded[:,1]
     
-    markers = ['x','^','*','+','p','>','2','v','H','<','>']
-    sizes = [60,90,200,60,60,60,60,60,60,60,60]
-    legend_elemens = []
+#     markers = ['x','^','*','+','p','>','2','v','H','<','>']
+#     sizes = [60,90,200,60,60,60,60,60,60,60,60]
+#     legend_elemens = []
     
-    previous_end = 0
-    for i,subset in enumerate(separators):
-        start = previous_end
-        end = start + subset
-        previous_end = end
+#     previous_end = 0
+#     for i,subset in enumerate(separators):
+#         start = previous_end
+#         end = start + subset
+#         previous_end = end
         
-        s_sizes = [sizes[i]] * subset
-        int_labels = labels[start:end]
-        scatter = ax.scatter(x=emb_x[start:end], y=emb_y[start:end], 
-                             s=s_sizes, c=[colors[i]], edgecolors='w', 
-                             marker=markers[i],label=label_text[i])
+#         s_sizes = [sizes[i]] * subset
+#         int_labels = labels[start:end]
+#         scatter = ax.scatter(x=emb_x[start:end], y=emb_y[start:end], 
+#                              s=s_sizes, c=[colors[i]], edgecolors='w', 
+#                              marker=markers[i],label=label_text[i])
     
-    # topic centers
-    s_sizes = [100] * components
-    int_labels = labels[-1*components:]
-    scatter2 = ax.scatter(x=emb_x[-1*components:], y=emb_y[-1*components:], 
-                         s=s_sizes, c="black", edgecolors='w', marker='o', cmap=cm.jet,label="Topic center")
+#     # topic centers
+#     s_sizes = [100] * components
+#     int_labels = labels[-1*components:]
+#     scatter2 = ax.scatter(x=emb_x[-1*components:], y=emb_y[-1*components:], 
+#                          s=s_sizes, c="black", edgecolors='w', marker='o', cmap=cm.jet,label="Topic center")
     
-    texts = []
-    label_counter = 0
-    for i, text in zip(range(len(labels)-components,len(labels)), annotation_text):
-        label_counter += 1
-        test_to_add = nth_repl(text," ","\n",15)
-        test_to_add = nth_repl(text," ","\n",12)
-        test_to_add = nth_repl(text," ","\n",9)
-        test_to_add = nth_repl(test_to_add," ","\n",6)
-        test_to_add = nth_repl(test_to_add," ","\n",3)
-        test_to_add = f"(T{label_counter}) {test_to_add}"
+#     texts = []
+#     label_counter = 0
+#     for i, text in zip(range(len(labels)-components,len(labels)), annotation_text):
+#         label_counter += 1
+#         test_to_add = nth_repl(text," ","\n",15)
+#         test_to_add = nth_repl(text," ","\n",12)
+#         test_to_add = nth_repl(text," ","\n",9)
+#         test_to_add = nth_repl(test_to_add," ","\n",6)
+#         test_to_add = nth_repl(test_to_add," ","\n",3)
+#         test_to_add = f"(T{label_counter}) {test_to_add}"
 
-        texts.append(plt.text(emb_x[i], emb_y[i], 
-                              test_to_add,fontdict={'size': 16}, 
-                              bbox=dict(boxstyle='round', fc='white', ec='w', alpha=0.7))) 
-    # adjust text to avoid overlapping boxes
-    iterations = adjust_text(texts,lim=5000)
+#         texts.append(plt.text(emb_x[i], emb_y[i], 
+#                               test_to_add,fontdict={'size': 16}, 
+#                               bbox=dict(boxstyle='round', fc='white', ec='w', alpha=0.7))) 
+#     # adjust text to avoid overlapping boxes
+#     iterations = adjust_text(texts,lim=5000)
     
-    ax.legend( loc="upper right", title="Datasets")
-    fig.savefig(path_fig + "-content_tsne.pdf", bbox_inches='tight', dpi=300)
-    fig.savefig(path_fig + "-content_tsne.png", bbox_inches='tight', dpi=300)
-    fig.savefig(path_fig + "-content_tsne.eps", bbox_inches='tight', dpi=600)
-    return plt
+#     ax.legend( loc="upper right", title="Datasets")
+#     fig.savefig(path_fig + "-content_tsne.pdf", bbox_inches='tight', dpi=300)
+#     fig.savefig(path_fig + "-content_tsne.png", bbox_inches='tight', dpi=300)
+#     fig.savefig(path_fig + "-content_tsne.eps", bbox_inches='tight', dpi=600)
+#     return plt
 
 
 if __name__ == "__main__":
@@ -178,7 +178,8 @@ if __name__ == "__main__":
     components = 20
     file_suffix = 'all'
     embedding_path = "embeddings/cc.de.300.bin"
-    fname = strftime("%y%m%d", gmtime()) + "-" + "-".join(dataset_names).replace(" ","_")
+    now = datetime.now()
+    fname = now.strftime("%Y-%m-%d_%H-%M-%S")
     result_file = 'tools/cluwords/cluwords/multi_embedding/results/{}/matrix_w.txt'.format(fname)
     cluword_path = 'tools/cluwords/cluwords/multi_embedding/results/{}/result_topic_10.txt'.format(fname)
     sample_path = ''+fname
@@ -282,10 +283,69 @@ if __name__ == "__main__":
     
     #Read in the cluwords for the topics to display
     cluword_labels = get_cluword_labels(cluword_path, components)
-    plot_tsne_embedding_annotate(tsne_embedded, 
-                                 labels, 
-                                 label_text, 
-                                 cluword_labels,
-                                 separators,
-                                 file_suffix,
-                                 components=components).show()
+    
+    now = datetime.now()
+    results_dir = "./results/"+"topic_model_hate_only_"+now.strftime("%Y-%m-%d_%H-%M-%S")+"/"
+    if os.path.exists(results_dir) == False:
+        os.makedirs(results_dir)
+    # path for storing image
+    path_fig = results_dir
+    #path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(label_text).replace(" ","_") + file_suffix
+    #colors
+    palette = "colorblind"
+    colors = sns.color_palette(palette, len(label_text))
+    sns.set_palette(palette, len(label_text))
+    sns.set_style("dark")
+    # set font
+
+    fig = plt.figure(figsize=(24,18))
+    ax = fig.add_subplot(111)
+    
+    emb_x = tsne_embedded[:,0]
+    emb_y = tsne_embedded[:,1]
+    
+    markers = ['x','^','*','+','p','>','2','v','H','<','>']
+    sizes = [60,90,200,60,60,60,60,60,60,60,60]
+    legend_elemens = []
+    
+    previous_end = 0
+    for i,subset in enumerate(separators):
+        start = previous_end
+        end = start + subset
+        previous_end = end
+        
+        s_sizes = [sizes[i]] * subset
+        int_labels = labels[start:end]
+        scatter = ax.scatter(x=emb_x[start:end], y=emb_y[start:end], 
+                             s=s_sizes, c=[colors[i]], edgecolors='w', 
+                             marker=markers[i],label=label_text[i])
+    
+    # topic centers
+    s_sizes = [100] * components
+    int_labels = labels[-1*components:]
+    scatter2 = ax.scatter(x=emb_x[-1*components:], y=emb_y[-1*components:], 
+                         s=s_sizes, c="black", edgecolors='w', marker='o', cmap=cm.jet,label="Topic center")
+    
+    texts = []
+    label_counter = 0
+    for i, text in zip(range(len(labels)-components,len(labels)), cluword_labels):
+        label_counter += 1
+        test_to_add = nth_repl(text," ","\n",15)
+        test_to_add = nth_repl(text," ","\n",12)
+        test_to_add = nth_repl(text," ","\n",9)
+        test_to_add = nth_repl(test_to_add," ","\n",6)
+        test_to_add = nth_repl(test_to_add," ","\n",3)
+        test_to_add = f"(T{label_counter}) {test_to_add}"
+
+        texts.append(plt.text(emb_x[i], emb_y[i], 
+                              test_to_add,fontdict={'size': 16}, 
+                              bbox=dict(boxstyle='round', fc='white', ec='w', alpha=0.7))) 
+    # adjust text to avoid overlapping boxes
+    iterations = adjust_text(texts,lim=5000)
+    
+    ax.legend( loc="upper right", title="Datasets")
+    fig.savefig(path_fig + "content_tsne.pdf", bbox_inches='tight', dpi=300)
+    fig.savefig(path_fig + "content_tsne.png", bbox_inches='tight', dpi=300)
+    fig.savefig(path_fig + "content_tsne.eps", bbox_inches='tight', dpi=600)
+
+    plt.show()
