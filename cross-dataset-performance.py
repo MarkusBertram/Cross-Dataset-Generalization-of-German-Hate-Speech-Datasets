@@ -12,7 +12,7 @@ import seaborn as sns
 import re
 import unicodedata
 import yaml
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments, AdamW, get_scheduler
 from utils.utils import fetch_import_module
 from pipelines import utils_pipeline
 from time import gmtime, strftime
@@ -20,6 +20,7 @@ from tqdm import tqdm
 from datasets import concatenate_datasets,Dataset,ClassLabel
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import sys
+from torch.utils.data import Dataset, TensorDataset, DataLoader
 import subprocess
 from accelerate import Accelerator
 os.environ['MKL_THREADING_LAYER'] = 'GNU'
@@ -74,7 +75,18 @@ def f(x, model, tokenizer):
     return val
 
 def tokenize(df, tokenizer):
-    BatchEncoding = tokenizer(df["text"].values.tolist(), padding=True, truncation=True, max_length=512)
+
+    for sentence in df["text"]:
+        
+        BatchEncoding = tokenizer.encode_plus(
+                sentence,
+                add_special_tokens = True,
+                padding = 'max_length',
+                max_length = tokenizer.model_max_length,
+                truncation = True,
+                return_attention_mask = True,
+                return_tensors = 'pt'
+            )
 
     tokenized_df = pd.DataFrame(data = {"input_ids" : BatchEncoding["input_ids"], "token_type_ids" : BatchEncoding["token_type_ids"], "attention_mask" : BatchEncoding["attention_mask"], "label": df["label"]})
 
@@ -94,6 +106,44 @@ def compute_metrics(pred):
         'precision': precision,
         'recall': recall
     }
+
+def transform_to_dataset(dataset, tokenizer):
+    input_ids = []
+    attention_masks = []
+    targets = []
+
+    # get sentence vector
+    for index, row in dataset.iterrows():
+        #text = preprocessing_multilingual.clean_text(sentence['text'])
+        # tokenize text
+        encoded_dict = tokenizer.encode_plus(
+            row["text"],
+            add_special_tokens = True,
+            padding = 'max_length',
+            max_length = tokenizer.model_max_length,
+            truncation = True,
+            return_attention_mask = True,
+            return_tensors = 'pt'
+        )
+        input_ids.append(encoded_dict['input_ids'])
+        attention_masks.append(encoded_dict['attention_mask'])
+        
+        #label = dset_name + "_" + str(sentence['label'])
+        targets.append(row["label"])
+
+    # le = preprocessing.LabelEncoder()
+    # targets = le.fit_transform(labels)
+    targets = torch.as_tensor(targets)
+
+    # Convert the lists into tensors.
+    input_ids = torch.cat(input_ids, dim=0)
+    attention_masks = torch.cat(attention_masks, dim=0)
+    
+    stacked_input = torch.stack((input_ids, attention_masks), dim=1)
+    
+    tensordataset = TensorDataset(stacked_input, targets)
+
+    return tensordataset
 
 def plotMatrix(eval_metrics,labels,selected_type='f1', type_name=""):
     path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(labels).replace(" ","_")
@@ -159,11 +209,10 @@ if __name__ == '__main__':
     path = './tmp2/'
     number_of_tokens = 50
     batch = 10
-    epochs = 3
+    num_epochs = 3
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name, return_dict=True)
-
+    device = accelerator.device
     # get paths and create folders
     path_models,path_datasets,path_output,path_logs =getPaths(path)
 
@@ -198,8 +247,8 @@ if __name__ == '__main__':
         ds_dict_2 = {}
         # split data sets and tokenize
         ## train/test split
-        tokenized_dataset = tokenize(dataset, tokenizer)
-        ds_dict['train'], ds_dict['test'] = train_test_split(tokenized_dataset, test_size=size_test,train_size=size_train,shuffle=True)
+        #tokenized_dataset = tokenize(dataset, tokenizer)
+        ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
         
         #ds_dict_1['train'], ds_dict_1['test'] = train_test_split(tokenized_dataset, test_size=size_test,train_size=size_train,shuffle=True)
         #ds_dict_1['train'],  = tokenize(ds_dict_1['train'], tokenizer), tokenize(ds_dict_1['test'], tokenizer)
@@ -221,10 +270,35 @@ if __name__ == '__main__':
     # train and evaluate classifiers
     for i in tqdm(range(len(data_sets))):
         path_model = "{}{}_{}_model".format(path_models,str(i),dataset_names[i])
-        train_dataset = training_sets[i]
+        train_dataset = transform_to_dataset(training_sets[i], tokenizer)
         # get train, test dataloader
-        print(train_dataset)
-        sys.exit(0)
+        train_dataloader = DataLoader(train_dataset, batch_size = 10, shuffle = False)
+        model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+        optimizer = AdamW(model.parameters(), lr=3e-5)
+        model, train_dataloader, optimizer = accelerator.prepare(model, train_dataloader, optimizer)
+        num_training_steps = num_epochs * len(train_dataloader)
+        lr_scheduler = get_scheduler(
+                "linear",
+                optimizer=optimizer,
+                num_warmup_steps=0,
+                num_training_steps=num_training_steps
+            )
+
+        for epoch in range(num_epochs):
+            for x, y in train_dataloader:
+                input_id = x[:, 0].to(device)
+                attention_masks = x[:, 1].to(device)
+                #outputs = model(**batch)
+                outputs = model(input_ids = input_id, attention_mask = attention_masks, labels = y)
+                print(outputs)
+                loss = outputs.loss
+                print(loss)
+                
+                accelerator.backward(loss)
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
+                sys.exit(0)
         # # define trainer
         # training_args = TrainingArguments(
         #     output_dir=path_model,          # output directory
