@@ -198,9 +198,9 @@ if __name__ == '__main__':
         ds_dict_2 = {}
         # split data sets and tokenize
         ## train/test split
-        #tokenized_dataset = tokenize(dataset, tokenizer)
-        ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
-
+        tokenized_dataset = tokenize(dataset, tokenizer)
+        ds_dict['train'], ds_dict['test'] = train_test_split(tokenized_dataset, test_size=size_test,train_size=size_train,shuffle=True)
+        
         #ds_dict_1['train'], ds_dict_1['test'] = train_test_split(tokenized_dataset, test_size=size_test,train_size=size_train,shuffle=True)
         #ds_dict_1['train'],  = tokenize(ds_dict_1['train'], tokenizer), tokenize(ds_dict_1['test'], tokenizer)
         #ds_dict_2['train'], ds_dict_2['test'] = train_test_split(ds_dict_1['train'],test_size=0.2,shuffle=True)
@@ -222,24 +222,25 @@ if __name__ == '__main__':
     for i in tqdm(range(len(data_sets))):
         path_model = "{}{}_{}_model".format(path_models,str(i),dataset_names[i])
         train_dataset = training_sets[i]
+        # get train, test dataloader
         print(train_dataset)
         sys.exit(0)
-        # define trainer
-        training_args = TrainingArguments(
-            output_dir=path_model,          # output directory
-            num_train_epochs=epochs,              # total # of training epochs
-            per_device_train_batch_size=batch,  # batch size per device during training
-            warmup_steps=500,                # number of warmup steps for learning rate scheduler
-            weight_decay=0.01,               # strength of weight decay
-        )
+        # # define trainer
+        # training_args = TrainingArguments(
+        #     output_dir=path_model,          # output directory
+        #     num_train_epochs=epochs,              # total # of training epochs
+        #     per_device_train_batch_size=batch,  # batch size per device during training
+        #     warmup_steps=500,                # number of warmup steps for learning rate scheduler
+        #     weight_decay=0.01,               # strength of weight decay
+        # )
 
-        trainer = Trainer(
-        model=model,                         # the instantiated 🤗 Transformers model to be trained
-        args=training_args,                  # training arguments, defined above
-        train_dataset=train_dataset,         # training dataset
-        tokenizer = tokenizer,
-        compute_metrics=compute_metrics
-        )
+        # trainer = Trainer(
+        # model=model,                         # the instantiated 🤗 Transformers model to be trained
+        # args=training_args,                  # training arguments, defined above
+        # train_dataset=train_dataset,         # training dataset
+        # tokenizer = tokenizer,
+        # compute_metrics=compute_metrics
+        # )
 
         # train model
         trainer.train()
