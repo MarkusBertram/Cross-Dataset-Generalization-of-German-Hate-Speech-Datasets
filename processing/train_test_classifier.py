@@ -127,7 +127,7 @@ def train_model(i,model_name, number_tokens,batch,training_sets, validation_sets
     cuda.close()
     
 def main():
-    
+    print("Otto2")
     parser = argparse.ArgumentParser(description='List the content of a folder')
 
     parser.add_argument('-i','--counter', type=int,
@@ -190,5 +190,5 @@ def main():
     
     
 if __name__ == "__main__":
-    
+    print("Otto1")
     main()
