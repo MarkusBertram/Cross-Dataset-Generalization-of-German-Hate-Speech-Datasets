@@ -8,6 +8,7 @@ import time
 import torch
 import pickle
 import matplotlib.pyplot as plt
+from pathlib import Path
 import seaborn as sns
 import re
 import unicodedata
@@ -44,14 +45,14 @@ def cleanTweets(dataset):
     return dataset
 
 def getPaths(root_path): 
-    path_models = root_path+'models/'
-    path_datasets =root_path+'datasets/'
-    path_output = root_path+'outputs/'
-    path_logs = root_path+'logs/'
-    Path(path_models).mkdir(parents=True, exist_ok=True)
-    Path(path_datasets).mkdir(parents=True, exist_ok=True)
-    Path(path_output).mkdir(parents=True, exist_ok=True)
-    Path(path_logs).mkdir(parents=True, exist_ok=True)
+    path_models = Path(root_path+'models/')
+    path_datasets =Path(root_path+'datasets/')
+    path_output = Path(root_path+'outputs/')
+    path_logs = Path(root_path+'logs/')
+    path_models.mkdir(parents=True, exist_ok=True)
+    path_datasets.mkdir(parents=True, exist_ok=True)
+    path_output.mkdir(parents=True, exist_ok=True)
+    path_logs.mkdir(parents=True, exist_ok=True)
     return path_models,path_datasets,path_output,path_logs
 
 def prepareData(data):
@@ -63,7 +64,8 @@ def convertLabelsToInt(dataset):
         "neutral": 0,
         "abusive": 1
     }
-    dataset['label'] = dataset["label"].map(label_to_int)
+    #dataset['label'] = dataset["label"].map(label_to_int)
+    dataset = dataset.map(lambda convertLabels: {"label": label_to_int[convertLabels["label"]]})
     return dataset
 
 # define a prediction function
@@ -74,23 +76,23 @@ def f(x, model, tokenizer):
     val = sp.special.logit(scores[:,1]) # use one vs rest logit units
     return val
 
-def tokenize(df, tokenizer):
+# def tokenize(df, tokenizer):
 
-    for sentence in df["text"]:
+#     for sentence in df["text"]:
         
-        BatchEncoding = tokenizer.encode_plus(
-                sentence,
-                add_special_tokens = True,
-                padding = 'max_length',
-                max_length = tokenizer.model_max_length,
-                truncation = True,
-                return_attention_mask = True,
-                return_tensors = 'pt'
-            )
+#         BatchEncoding = tokenizer.encode_plus(
+#                 sentence,
+#                 add_special_tokens = True,
+#                 padding = 'max_length',
+#                 max_length = tokenizer.model_max_length,
+#                 truncation = True,
+#                 return_attention_mask = True,
+#                 return_tensors = 'pt'
+#             )
 
-    tokenized_df = pd.DataFrame(data = {"input_ids" : BatchEncoding["input_ids"], "token_type_ids" : BatchEncoding["token_type_ids"], "attention_mask" : BatchEncoding["attention_mask"], "label": df["label"]})
+#     tokenized_df = pd.DataFrame(data = {"input_ids" : BatchEncoding["input_ids"], "token_type_ids" : BatchEncoding["token_type_ids"], "attention_mask" : BatchEncoding["attention_mask"], "label": df["label"]})
 
-    return tokenized_df
+#     return tokenized_df
 # # tokenize datasets
 # def tokenize(batch, tokenizer=tokenizer):
 #     return tokenizer(batch, padding=True, truncation=True, max_length=512)
@@ -193,6 +195,9 @@ def plotMatrix(eval_metrics,labels,selected_type='f1', type_name=""):
     fig.savefig(path_fig + "-classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
     fig.savefig(path_fig + "-classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
 
+# tokenize datasets
+def tokenize(batch):
+    return tokenizer(batch['text'], padding=True, truncation=True, max_length=512)
 
 if __name__ == '__main__':
     config = yaml.safe_load(open("settings/config.yaml"))
@@ -202,6 +207,8 @@ if __name__ == '__main__':
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
     
+    
+
     SEED =321
     SPLIT_RATIO = 0.15
     COMBINED_RATIO = 0.5
@@ -209,7 +216,7 @@ if __name__ == '__main__':
     path = './tmp2/'
     number_of_tokens = 50
     batch = 10
-    num_epochs = 3
+    num_epochs = 1
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
@@ -248,79 +255,80 @@ if __name__ == '__main__':
         # split data sets and tokenize
         ## train/test split
         #tokenized_dataset = tokenize(dataset, tokenizer)
-        ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
-        
-        #ds_dict_1['train'], ds_dict_1['test'] = train_test_split(tokenized_dataset, test_size=size_test,train_size=size_train,shuffle=True)
-        #ds_dict_1['train'],  = tokenize(ds_dict_1['train'], tokenizer), tokenize(ds_dict_1['test'], tokenizer)
-        #ds_dict_2['train'], ds_dict_2['test'] = train_test_split(ds_dict_1['train'],test_size=0.2,shuffle=True)
+        #ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
+        ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train,shuffle=True,seed=SEED)
         
         training_sets.append(ds_dict['train'])
         #validation_sets.append(ds_dict_2['test'])
         test_sets.append(ds_dict['test'])
 
         # combined test set
-        ds_dict_2['train'], ds_dict_2['test'] = train_test_split(ds_dict['test'],train_size=COMBINED_RATIO,shuffle=True)
-        
+        #ds_dict_2['train'], ds_dict_2['test'] = train_test_split(ds_dict['test'],train_size=COMBINED_RATIO,shuffle=True)
+        ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,shuffle=True,seed=SEED)
         if combined_test_set is None:
             combined_test_set = ds_dict_2['train']
         else:
-            combined_test_set = pd.concat([combined_test_set,ds_dict_2['train']])
+            #combined_test_set = pd.concat([combined_test_set,ds_dict_2['train']])
+            combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
     test_sets.append(combined_test_set)
+
 
     # train and evaluate classifiers
     for i in tqdm(range(len(data_sets))):
         path_model = "{}{}_{}_model".format(path_models,str(i),dataset_names[i])
-        train_dataset = transform_to_dataset(training_sets[i], tokenizer)
+        #train_dataset = transform_to_dataset(training_sets[i], tokenizer)
         # get train, test dataloader
-        train_dataloader = DataLoader(train_dataset, batch_size = 10, shuffle = False)
+        #train_dataloader = DataLoader(train_dataset, batch_size = 5, shuffle = False)
         model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
-        optimizer = AdamW(model.parameters(), lr=3e-5)
-        model, train_dataloader, optimizer = accelerator.prepare(model, train_dataloader, optimizer)
-        num_training_steps = num_epochs * len(train_dataloader)
-        lr_scheduler = get_scheduler(
-                "linear",
-                optimizer=optimizer,
-                num_warmup_steps=0,
-                num_training_steps=num_training_steps
-            )
+        #optimizer = AdamW(model.parameters(), lr=3e-5)
+        #model, train_dataloader, optimizer = accelerator.prepare(model, train_dataloader, optimizer)
+        train_dataset = training_sets[i].map(tokenize, batched=True, batch_size=len(training_sets[i]))
+        train_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
+        # define trainer
+        training_args = TrainingArguments(
+            output_dir=path_model,          # output directory
+            num_train_epochs=num_epochs,              # total # of training epochs
+            per_device_train_batch_size=batch,  # batch size per device during training
+            per_device_eval_batch_size=64,   # batch size for evaluation
+            #warmup_steps=500,                # number of warmup steps for learning rate scheduler
+            weight_decay=0.01,               # strength of weight decay
+            logging_dir=path_logs
+        )
 
-        for epoch in range(num_epochs):
-            for x, y in train_dataloader:
-                input_id = x[:, 0].to(device)
-                attention_masks = x[:, 1].to(device)
-                #outputs = model(**batch)
-                outputs = model(input_ids = input_id, attention_mask = attention_masks, labels = y)
-                print(outputs)
-                loss = outputs.loss
-                print(loss)
-                
-                accelerator.backward(loss)
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad()
-                sys.exit(0)
-        # # define trainer
-        # training_args = TrainingArguments(
-        #     output_dir=path_model,          # output directory
-        #     num_train_epochs=epochs,              # total # of training epochs
-        #     per_device_train_batch_size=batch,  # batch size per device during training
-        #     warmup_steps=500,                # number of warmup steps for learning rate scheduler
-        #     weight_decay=0.01,               # strength of weight decay
-        # )
-
-        # trainer = Trainer(
-        # model=model,                         # the instantiated 🤗 Transformers model to be trained
-        # args=training_args,                  # training arguments, defined above
-        # train_dataset=train_dataset,         # training dataset
-        # tokenizer = tokenizer,
-        # compute_metrics=compute_metrics
-        # )
-
+        trainer = Trainer(
+            model=model,                         # the instantiated 🤗 Transformers model to be trained
+            args=training_args,                  # training arguments, defined above
+            train_dataset=train_dataset,         # training dataset
+            compute_metrics=compute_metrics,
+            #tokenizer = tokenizer
+        )
+        
         # train model
         trainer.train()
+        # num_training_steps = num_epochs * len(train_dataloader)
+        # lr_scheduler = get_scheduler(
+        #         "linear",
+        #         optimizer=optimizer,
+        #         num_warmup_steps=0,
+        #         num_training_steps=num_training_steps
+        #     )
+        # model.train()
+        # for epoch in range(num_epochs):
+        #     for x, y in train_dataloader:
+        #         #input_id = x[:, 0].to(device)
+        #         #attention_masks = x[:, 1].to(device)
+        #         #outputs = model(**batch)
+        #         #outputs = model(input_ids = input_id, attention_mask = attention_masks, labels = y)
+        #         outputs = model(input_ids = x[:, 0], attention_mask = x[:, 1], labels = y)
+        #         loss = outputs.loss
+                
+        #         accelerator.backward(loss)
+        #         optimizer.step()
+        #         lr_scheduler.step()
+        #         optimizer.zero_grad()        
         
         # evaluate model
-        
+        accuracy = []
         f1 = []
         precision = []
         recall = []
@@ -328,27 +336,38 @@ if __name__ == '__main__':
             
         for j in range(len(test_sets)):
             # prepare evluation test set
+            # eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(train_dataset))
+            # eval_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
             eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(train_dataset))
             eval_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
             
             # predict
             results_it = trainer.predict(eval_dataset) 
-            
-            f1.append(results_it.metrics['eval_f1'])
-            precision.append(results_it.metrics['eval_precision'])
-            recall.append(results_it.metrics['eval_recall'])
+            print(results_it)
+            accuracy.append(results_it.metrics["test_accuracy"])
+            f1.append(results_it.metrics['test_f1'])
+            precision.append(results_it.metrics['test_precision'])
+            recall.append(results_it.metrics['test_recall'])
             #predictions.append(results)
+
             
         results = {}
         results['f1'] = f1
         results['precision'] = precision
         results['recall'] = recall
+        results['accuracy'] = accuracy
         #results['predictions'] = predictions
             
         # save model
         trainer.save_model(path_model)
 
-        pickle.dump(results, open(path_output, "wb"))
+        # with path_output.open('wb') as fp:
+        #     pickle.dump(results, fp)
+        pickle.dump(results, open("{}{}_{}.pkl".format(path_output,str(i),dataset_names[i]), "wb"))
+
+        # clear GPU memory
+        del model, trainer
+        gc.collect()
 
     evaluation_results = []
     for i in range(len(data_sets)):
@@ -362,5 +381,7 @@ if __name__ == '__main__':
     plotMatrix(evaluation_results,dataset_names,selected_type="precision")
     print("Recall")
     plotMatrix(evaluation_results,dataset_names,selected_type="recall")
+    print("Accuracy")
+    plotMatrix(evaluation_results,dataset_names,selected_type="accuracy")
 
     

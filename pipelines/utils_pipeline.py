@@ -14,9 +14,9 @@ def filter_columns(dataset, column_names=['text','label']):
 
 def convertListToDataset(datset):
     df = pd.DataFrame(datset)
-    # labels = list(set(df['label'].tolist()))
-    # ds = Dataset.from_pandas(df) 
-    return df
+    #labels = list(set(df['label'].tolist()))
+    ds = Dataset.from_pandas(df) 
+    return ds
 
 def get_huggingface_dataset_format(data):
     return convertListToDataset(filter_columns(data))
