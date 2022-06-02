@@ -181,7 +181,7 @@ def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""
 
     cmap = "Blues"
     center = matrix[0][0]
-
+    sns.set(font_scale=0.85)
     hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
     hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
     hm1.set_xticklabels(labels, rotation=90, ha='center')
@@ -191,7 +191,7 @@ def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""
     ax1.xaxis.tick_top()
     ax1.tick_params(length=0)
     ax1.set(xlabel='Test sets', ylabel='Classifiers')
-    ax1.xaxis.set_label_coords(0.5, 1.30)
+    ax1.xaxis.set_label_coords(0.5, 1.4)
 
     ax3.set(xlabel='Combined\n test set', ylabel='')
     #ax3.xaxis.tick_top()
