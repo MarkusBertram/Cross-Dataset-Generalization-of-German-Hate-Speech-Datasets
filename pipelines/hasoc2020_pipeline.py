@@ -33,3 +33,13 @@ def get_labeled_data():
     #full_data["unlabeled"] = read_data
 
     return dset_list
+
+def get_data_binary():
+    binary_data = get_labeled_data()
+    for entry in binary_data:
+        del entry["fine-grained_label"]
+        if entry["label"] == "HOF":
+            entry["label"] = "abusive"
+        else:
+            entry["label"] = "neutral"
+    return binary_data
