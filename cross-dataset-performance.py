@@ -148,11 +148,11 @@ def transform_to_dataset(dataset, tokenizer):
 
     return tensordataset
 
-def plotMatrix(eval_metrics,labels,selected_type='f1', type_name=""):
-    now = datetime.now()
-    results_dir = "./results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
-    if os.path.exists(results_dir) == False:
-        os.makedirs(results_dir)
+def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""):
+    # now = datetime.now()
+    # results_dir = "./results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+    # if os.path.exists(results_dir) == False:
+    #     os.makedirs(results_dir)
     #path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(labels).replace(" ","_")
     path_fig = results_dir
     sns.set(font_scale=1.0)
@@ -197,8 +197,8 @@ def plotMatrix(eval_metrics,labels,selected_type='f1', type_name=""):
     #ax3.xaxis.tick_top()
     ax3.xaxis.set_label_coords(0.5, 1.13)
     
-    fig.savefig(path_fig + "-classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
-    fig.savefig(path_fig + "-classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
+    fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
+    fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
 
 # tokenize datasets
 def tokenize(batch):
@@ -212,8 +212,6 @@ if __name__ == '__main__':
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
     
-    
-
     SEED =321
     SPLIT_RATIO = 0.15
     COMBINED_RATIO = 0.5
@@ -221,7 +219,7 @@ if __name__ == '__main__':
     path = './tmp2/'
     number_of_tokens = 50
     batch = 10
-    num_epochs = 1
+    num_epochs = 3
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
@@ -379,14 +377,17 @@ if __name__ == '__main__':
         file = "{}{}_{}.pkl".format(path_output,str(i),dataset_names[i])
         single_result = pickle.load(open(file, "rb"))
         evaluation_results.append(single_result)
-    
+    now = datetime.now()
+    results_dir = "./results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+    if os.path.exists(results_dir) == False:
+        os.makedirs(results_dir)
     print("Macro F1")
-    plotMatrix(evaluation_results,dataset_names,selected_type="f1")
+    plotMatrix(evaluation_results,dataset_names, results_dir,selected_type="f1")
     print("Precision")
-    plotMatrix(evaluation_results,dataset_names,selected_type="precision")
+    plotMatrix(evaluation_results,dataset_names, results_dir,selected_type="precision")
     print("Recall")
-    plotMatrix(evaluation_results,dataset_names,selected_type="recall")
+    plotMatrix(evaluation_results,dataset_names, results_dir,selected_type="recall")
     print("Accuracy")
-    plotMatrix(evaluation_results,dataset_names,selected_type="accuracy")
+    plotMatrix(evaluation_results,dataset_names, results_dir,selected_type="accuracy")
 
     
