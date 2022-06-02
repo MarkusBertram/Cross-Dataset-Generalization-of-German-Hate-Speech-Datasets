@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from datetime import datetime
 import datasets
 import os
 import scipy as sp
@@ -148,8 +149,12 @@ def transform_to_dataset(dataset, tokenizer):
     return tensordataset
 
 def plotMatrix(eval_metrics,labels,selected_type='f1', type_name=""):
-    path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(labels).replace(" ","_")
-
+    now = datetime.now()
+    results_dir = "./results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+    if os.path.exists(results_dir) == False:
+        os.makedirs(results_dir)
+    #path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(labels).replace(" ","_")
+    path_fig = results_dir
     sns.set(font_scale=1.0)
     matrix = np.empty([len(eval_metrics),len(eval_metrics)])
     for i in range(len(eval_metrics)):

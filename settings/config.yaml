@@ -15,21 +15,21 @@ datasets:
   #     - prejudice
   #     - criticism
   #     - counter
-  # hasoc2019:
-  #   unlabeled-dataset: False
-  #   non-hate-label: none
-  # hasoc2020:
-  #   unlabeled-dataset: False
-  #   non-hate-label: none
-  # ihs_data:
-  #   unlabeled-dataset: True
-  #   non-hate-label: none
-  # IWG_hatespeech_public:
-  #   unlabeled-dataset: False
-  #   non-hate-label: none
-  # telegram:
-  #   unlabeled-dataset: True
-  #   non-hate-label: none 
+  hasoc2019:
+    unlabeled-dataset: False
+    non-hate-label: none
+  hasoc2020:
+    unlabeled-dataset: False
+    non-hate-label: none
+  ihs_data:
+    unlabeled-dataset: True
+    non-hate-label: none
+  IWG_hatespeech_public:
+    unlabeled-dataset: False
+    non-hate-label: none
+  telegram:
+    unlabeled-dataset: True
+    non-hate-label: none 
 models:
   single-source unsupervised:
     - ADDA
