@@ -219,7 +219,7 @@ if __name__ == '__main__':
     path = './tmp2/'
     number_of_tokens = 50
     batch = 10
-    num_epochs = 3
+    num_epochs = 2
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
@@ -275,10 +275,14 @@ if __name__ == '__main__':
             combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
     test_sets.append(combined_test_set)
 
+    path_combined_test = path_datasets / 'combined_test'
+    Path(path_combined_test).mkdir(parents=True, exist_ok=True)
+    #test_sets.append(path_combined_test)
+    combined_test_set.save_to_disk(path_combined_test)
 
     # train and evaluate classifiers
     for i in tqdm(range(len(data_sets))):
-        path_model = "{}{}_{}_model".format(path_models,str(i),dataset_names[i])
+        path_model = path_models / "{}_{}_model".format(str(i),dataset_names[i])
         #train_dataset = transform_to_dataset(training_sets[i], tokenizer)
         # get train, test dataloader
         #train_dataloader = DataLoader(train_dataset, batch_size = 5, shuffle = False)
