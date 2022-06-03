@@ -65,6 +65,7 @@ def shap_explanations(d_names):
     model_name= 'deepset/gbert-base'
     global dataset_names
     global tokenizer
+    global model
     dataset_names = d_names
     # tokenizer
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
