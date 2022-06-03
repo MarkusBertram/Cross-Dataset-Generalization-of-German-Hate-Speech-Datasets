@@ -52,18 +52,19 @@ def predict(x):
         val.append(softmaxed[0][1])
     return np.array(val)
 
-def calculateError(x):
+def calculateError(x, dataset_names):
     error = 0
     for dataset in dataset_names:
         if x['Labels'] != x[dataset]:
             error += 1
     return error
 
-def shap_explanations(dataset_names):
+def shap_explanations(d_names):
     path_models = Path('./tmp2/models/')
     path_combined_test_set = Path('./tmp2/datasets/combined_test')
     model_name= 'deepset/gbert-base'
-    dataset_names = dataset_names
+    global dataset_names
+    dataset_names = d_names
     # tokenizer
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
 
@@ -95,7 +96,7 @@ def shap_explanations(dataset_names):
                 
         df[dataset_name] = predictions
 
-    df['Error'] = df.apply(lambda x: calculateError(x), axis=1)
+    df['Error'] = df.apply(lambda x: calculateError(x, dataset_names), axis=1)
 
     number_of_error = 2
     selected_test_data = []
