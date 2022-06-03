@@ -59,14 +59,11 @@ def calculateError(x):
             error += 1
     return error
 
-if __name__ == '__main__':
-    config = yaml.safe_load(open("settings/config.yaml"))
-    dataset_names = list(config['datasets'].keys())
-
+def shap_explanations(dataset_names):
     path_models = Path('./tmp2/models/')
     path_combined_test_set = Path('./tmp2/datasets/combined_test')
     model_name= 'deepset/gbert-base'
-
+    dataset_names = dataset_names
     # tokenizer
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
 
@@ -123,22 +120,4 @@ if __name__ == '__main__':
         
         shap_values_of_models.append(shap_values)
 
-    selected_item_to_explain = 35
-
-    global_min = 1
-    global_max = 0
-
-    for i,dataset_name in enumerate(dataset_names):
-        min_val = shap_values_of_models[i].base_values[selected_item_to_explain]
-        max_val = shap_values_of_models[i].base_values[selected_item_to_explain]
-        for elem in shap_values_of_models[i].values[selected_item_to_explain]:
-            if  elem < 0:
-                min_val = min_val + elem
-            else:
-                max_val = max_val + elem
-        global_min = min(min_val,global_min)
-        global_max = max(max_val,global_max)
-
-    for i,dataset_name in enumerate(dataset_names):
-        #print(dataset_name)
-        shap.plots.text(shap_values_of_models[i][selected_item_to_explain],xmin=global_min-0.05,xmax=global_max+0.05)
+    return shap_values_of_models
