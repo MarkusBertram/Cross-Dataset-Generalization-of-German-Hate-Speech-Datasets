@@ -64,6 +64,7 @@ def shap_explanations(d_names):
     path_combined_test_set = Path('./tmp2/datasets/combined_test')
     model_name= 'deepset/gbert-base'
     global dataset_names
+    global tokenizer
     dataset_names = d_names
     # tokenizer
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
