@@ -9,7 +9,7 @@ from gensim import corpora, models, similarities
 from datetime import datetime
 from utils.utils import fetch_import_module
 from nltk.corpus import stopwords
-
+import nltk
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', 1000) 
 sns.set_style("dark", {'axes.grid' : True, 'axes.linewidth':1})
@@ -88,8 +88,7 @@ def get_sim_score(query_i, corpus, labels, dictionary, lsi, index):
 
 if __name__ == "__main__":
     config = yaml.safe_load(open("settings/config.yaml"))
-    # print("\n --- Downloading Stopwords ---")
-    # nltk.download('stopwords')
+    nltk.download('stopwords')
     dataset_names = list(config['datasets'].keys())
     datasets = []
     for dset in dataset_names:
