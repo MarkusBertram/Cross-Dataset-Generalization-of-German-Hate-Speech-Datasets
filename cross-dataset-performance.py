@@ -219,7 +219,7 @@ if __name__ == '__main__':
     path = './tmp2/'
     number_of_tokens = 50
     batch = 10
-    num_epochs = 2
+    num_epochs = 3
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
