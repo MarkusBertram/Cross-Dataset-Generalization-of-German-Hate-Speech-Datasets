@@ -3,7 +3,7 @@ import pickle
 import csv
 from pathlib import Path
 
-data_path = Path(__file__).resolve().parents[1] / 'data' / 'telegram'
+data_path = Path(__file__).resolve().parents[1] / 'data' / 'telegram_gold'
 
 train = data_path / 'annotated_dataset.txt'
 

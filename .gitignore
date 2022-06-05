@@ -24,3 +24,4 @@ document_distribution_220529-germeval2018-germeval2019
 one_hot_topics_220529-germeval2018-germeval2019.npz
 tmp2
 *.xml
+*.bson
