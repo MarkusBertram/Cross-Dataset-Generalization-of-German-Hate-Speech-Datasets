@@ -5,6 +5,9 @@ datasets:
   germeval2019:
     unlabeled-dataset: False
     non-hate-label: OTHER
+  de-reddit-corpus:
+    unlabeled-dataset: True
+    non-hate-label: "False"
   # # Davidson:
   # #   unlabeled-dataset: False
   # #   non-hate-label: neither
