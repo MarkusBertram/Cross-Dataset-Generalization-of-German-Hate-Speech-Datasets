@@ -2,6 +2,7 @@ import bson
 import sys
 from pathlib import Path
 from itertools import islice
+import math
 from collections import Counter
 data_path = Path(__file__).resolve().parents[1] / 'data' / 'telegram_unlabeled'
 
@@ -33,22 +34,25 @@ def get_labeled_data():
                     labels = [d[key]["label"] for key in classifiers if key in d]
                     counter = Counter(map_values(labels))
                     label = counter.most_common()[0][0]
-                    if len(set(labels)) > 2:
-                        print(labels)
-                    if label == "neutral" and count_neutral < 5000:
-                        entry = dict()
-                        entry['text'] = d["text"]
-                        entry['label'] = 'neutral'
-                        dset_list.append(entry)
-                        count_neutral += 1
-                    elif label == "abusive" and count_abusive < 5000:
-                        entry = dict()
-                        entry['text'] = d["text"]
-                        entry['label'] = 'abusive'
-                        dset_list.append(entry)
-                        count_abusive += 1
+                    most_common_count = counter.most_common()[0][1]
+
+                    if most_common_count >= int(len(labels)/2)+1:
+                        if label == "neutral" and count_neutral < 5000:
+                            entry = dict()
+                            entry['text'] = d["text"]
+                            entry['label'] = 'neutral'
+                            dset_list.append(entry)
+                            count_neutral += 1
+                        elif label == "abusive" and count_abusive < 5000:
+                            entry = dict()
+                            entry['text'] = d["text"]
+                            entry['label'] = 'abusive'
+                            dset_list.append(entry)
+                            count_abusive += 1
             if count_neutral == 5000 and count_abusive == 5000:
                 return dset_list
 
 def get_binary_data():
     return get_labeled_data()
+
+get_binary_data()
