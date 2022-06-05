@@ -13,7 +13,6 @@ from pprint import pprint
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import nltk
-
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -49,8 +48,7 @@ from nltk.tokenize import word_tokenize
 from nltk.tokenize import wordpunct_tokenize
 from spacy.tokenizer import Tokenizer
 from spacy.lang.de import German
-nltk.download('punkt')
-nltk.download('stopwords')
+nltk.download('words')
 import fasttext
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', 1000) 

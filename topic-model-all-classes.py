@@ -49,8 +49,7 @@ from nltk.tokenize import word_tokenize
 from nltk.tokenize import wordpunct_tokenize
 from spacy.tokenizer import Tokenizer
 from spacy.lang.de import German
-nltk.download('punkt')
-nltk.download('stopwords')
+nltk.download('words')
 import fasttext
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', 1000) 
