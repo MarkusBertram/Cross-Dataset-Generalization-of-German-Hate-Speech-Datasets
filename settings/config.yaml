@@ -8,16 +8,6 @@ datasets:
   de-reddit-corpus:
     unlabeled-dataset: True
     non-hate-label: "False"
-  # # Davidson:
-  # #   unlabeled-dataset: False
-  # #   non-hate-label: neither
-  # # vidgen:
-  # #   unlabeled-dataset: False
-  # #   non-hate-label:
-  # #     - none
-  # #     - prejudice
-  # #     - criticism
-  # #     - counter
   hasoc2019:
     unlabeled-dataset: False
     non-hate-label: none
@@ -30,7 +20,10 @@ datasets:
   IWG_hatespeech_public:
     unlabeled-dataset: False
     non-hate-label: none
-  telegram:
+  telegram_gold:
+    unlabeled-dataset: False
+    non-hate-label: none 
+  telegram_unlabeled:
     unlabeled-dataset: True
     non-hate-label: none 
 models:
