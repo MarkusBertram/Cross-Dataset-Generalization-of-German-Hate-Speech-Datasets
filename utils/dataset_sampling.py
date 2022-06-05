@@ -5,7 +5,7 @@ import re
 import random
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-
+import sys
 """
 Helper methods for sampling from different data sets
 """
@@ -38,6 +38,8 @@ def sort_tweets_and_labels(tweets, labels):
 
 # uniformly samples from all distinct classes to generate n total samples
 def sample_tweets(tweets, labels, n=2000, exclude_labels=set(), on_distribution=False):
+    if len(tweets) < n:
+        n = len(tweets)
     if on_distribution:
         total_tweets = list(zip(tweets, labels))
         samples = random.sample(total_tweets, n)
