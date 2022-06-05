@@ -16,7 +16,6 @@ sns.set_style("dark", {'axes.grid' : True, 'axes.linewidth':1})
 
 # Cleaning up raw input text
 def filter_corpus(corpus_input):
-    stop_words = set(stopwords.words('german'))
     filtered_corpus = [
                 [token for token in document.lower().split() if token not in stop_words]
                 for document in corpus_input
@@ -88,7 +87,9 @@ def get_sim_score(query_i, corpus, labels, dictionary, lsi, index):
 
 if __name__ == "__main__":
     config = yaml.safe_load(open("settings/config.yaml"))
-    nltk.download('stopwords')
+    global stop_words
+    with open("german_stop_words.txt", 'r', encoding = 'utf8') as f:
+        stop_words = f.read().splitlines()
     dataset_names = list(config['datasets'].keys())
     datasets = []
     for dset in dataset_names:
