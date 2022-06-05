@@ -31,23 +31,3 @@ def get_data_binary():
         else:
             entry["label"] = "abusive"
     return binary_data
-
-# def get_data_binary():
-#     dset_list = list()
-#     with open(train, 'r', encoding="utf8") as file:
-#         #reader = csv.reader(file, delimiter='\t')
-#         reader=(line for line in csv.reader(file, delimiter = "\t", dialect='excel'))
-#         for row in reader:
-#             entry = dict()
-#             entry['text'] = row[-1]
-#             try:
-#                 if int(row[-2]) == 0:
-#                     entry['label'] = 'abusive'
-#                 if int(row[-2]) == 1:
-#                     entry['label'] = 'abusive'
-#                 if int(row[-2]) == 2:
-#                     entry['label'] = 'neutral'
-#             except:
-#                 entry['label'] = row[-2]
-#             dset_list.append(entry)
-#     return dset_list

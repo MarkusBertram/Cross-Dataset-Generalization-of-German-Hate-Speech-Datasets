@@ -52,7 +52,5 @@ def get_labeled_data():
             if count_neutral == 5000 and count_abusive == 5000:
                 return dset_list
 
-def get_binary_data():
+def get_data_binary():
     return get_labeled_data()
-
-get_binary_data()

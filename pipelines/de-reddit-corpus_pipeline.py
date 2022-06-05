@@ -28,7 +28,7 @@ def get_labeled_data():
 
     return dset_list
 
-def get_binary_data():
+def get_data_binary():
     dset_list = []
     
     count_false = 0
