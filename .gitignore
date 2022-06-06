@@ -25,3 +25,6 @@ one_hot_topics_220529-germeval2018-germeval2019.npz
 tmp2
 *.xml
 *.bson
+language_detection.py
+language_detection.py
+german_subredditcorpus.json

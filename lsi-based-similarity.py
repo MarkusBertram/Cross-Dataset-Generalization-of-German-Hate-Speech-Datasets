@@ -99,9 +99,9 @@ if __name__ == "__main__":
 
     print("\n --- Calculating LSI-based Intra-dataset class similarity... ---")
     title = ""
-    rows = 5
-    cols = 2
-    width = 12
+    rows = 3
+    cols = 3
+    width = 18
     height = 6
     sync_scaling=False
     cmap = "Blues"
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     # path for storing image
-    path_fig = results_dir + "-".join(dataset_names).replace(" ","_")
+    path_fig = results_dir
     
     fig2 = plt.figure(constrained_layout=True,figsize=(width, height))
     fig2.suptitle(title,y=1.05,fontsize=16)
