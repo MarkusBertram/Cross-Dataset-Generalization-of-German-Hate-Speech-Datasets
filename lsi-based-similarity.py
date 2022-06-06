@@ -10,6 +10,7 @@ from datetime import datetime
 from utils.utils import fetch_import_module
 from nltk.corpus import stopwords
 import nltk
+import sys
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', 1000) 
 sns.set_style("dark", {'axes.grid' : True, 'axes.linewidth':1})
@@ -98,8 +99,8 @@ if __name__ == "__main__":
 
     print("\n --- Calculating LSI-based Intra-dataset class similarity... ---")
     title = ""
-    rows = 2
-    cols = 4
+    rows = 5
+    cols = 2
     width = 12
     height = 6
     sync_scaling=False
@@ -156,8 +157,8 @@ if __name__ == "__main__":
                 #ax.set_title(dataset_names[m])
                 
                 m += 1
-    fig2.savefig(path_fig + "-vocab_intra-dataset-sim.pdf", bbox_inches='tight', dpi=300)
-    fig2.savefig(path_fig + "-vocab_intra-dataset-sim.png", bbox_inches='tight', dpi=300)
-    fig2.savefig(path_fig + "-vocab_intra-dataset-sim.eps", bbox_inches='tight', dpi=600)
+    fig2.savefig(path_fig + "vocab_intra-dataset-sim.pdf", bbox_inches='tight', dpi=300)
+    fig2.savefig(path_fig + "vocab_intra-dataset-sim.png", bbox_inches='tight', dpi=300)
+    fig2.savefig(path_fig + "vocab_intra-dataset-sim.eps", bbox_inches='tight', dpi=600)
 
     print("\n --- Calculation finished. Output is saved in results folder. ---")
