@@ -176,12 +176,12 @@ def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""
     avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
 
     fig = plt.figure(figsize=(11,13))
-    ax1 = plt.subplot2grid((10,9), (0,0), colspan=8, rowspan=9)
-    ax3 = plt.subplot2grid((10,9), (0,4), rowspan=9)
+    ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
+    ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
 
     cmap = "Blues"
     center = matrix[0][0]
-    sns.set(font_scale=0.7)
+    sns.set(font_scale=0.8)
     hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
     hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
     hm1.set_xticklabels(labels, rotation=90, ha='center')
