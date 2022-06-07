@@ -175,9 +175,9 @@ def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""
 
     avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
 
-    fig = plt.figure(figsize=(6,5))
-    ax1 = plt.subplot2grid((6,5), (0,0), colspan=4, rowspan=5)
-    ax3 = plt.subplot2grid((6,5), (0,4), rowspan=5)
+    fig = plt.figure(figsize=(9,7))
+    ax1 = plt.subplot2grid((9,7), (0,0), colspan=4, rowspan=5)
+    ax3 = plt.subplot2grid((9,7), (0,4), rowspan=5)
 
     cmap = "Blues"
     center = matrix[0][0]
