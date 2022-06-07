@@ -350,7 +350,6 @@ if __name__ == '__main__':
             
             # predict
             results_it = trainer.predict(eval_dataset) 
-            print(results_it)
             accuracy.append(results_it.metrics["test_accuracy"])
             f1.append(results_it.metrics['test_f1'])
             precision.append(results_it.metrics['test_precision'])
