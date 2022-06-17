@@ -227,7 +227,7 @@ if __name__ == '__main__':
     model_name= 'deepset/gbert-base'
     path = './tmp3/'
     number_of_tokens = 50
-    batch = 64
+    batch = 16
     num_epochs = 6
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -245,7 +245,8 @@ if __name__ == '__main__':
         dset = prepareData(dataset)
         dset = dset.class_encode_column("label")
         data_sets.append(dset)
-
+        
+    del data_sets_text
     del dset
     print('-'*50)
     print('Preparing data sets...')
