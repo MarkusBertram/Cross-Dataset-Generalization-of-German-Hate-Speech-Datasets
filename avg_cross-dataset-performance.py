@@ -157,22 +157,24 @@ def plotMatrix(number_of_runs, eval_metrics,labels,results_dir, selected_type='f
     path_fig = results_dir
     sns.set(font_scale=1.0)
 
-    average_matrix = np.empty([len(eval_metric),len(eval_metric)])
+    average_matrix = []#np.empty([len(eval_metrics[0]),len(eval_metrics[0])])
     avg_of_avg_classifiers = []
     for eval_metric in eval_metrics:
-
         matrix = np.empty([len(eval_metric),len(eval_metric)])
         for i in range(len(eval_metric)):
             for j in range(len(eval_metric[i][selected_type])-1):
                 matrix[i][j] = eval_metric[i][selected_type][j]
+        
         average_matrix.append(matrix)
         # calculate averages
         avg_classifiers = []
         avg_testsets = []
         size = len(matrix[0])
+
         for i in range(len(eval_metric)):
-            avg_classifiers.append(np.asarray(eval_metric[i][selected_type][-1]).reshape(size,1))
-        avg_of_avg_classifiers.append(avg_classifiers)
+            avg_classifiers.append(eval_metric[i][selected_type][-1])
+        vec = np.asarray(avg_classifiers).reshape(size,1)
+        avg_of_avg_classifiers.append(vec)
 
     # averaging of the runs:
     matrix = np.mean(average_matrix, axis = 0)
@@ -245,7 +247,7 @@ if __name__ == '__main__':
         dset = prepareData(dataset)
         dset = dset.class_encode_column("label")
         data_sets.append(dset)
-        
+
     del data_sets_text
     del dset
     print('-'*50)
@@ -372,10 +374,12 @@ if __name__ == '__main__':
 
     evaluation_results = []
     for r in range(number_of_runs):
+        multiple_results = []
         for i in range(len(data_sets)):
-            file = "{}{}{}_{}.pkl".format(path_output,str(run_iter),str(i),dataset_names[i])
+            file = "{}{}{}_{}.pkl".format(path_output,str(r),str(i),dataset_names[i])
             single_result = pickle.load(open(file, "rb"))
-            evaluation_results.append(single_result)
+            multiple_results.append(single_result)
+        evaluation_results.append(multiple_results)
     now = datetime.now()
     results_dir = "./results/"+"avg-cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
     if os.path.exists(results_dir) == False:
