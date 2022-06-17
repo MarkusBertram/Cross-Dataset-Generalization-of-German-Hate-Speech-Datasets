@@ -14,7 +14,7 @@ import seaborn as sns
 import re
 import unicodedata
 import yaml
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments, AdamW, get_scheduler
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments, AdamW
 from utils.utils import fetch_import_module
 from pipelines import utils_pipeline
 from time import gmtime, strftime
@@ -26,7 +26,7 @@ from torch.utils.data import Dataset, TensorDataset, DataLoader
 import subprocess
 from accelerate import Accelerator
 os.environ['MKL_THREADING_LAYER'] = 'GNU'
-from sklearn.model_selection import train_test_split
+#from sklearn.model_selection import train_test_split
 from pathlib import Path
 
 def cleanTweets(dataset):
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     model_name= 'deepset/gbert-base'
     path = './tmp3/'
     number_of_tokens = 50
-    batch = 10
+    batch = 64
     num_epochs = 6
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -242,12 +242,15 @@ if __name__ == '__main__':
     # prepare data sets
     data_sets = []
     for dataset in data_sets_text:
-        data_sets.append(prepareData(dataset))
+        dset = prepareData(dataset)
+        dset = dset.class_encode_column("label")
+        data_sets.append(dset)
 
+    del dset
     print('-'*50)
     print('Preparing data sets...')
     print('-'*50)
-    
+
     if fair == True:
         # find lengths of smallest data set
         min_length = 99999999
@@ -273,7 +276,7 @@ if __name__ == '__main__':
             ## train/test split
             #tokenized_dataset = tokenize(dataset, tokenizer)
             #ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
-            ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train,shuffle=True)
+            ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train, stratify_by_column = "label", shuffle=True)
             
             training_sets.append(ds_dict['train'])
             #validation_sets.append(ds_dict_2['test'])
@@ -281,7 +284,7 @@ if __name__ == '__main__':
 
             # combined test set
             #ds_dict_2['train'], ds_dict_2['test'] = train_test_split(ds_dict['test'],train_size=COMBINED_RATIO,shuffle=True)
-            ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,shuffle=True)
+            ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,stratify_by_column = "label",shuffle=True)
             if combined_test_set is None:
                 combined_test_set = ds_dict_2['train']
             else:
