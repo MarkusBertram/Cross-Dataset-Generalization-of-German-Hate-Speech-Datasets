@@ -28,7 +28,7 @@ def preprocess_text(text, tokenizer, stop_words):
     text_tokens = [token.text for token in text_tokens]
 
     # remove stop words
-    tokens_without_sw = [word for word in text_tokens if not word.lower() in stop_words]
+    tokens_without_sw = [word.lower() for word in text_tokens if not word.lower() in stop_words]
 
     # merge to sentence
     cleaned_text = " ".join(tokens_without_sw)

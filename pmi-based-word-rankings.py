@@ -54,7 +54,7 @@ pd.set_option('display.max_colwidth', 1000)
 sns.set_style("dark", {'axes.grid' : True, 'axes.linewidth':1})
 
 def getMatrix(X):
-    cv = CountVectorizer(lowercase = False,
+    cv = CountVectorizer(lowercase = True,
                          max_df=0.95, 
                          min_df=2,                 
                          max_features=10000, 
@@ -115,7 +115,6 @@ if __name__ == "__main__":
 
     with open("german_stop_words.txt", 'r', encoding = 'utf8') as f:
         stop_words = f.read().splitlines()
-    #stop_words = nlp.Defaults.stop_words
     
     n = 10
     
