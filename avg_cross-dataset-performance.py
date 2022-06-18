@@ -275,18 +275,13 @@ if __name__ == '__main__':
             ds_dict = {}
             ds_dict_1 = {}
             ds_dict_2 = {}
-            # split data sets and tokenize
-            ## train/test split
-            #tokenized_dataset = tokenize(dataset, tokenizer)
-            #ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
+            
             ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train, stratify_by_column = "label", shuffle=True)
             
             training_sets.append(ds_dict['train'])
-            #validation_sets.append(ds_dict_2['test'])
             test_sets.append(ds_dict['test'])
 
             # combined test set
-            #ds_dict_2['train'], ds_dict_2['test'] = train_test_split(ds_dict['test'],train_size=COMBINED_RATIO,shuffle=True)
             ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,stratify_by_column = "label",shuffle=True)
             if combined_test_set is None:
                 combined_test_set = ds_dict_2['train']
@@ -303,12 +298,9 @@ if __name__ == '__main__':
         # train and evaluate classifiers
         for i in tqdm(range(len(data_sets))):
             path_model = path_models / "{}_{}_model".format(str(i),dataset_names[i])
-            #train_dataset = transform_to_dataset(training_sets[i], tokenizer)
-            # get train, test dataloader
-            #train_dataloader = DataLoader(train_dataset, batch_size = 5, shuffle = False)
+
             model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
-            #optimizer = AdamW(model.parameters(), lr=3e-5)
-            #model, train_dataloader, optimizer = accelerator.prepare(model, train_dataloader, optimizer)
+
             train_dataset = training_sets[i].map(tokenize, batched=True, batch_size=len(training_sets[i]))
             train_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
             # define trainer
@@ -344,7 +336,7 @@ if __name__ == '__main__':
                 # prepare evluation test set
                 # eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(train_dataset))
                 # eval_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
-                eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(train_dataset))
+                eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(test_sets[j]))
                 eval_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
                 
                 # predict
