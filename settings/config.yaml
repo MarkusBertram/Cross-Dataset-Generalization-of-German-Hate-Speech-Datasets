@@ -8,24 +8,24 @@ datasets:
   # de-reddit-corpus:
   #   unlabeled-dataset: True
   #   non-hate-label: "False"
-  # hasoc2019:
-  #   unlabeled-dataset: False
-  #   non-hate-label: none
-  # hasoc2020:
-  #   unlabeled-dataset: False
-  #   non-hate-label: none
-  # ihs_data:
-  #   unlabeled-dataset: True
-  #   non-hate-label: none
+  hasoc2019:
+    unlabeled-dataset: False
+    non-hate-label: none
+  hasoc2020:
+    unlabeled-dataset: False
+    non-hate-label: none
+  ihs_data:
+    unlabeled-dataset: True
+    non-hate-label: none
   # # IWG_hatespeech_public:
   # #   unlabeled-dataset: False
   # #   non-hate-label: none
-  # covid_2021:
-  #   unlabeled-dataset: False
-  #   non-hate-label: not
-  # telegram_gold:
-  #   unlabeled-dataset: False
-  #   non-hate-label: none 
+  covid_2021:
+    unlabeled-dataset: False
+    non-hate-label: not
+  telegram_gold:
+    unlabeled-dataset: False
+    non-hate-label: none 
   # telegram_unlabeled:
   #   unlabeled-dataset: True
   #   non-hate-label: none 
