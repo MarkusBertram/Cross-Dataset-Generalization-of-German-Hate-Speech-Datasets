@@ -254,7 +254,7 @@ if __name__ == '__main__':
     print('Preparing data sets...')
     print('-'*50)
 
-    if fair == True:
+    if fair == False:
         # find lengths of smallest data set
         min_length = 99999999
         for dataset in data_sets:
