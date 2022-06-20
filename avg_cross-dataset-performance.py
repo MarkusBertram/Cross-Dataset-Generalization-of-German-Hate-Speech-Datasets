@@ -222,7 +222,7 @@ if __name__ == '__main__':
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
     
-    number_of_runs = 10
+    number_of_runs = 5
     fair = False
     SPLIT_RATIO = 0.2
     COMBINED_RATIO = 0.5
@@ -254,7 +254,7 @@ if __name__ == '__main__':
     print('Preparing data sets...')
     print('-'*50)
 
-    if fair == False:
+    if fair == True:
         # find lengths of smallest data set
         min_length = 99999999
         for dataset in data_sets:
