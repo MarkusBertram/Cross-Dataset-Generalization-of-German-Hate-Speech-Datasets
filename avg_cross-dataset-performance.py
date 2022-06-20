@@ -223,7 +223,7 @@ if __name__ == '__main__':
         data_sets_text.append(dset_module.get_data_binary())
     
     number_of_runs = 10
-    fair = True
+    fair = False
     SPLIT_RATIO = 0.2
     COMBINED_RATIO = 0.5
     model_name= 'deepset/gbert-base'
