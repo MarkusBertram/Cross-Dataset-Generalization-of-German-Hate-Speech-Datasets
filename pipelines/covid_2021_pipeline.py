@@ -6,19 +6,17 @@ from pathlib import Path
 data_path = Path(__file__).resolve().parents[1] / 'data' / 'covid_2021'
 
 train = data_path / "covid_2021_dataset.csv"
-
-#unlabeled = data_path + "germeval2018.test.txt"
     
 def get_labeled_data():  
     dset_list = list()     
 
     with open(train, 'r', encoding="utf8") as file:
-        reader=csv.reader(file)
+        reader=csv.reader(file, delimiter='\t')
 
         for row in reader:
             entry=dict()
-            entry['text'] = row[0]
-            entry['label'] = row[1]
+            entry['text'] = row[1]
+            entry['label'] = row[3]
             dset_list.append(entry)
 
     return dset_list[1:]
