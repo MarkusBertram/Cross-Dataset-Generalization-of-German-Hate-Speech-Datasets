@@ -148,7 +148,7 @@ def transform_to_dataset(dataset, tokenizer):
 
     return tensordataset
 
-def plotMatrix(number_of_runs, eval_metrics,labels,results_dir, selected_type='f1', type_name=""):
+def plotMatrix(number_of_runs, eval_metrics,labels,results_dir, fair, selected_type='f1', type_name=""):
     # now = datetime.now()
     # results_dir = "./results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
     # if os.path.exists(results_dir) == False:
@@ -157,59 +157,107 @@ def plotMatrix(number_of_runs, eval_metrics,labels,results_dir, selected_type='f
     path_fig = results_dir
     sns.set(font_scale=1.0)
 
-    average_matrix = []#np.empty([len(eval_metrics[0]),len(eval_metrics[0])])
-    avg_of_avg_classifiers = []
-    for eval_metric in eval_metrics:
-        matrix = np.empty([len(eval_metric),len(eval_metric)])
-        for i in range(len(eval_metric)):
-            for j in range(len(eval_metric[i][selected_type])-1):
-                matrix[i][j] = eval_metric[i][selected_type][j]
+    if fair == True:
+        average_matrix = []#np.empty([len(eval_metrics[0]),len(eval_metrics[0])])
+        avg_of_avg_classifiers = []
+        for eval_metric in eval_metrics:
+            matrix = np.empty([len(eval_metric),len(eval_metric)])
+            for i in range(len(eval_metric)):
+                for j in range(len(eval_metric[i][selected_type])-1):
+                    matrix[i][j] = eval_metric[i][selected_type][j]
+            
+            average_matrix.append(matrix)
+            # calculate averages
+            avg_classifiers = []
+            avg_testsets = []
+            size = len(matrix[0])
+
+            for i in range(len(eval_metric)):
+                avg_classifiers.append(eval_metric[i][selected_type][-1])
+            vec = np.asarray(avg_classifiers).reshape(size,1)
+            avg_of_avg_classifiers.append(vec)
+
+        # averaging of the runs:
+        matrix = np.mean(average_matrix, axis = 0)
+        avg_classifiers = np.mean(avg_of_avg_classifiers, axis = 0)
         
-        average_matrix.append(matrix)
-        # calculate averages
-        avg_classifiers = []
-        avg_testsets = []
-        size = len(matrix[0])
+        min_val = np.amin(matrix)
+        max_val = np.amax(matrix) 
 
-        for i in range(len(eval_metric)):
-            avg_classifiers.append(eval_metric[i][selected_type][-1])
-        vec = np.asarray(avg_classifiers).reshape(size,1)
-        avg_of_avg_classifiers.append(vec)
+        #avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
 
-    # averaging of the runs:
-    matrix = np.mean(average_matrix, axis = 0)
-    avg_classifiers = np.mean(avg_of_avg_classifiers, axis = 0)
-    
-    min_val = np.amin(matrix)
-    max_val = np.amax(matrix) 
+        fig = plt.figure(figsize=(11,13))
+        ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
+        ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
 
-    #avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
+        cmap = "Blues"
+        center = matrix[0][0]
+        sns.set(font_scale=0.8)
+        hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
+        hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
+        hm1.set_xticklabels(labels, rotation=90, ha='center')
+        
+        
+        ax1.set_title(type_name)
+        ax1.xaxis.tick_top()
+        ax1.tick_params(length=0)
+        ax1.set(xlabel='Test sets', ylabel='Classifiers')
+        ax1.xaxis.set_label_coords(0.5, 1.4)
 
-    fig = plt.figure(figsize=(11,13))
-    ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
-    ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
+        ax3.set(xlabel='Combined\n test set', ylabel='')
+        #ax3.xaxis.tick_top()
+        ax3.xaxis.set_label_coords(0.5, 1.13)
+        
+        fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
+        fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
+    else:
+        average_matrix = []#np.empty([len(eval_metrics[0]),len(eval_metrics[0])])
+        avg_of_avg_classifiers = []
+        for eval_metric in eval_metrics:
+            matrix = np.empty([len(eval_metric),len(eval_metric)])
+            for i in range(len(eval_metric)):
+                for j in range(len(eval_metric[i][selected_type])):
+                    matrix[i][j] = eval_metric[i][selected_type][j]
+            
+            average_matrix.append(matrix)
+            # calculate averages
+            avg_classifiers = []
+            avg_testsets = []
+            size = len(matrix[0])
 
-    cmap = "Blues"
-    center = matrix[0][0]
-    sns.set(font_scale=0.8)
-    hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
-    hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
-    hm1.set_xticklabels(labels, rotation=90, ha='center')
-    
-    
-    ax1.set_title(type_name)
-    ax1.xaxis.tick_top()
-    ax1.tick_params(length=0)
-    ax1.set(xlabel='Test sets', ylabel='Classifiers')
-    ax1.xaxis.set_label_coords(0.5, 1.4)
 
-    ax3.set(xlabel='Combined\n test set', ylabel='')
-    #ax3.xaxis.tick_top()
-    ax3.xaxis.set_label_coords(0.5, 1.13)
-    
-    fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
-    fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
+        # averaging of the runs:
+        matrix = np.mean(average_matrix, axis = 0)
+        
+        min_val = np.amin(matrix)
+        max_val = np.amax(matrix) 
 
+        #avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
+
+        fig = plt.figure(figsize=(11,13))
+        ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
+        #ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
+
+        cmap = "Blues"
+        center = matrix[0][0]
+        sns.set(font_scale=0.8)
+        hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
+        #hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
+        hm1.set_xticklabels(labels, rotation=90, ha='center')
+        
+        
+        ax1.set_title(type_name)
+        ax1.xaxis.tick_top()
+        ax1.tick_params(length=0)
+        ax1.set(xlabel='Test sets', ylabel='Classifiers')
+        ax1.xaxis.set_label_coords(0.5, 1.4)
+
+        # ax3.set(xlabel='Combined\n test set', ylabel='')
+        # #ax3.xaxis.tick_top()
+        # ax3.xaxis.set_label_coords(0.5, 1.13)
+        
+        fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
+        fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
 # tokenize datasets
 def tokenize(batch):
     return tokenizer(batch['text'], padding=True, truncation=True, max_length=512)
@@ -268,7 +316,6 @@ if __name__ == '__main__':
     for run_iter in range(number_of_runs):
         # split data into train and test set  
         training_sets = []
-        validation_sets = []
         test_sets = []
         combined_test_set = None
         for i,dataset in enumerate(data_sets):
@@ -283,17 +330,20 @@ if __name__ == '__main__':
 
             # combined test set
             ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,stratify_by_column = "label",shuffle=True)
-            if combined_test_set is None:
-                combined_test_set = ds_dict_2['train']
-            else:
-                #combined_test_set = pd.concat([combined_test_set,ds_dict_2['train']])
-                combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
-        test_sets.append(combined_test_set)
+            if fair == True:
+                if combined_test_set is None:
+                    combined_test_set = ds_dict_2['train']
+                else:
+                    #combined_test_set = pd.concat([combined_test_set,ds_dict_2['train']])
+                    combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
+        if combined_test_set is not None:
+            test_sets.append(combined_test_set)
 
         path_combined_test = path_datasets / 'combined_test'
         Path(path_combined_test).mkdir(parents=True, exist_ok=True)
         #test_sets.append(path_combined_test)
-        combined_test_set.save_to_disk(path_combined_test)
+        if combined_test_set is not None:
+            combined_test_set.save_to_disk(path_combined_test)
 
         # train and evaluate classifiers
         for i in tqdm(range(len(data_sets))):
@@ -310,7 +360,7 @@ if __name__ == '__main__':
                 per_device_train_batch_size=batch,  # batch size per device during training
                 per_device_eval_batch_size=64,   # batch size for evaluation
                 #warmup_steps=500,                # number of warmup steps for learning rate scheduler
-                weight_decay=0.01,               # strength of weight decay
+                #weight_decay=0.01,               # strength of weight decay
                 logging_dir=path_logs
             )
 
@@ -377,12 +427,12 @@ if __name__ == '__main__':
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     print("Macro F1")
-    plotMatrix(number_of_runs, evaluation_results,dataset_names, results_dir,selected_type="f1")
+    plotMatrix(number_of_runs, evaluation_results,dataset_names, results_dir, fair, selected_type="f1")
     print("Precision")
-    plotMatrix(number_of_runs, evaluation_results,dataset_names, results_dir,selected_type="precision")
+    plotMatrix(number_of_runs, evaluation_results,dataset_names, results_dir, fair, selected_type="precision")
     print("Recall")
-    plotMatrix(number_of_runs, evaluation_results,dataset_names, results_dir,selected_type="recall")
+    plotMatrix(number_of_runs, evaluation_results,dataset_names, results_dir, fair, selected_type="recall")
     print("Accuracy")
-    plotMatrix(number_of_runs, evaluation_results,dataset_names, results_dir,selected_type="accuracy")
+    plotMatrix(number_of_runs, evaluation_results,dataset_names, results_dir, fair, selected_type="accuracy")
 
     
