@@ -235,7 +235,7 @@ if __name__ == '__main__':
 
     number_of_runs = 5
     fair = False
-    SPLIT_RATIO = 0.2
+    SPLIT_RATIO = 0.15
     COMBINED_RATIO = 0.5
     model_name= 'deepset/gbert-base'
     path = './tmp3/'
