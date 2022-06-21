@@ -7,6 +7,8 @@ import seaborn as sns
 import yaml
 from gensim import corpora, models, similarities
 from datetime import datetime
+from spacy.tokenizer import Tokenizer
+from spacy.lang.de import German
 from utils.utils import fetch_import_module
 from nltk.corpus import stopwords
 import nltk
@@ -16,11 +18,18 @@ pd.set_option('display.max_colwidth', 1000)
 sns.set_style("dark", {'axes.grid' : True, 'axes.linewidth':1})
 
 # Cleaning up raw input text
-def filter_corpus(corpus_input):
-    filtered_corpus = [
-                [token for token in document.lower().split() if token not in stop_words]
-                for document in corpus_input
-    ]
+def filter_corpus(corpus_input, tokenizer, stop_words):
+
+    filtered_corpus = []
+    for document in corpus_input:
+        text_tokens = tokenizer(document)
+
+        text_tokens = [token.text for token in text_tokens]
+        # remove stop words
+        tokens_without_sw = [word.lower() for word in text_tokens if not word.lower() in stop_words]
+
+        filtered_corpus.append(tokens_without_sw)
+    
     corp_frequency = defaultdict(int)
     for text in filtered_corpus:
         for token in text:
@@ -31,12 +40,12 @@ def filter_corpus(corpus_input):
     ]
     return filtered_corpus
 
-def getSimilarityScores(data):
+def getSimilarityScores(data, tokenizer, stop_words):
     class_separated_dicts = separate_text_by_classes(data)
     labels = list(class_separated_dicts.keys())
     total_corpus = list()
     for label in labels:
-        total_corpus.append(filter_corpus(class_separated_dicts[label]))
+        total_corpus.append(filter_corpus(class_separated_dicts[label], tokenizer, stop_words))
         
     ### CLASS SIMILARITIES
     dictionary = corpora.Dictionary([item for sublist in total_corpus for item in sublist])
@@ -105,6 +114,8 @@ if __name__ == "__main__":
     height = 6
     sync_scaling=False
     cmap = "Blues"
+    nlp = German()
+    tokenizer = nlp.tokenizer
 
     now = datetime.now()
     results_dir = "./results/"+"lsi_"+now.strftime("%Y%m%d-%H%M%S")+"/"
@@ -116,12 +127,15 @@ if __name__ == "__main__":
     fig2 = plt.figure(constrained_layout=True,figsize=(width, height))
     fig2.suptitle(title,y=1.05,fontsize=16)
     spec2 = gridspec.GridSpec(ncols=cols, nrows=rows, figure=fig2)
-    
+
+    with open("german_stop_words.txt", 'r', encoding = 'utf8') as f:
+        stop_words = f.read().splitlines()
+
     global_min = 1
     global_max = 0
     all_similarity_scores = []
     for dataset in datasets:
-        scores = getSimilarityScores(dataset)
+        scores = getSimilarityScores(dataset, tokenizer, stop_words)
         all_similarity_scores.append(scores)
         for entry in scores.values():
             for ef in entry.values():
