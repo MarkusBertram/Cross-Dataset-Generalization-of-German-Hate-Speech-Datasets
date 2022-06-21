@@ -77,27 +77,6 @@ def f(x, model, tokenizer):
     val = sp.special.logit(scores[:,1]) # use one vs rest logit units
     return val
 
-# def tokenize(df, tokenizer):
-
-#     for sentence in df["text"]:
-        
-#         BatchEncoding = tokenizer.encode_plus(
-#                 sentence,
-#                 add_special_tokens = True,
-#                 padding = 'max_length',
-#                 max_length = tokenizer.model_max_length,
-#                 truncation = True,
-#                 return_attention_mask = True,
-#                 return_tensors = 'pt'
-#             )
-
-#     tokenized_df = pd.DataFrame(data = {"input_ids" : BatchEncoding["input_ids"], "token_type_ids" : BatchEncoding["token_type_ids"], "attention_mask" : BatchEncoding["attention_mask"], "label": df["label"]})
-
-#     return tokenized_df
-# # tokenize datasets
-# def tokenize(batch, tokenizer=tokenizer):
-#     return tokenizer(batch, padding=True, truncation=True, max_length=512)
-
 def compute_metrics(pred):
     labels = pred.label_ids
     preds = pred.predictions.argmax(-1)
@@ -134,8 +113,6 @@ def transform_to_dataset(dataset, tokenizer):
         #label = dset_name + "_" + str(sentence['label'])
         targets.append(row["label"])
 
-    # le = preprocessing.LabelEncoder()
-    # targets = le.fit_transform(labels)
     targets = torch.as_tensor(targets)
 
     # Convert the lists into tensors.
@@ -149,16 +126,12 @@ def transform_to_dataset(dataset, tokenizer):
     return tensordataset
 
 def plotMatrix(number_of_runs, eval_metrics,labels,results_dir, fair, selected_type='f1', type_name=""):
-    # now = datetime.now()
-    # results_dir = "./results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
-    # if os.path.exists(results_dir) == False:
-    #     os.makedirs(results_dir)
-    #path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(labels).replace(" ","_")
+
     path_fig = results_dir
     sns.set(font_scale=1.0)
 
     if fair == True:
-        average_matrix = []#np.empty([len(eval_metrics[0]),len(eval_metrics[0])])
+        average_matrix = []
         avg_of_avg_classifiers = []
         for eval_metric in eval_metrics:
             matrix = np.empty([len(eval_metric),len(eval_metric)])
@@ -183,8 +156,6 @@ def plotMatrix(number_of_runs, eval_metrics,labels,results_dir, fair, selected_t
         
         min_val = np.amin(matrix)
         max_val = np.amax(matrix) 
-
-        #avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
 
         fig = plt.figure(figsize=(11,13))
         ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
@@ -232,17 +203,13 @@ def plotMatrix(number_of_runs, eval_metrics,labels,results_dir, fair, selected_t
         min_val = np.amin(matrix)
         max_val = np.amax(matrix) 
 
-        #avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
-
         fig = plt.figure(figsize=(11,13))
         ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
-        #ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
 
         cmap = "Blues"
         center = matrix[0][0]
         sns.set(font_scale=0.8)
         hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
-        #hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
         hm1.set_xticklabels(labels, rotation=90, ha='center')
         
         
@@ -251,10 +218,6 @@ def plotMatrix(number_of_runs, eval_metrics,labels,results_dir, fair, selected_t
         ax1.tick_params(length=0)
         ax1.set(xlabel='Test sets', ylabel='Classifiers')
         ax1.xaxis.set_label_coords(0.5, 1.4)
-
-        # ax3.set(xlabel='Combined\n test set', ylabel='')
-        # #ax3.xaxis.tick_top()
-        # ax3.xaxis.set_label_coords(0.5, 1.13)
         
         fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
         fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
@@ -359,8 +322,6 @@ if __name__ == '__main__':
                 num_train_epochs=num_epochs,              # total # of training epochs
                 per_device_train_batch_size=batch,  # batch size per device during training
                 per_device_eval_batch_size=64,   # batch size for evaluation
-                #warmup_steps=500,                # number of warmup steps for learning rate scheduler
-                #weight_decay=0.01,               # strength of weight decay
                 logging_dir=path_logs
             )
 
@@ -369,7 +330,6 @@ if __name__ == '__main__':
                 args=training_args,                  # training arguments, defined above
                 train_dataset=train_dataset,         # training dataset
                 compute_metrics=compute_metrics,
-                #tokenizer = tokenizer
             )
             
             # train model
@@ -380,12 +340,9 @@ if __name__ == '__main__':
             f1 = []
             precision = []
             recall = []
-            #predictions = []
-                
+
             for j in range(len(test_sets)):
-                # prepare evluation test set
-                # eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(train_dataset))
-                # eval_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
+                # prepare evaluation test set
                 eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(test_sets[j]))
                 eval_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
                 
@@ -395,7 +352,6 @@ if __name__ == '__main__':
                 f1.append(results_it.metrics['test_f1'])
                 precision.append(results_it.metrics['test_precision'])
                 recall.append(results_it.metrics['test_recall'])
-                #predictions.append(results)
 
                 
             results = {}
