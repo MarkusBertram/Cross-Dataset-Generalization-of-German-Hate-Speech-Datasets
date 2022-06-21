@@ -232,7 +232,7 @@ if __name__ == '__main__':
     for dset in dataset_names:
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
-    
+
     number_of_runs = 5
     fair = False
     SPLIT_RATIO = 0.2
@@ -282,6 +282,7 @@ if __name__ == '__main__':
         test_sets = []
         combined_test_set = None
         for i,dataset in enumerate(data_sets):
+            
             ds_dict = {}
             ds_dict_1 = {}
             ds_dict_2 = {}
@@ -292,8 +293,9 @@ if __name__ == '__main__':
             test_sets.append(ds_dict['test'])
 
             # combined test set
-            ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,stratify_by_column = "label",shuffle=True)
             if fair == True:
+                ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,stratify_by_column = "label",shuffle=True)
+            
                 if combined_test_set is None:
                     combined_test_set = ds_dict_2['train']
                 else:
@@ -316,6 +318,7 @@ if __name__ == '__main__':
 
             train_dataset = training_sets[i].map(tokenize, batched=True, batch_size=len(training_sets[i]))
             train_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
+            
             # define trainer
             training_args = TrainingArguments(
                 output_dir=path_model,          # output directory
