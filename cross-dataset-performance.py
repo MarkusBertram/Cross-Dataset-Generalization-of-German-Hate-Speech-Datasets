@@ -271,7 +271,7 @@ if __name__ == '__main__':
         ## train/test split
         #tokenized_dataset = tokenize(dataset, tokenizer)
         #ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
-        ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train,shuffle=True)
+        ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train, stratify_by_column = "label" ,shuffle=True)
         
         training_sets.append(ds_dict['train'])
         #validation_sets.append(ds_dict_2['test'])
