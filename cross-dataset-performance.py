@@ -112,8 +112,6 @@ def transform_to_dataset(dataset, tokenizer):
         #label = dset_name + "_" + str(sentence['label'])
         targets.append(row["label"])
 
-    # le = preprocessing.LabelEncoder()
-    # targets = le.fit_transform(labels)
     targets = torch.as_tensor(targets)
 
     # Convert the lists into tensors.
@@ -184,17 +182,13 @@ def plotMatrix(eval_metrics,labels,results_dir, fair, selected_type='f1', type_n
         min_val = np.amin(matrix)
         max_val = np.amax(matrix) 
 
-        #avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
-
         fig = plt.figure(figsize=(11,13))
         ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
-        #ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
 
         cmap = "Blues"
         center = matrix[0][0]
         sns.set(font_scale=0.8)
         hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
-        #hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
         hm1.set_xticklabels(labels, rotation=90, ha='center')
         
         
@@ -218,7 +212,7 @@ if __name__ == '__main__':
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
 
-    SPLIT_RATIO = 0.15
+    SPLIT_RATIO = 0.2
     COMBINED_RATIO = 0.5
     model_name= 'deepset/gbert-base'
     path = './tmp2/'
@@ -260,7 +254,6 @@ if __name__ == '__main__':
 
     # split data into train and test set  
     training_sets = []
-    validation_sets = []
     test_sets = []
     combined_test_set = None
     for i,dataset in enumerate(data_sets):
@@ -269,12 +262,9 @@ if __name__ == '__main__':
         ds_dict_2 = {}
         # split data sets and tokenize
         ## train/test split
-        #tokenized_dataset = tokenize(dataset, tokenizer)
-        #ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
         ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train, stratify_by_column = "label" ,shuffle=True)
         
         training_sets.append(ds_dict['train'])
-        #validation_sets.append(ds_dict_2['test'])
         test_sets.append(ds_dict['test'])
 
         # combined test set
@@ -294,15 +284,21 @@ if __name__ == '__main__':
     if combined_test_set is not None:
         combined_test_set.save_to_disk(path_combined_test)
 
+    # for i in range(len(training_sets)):
+    #     print(data_sets[i])
+    #     print(training_sets[i])
+    #     print(test_sets[i])
+    #     print(f"{len(training_sets[i])} + {len(test_sets[i])} = {len(training_sets[i])+len(test_sets[i])} ")
+    #     print("*"*10)
+    # print(len(training_sets))
+    # print(len(test_sets))
+    # sys.exit(0)
     # train and evaluate classifiers
     for i in tqdm(range(len(data_sets))):
         path_model = path_models / "{}_{}_model".format(str(i),dataset_names[i])
-        #train_dataset = transform_to_dataset(training_sets[i], tokenizer)
-        # get train, test dataloader
-        #train_dataloader = DataLoader(train_dataset, batch_size = 5, shuffle = False)
+
         model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
-        #optimizer = AdamW(model.parameters(), lr=3e-5)
-        #model, train_dataloader, optimizer = accelerator.prepare(model, train_dataloader, optimizer)
+
         train_dataset = training_sets[i].map(tokenize, batched=True, batch_size=len(training_sets[i]))
         train_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
         # define trainer
@@ -355,10 +351,8 @@ if __name__ == '__main__':
         #results['predictions'] = predictions
             
         # save model
-        trainer.save_model(path_model)
+        #trainer.save_model(path_model)
 
-        # with path_output.open('wb') as fp:
-        #     pickle.dump(results, fp)
         pickle.dump(results, open("{}{}_{}.pkl".format(path_output,str(i),dataset_names[i]), "wb"))
 
         # clear GPU memory
