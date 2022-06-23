@@ -241,7 +241,7 @@ if __name__ == '__main__':
     path = './tmp3/'
     number_of_tokens = 50
     batch = 16
-    num_epochs = 6
+    num_epochs = 10
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
@@ -321,12 +321,12 @@ if __name__ == '__main__':
             
             # define trainer
             training_args = TrainingArguments(
-                output_dir=path_model,          # output directory
-                num_train_epochs=num_epochs,              # total # of training epochs
-                per_device_train_batch_size=batch,  # batch size per device during training
-                per_device_eval_batch_size=64,   # batch size for evaluation
-                logging_dir=path_logs
-            )
+            output_dir=path_model,          # output directory
+            num_train_epochs=num_epochs,              # total # of training epochs
+            per_device_train_batch_size=batch,  # batch size per device during training
+            per_device_eval_batch_size=64,   # batch size for evaluation
+            learning_rate = 2e-5
+        )
 
             trainer = Trainer(
                 model=model,                         # the instantiated 🤗 Transformers model to be trained
