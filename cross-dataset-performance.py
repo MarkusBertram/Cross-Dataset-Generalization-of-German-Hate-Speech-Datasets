@@ -65,7 +65,7 @@ def convertLabelsToInt(datset):
         "neutral": 0,
         "abusive": 1
     }
-    dataset = dataset.map(lambda convertLabels: {"label": label_to_int[convertLabels["label"]]})
+    dataset = datset.map(lambda convertLabels: {"label": label_to_int[convertLabels["label"]]})
     return dataset
 
 # define a prediction function
