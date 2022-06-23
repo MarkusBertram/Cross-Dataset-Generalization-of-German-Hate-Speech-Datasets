@@ -60,13 +60,10 @@ def prepareData(data):
     data = cleanTweets(data)
     return convertLabelsToInt(utils_pipeline.get_huggingface_dataset_format(data))
 
-def convertLabelsToInt(dataset):
-    label_to_int = {
-        "neutral": 0,
-        "abusive": 1
-    }
-    #dataset['label'] = dataset["label"].map(label_to_int)
-    dataset = dataset.map(lambda convertLabels: {"label": label_to_int[convertLabels["label"]]})
+def convertLabelsToInt(datset):
+    df = pd.DataFrame(datset)
+    #labels = list(set(df['label'].tolist()))
+    ds = Dataset.from_pandas(df) 
     return dataset
 
 # define a prediction function
@@ -76,27 +73,6 @@ def f(x, model, tokenizer):
     scores = (np.exp(outputs).T / np.exp(outputs).sum(-1)).T
     val = sp.special.logit(scores[:,1]) # use one vs rest logit units
     return val
-
-# def tokenize(df, tokenizer):
-
-#     for sentence in df["text"]:
-        
-#         BatchEncoding = tokenizer.encode_plus(
-#                 sentence,
-#                 add_special_tokens = True,
-#                 padding = 'max_length',
-#                 max_length = tokenizer.model_max_length,
-#                 truncation = True,
-#                 return_attention_mask = True,
-#                 return_tensors = 'pt'
-#             )
-
-#     tokenized_df = pd.DataFrame(data = {"input_ids" : BatchEncoding["input_ids"], "token_type_ids" : BatchEncoding["token_type_ids"], "attention_mask" : BatchEncoding["attention_mask"], "label": df["label"]})
-
-#     return tokenized_df
-# # tokenize datasets
-# def tokenize(batch, tokenizer=tokenizer):
-#     return tokenizer(batch, padding=True, truncation=True, max_length=512)
 
 def compute_metrics(pred):
     labels = pred.label_ids
@@ -149,57 +125,90 @@ def transform_to_dataset(dataset, tokenizer):
     return tensordataset
 
 def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""):
-    # now = datetime.now()
-    # results_dir = "./results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
-    # if os.path.exists(results_dir) == False:
-    #     os.makedirs(results_dir)
-    #path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(labels).replace(" ","_")
-    path_fig = results_dir
-    sns.set(font_scale=1.0)
-    matrix = np.empty([len(eval_metrics),len(eval_metrics)])
-    for i in range(len(eval_metrics)):
-        for j in range(len(eval_metrics[i][selected_type])-1):
-            matrix[i][j] = eval_metrics[i][selected_type][j]
+    if fair == True:
+        path_fig = results_dir
+        sns.set(font_scale=1.0)
+        matrix = np.empty([len(eval_metrics),len(eval_metrics)])
+        for i in range(len(eval_metrics)):
+            for j in range(len(eval_metrics[i][selected_type])-1):
+                matrix[i][j] = eval_metrics[i][selected_type][j]
 
-    # calculate averages
-    avg_classifiers = []
-    avg_testsets = []
+        # calculate averages
+        avg_classifiers = []
+        avg_testsets = []
 
-    for i in range(len(eval_metrics)):
-        avg_classifiers.append(eval_metrics[i][selected_type][-1])   
+        for i in range(len(eval_metrics)):
+            avg_classifiers.append(eval_metrics[i][selected_type][-1])   
 
 
-    size = len(matrix[0])
-    min_val = np.amin(matrix)
-    max_val = np.amax(matrix) 
+        size = len(matrix[0])
+        min_val = np.amin(matrix)
+        max_val = np.amax(matrix) 
 
-    avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
+        avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
 
-    fig = plt.figure(figsize=(11,13))
-    ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
-    ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
+        fig = plt.figure(figsize=(11,13))
+        ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
+        ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
 
-    cmap = "Blues"
-    center = matrix[0][0]
-    sns.set(font_scale=0.8)
-    hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
-    hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
-    hm1.set_xticklabels(labels, rotation=90, ha='center')
-    
-    
-    ax1.set_title(type_name)
-    ax1.xaxis.tick_top()
-    ax1.tick_params(length=0)
-    ax1.set(xlabel='Test sets', ylabel='Classifiers')
-    ax1.xaxis.set_label_coords(0.5, 1.4)
+        cmap = "Blues"
+        center = matrix[0][0]
+        sns.set(font_scale=0.8)
+        hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
+        hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
+        hm1.set_xticklabels(labels, rotation=90, ha='center')
+        
+        
+        ax1.set_title(type_name)
+        ax1.xaxis.tick_top()
+        ax1.tick_params(length=0)
+        ax1.set(xlabel='Test sets', ylabel='Classifiers')
+        ax1.xaxis.set_label_coords(0.5, 1.4)
 
-    ax3.set(xlabel='Combined\n test set', ylabel='')
-    #ax3.xaxis.tick_top()
-    ax3.xaxis.set_label_coords(0.5, 1.13)
-    
-    fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
-    fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
+        ax3.set(xlabel='Combined\n test set', ylabel='')
+        #ax3.xaxis.tick_top()
+        ax3.xaxis.set_label_coords(0.5, 1.13)
+        
+        fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
+        fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
+    else:
+        path_fig = results_dir
+        sns.set(font_scale=1.0)
+        matrix = np.empty([len(eval_metrics),len(eval_metrics)])
+        for i in range(len(eval_metrics)):
+            for j in range(len(eval_metrics[i][selected_type])):
+                matrix[i][j] = eval_metrics[i][selected_type][j]
 
+        size = len(matrix[0])
+        min_val = np.amin(matrix)
+        max_val = np.amax(matrix) 
+
+        #avg_classifiers = np.asarray(avg_classifiers).reshape(size,1)
+
+        fig = plt.figure(figsize=(11,13))
+        ax1 = plt.subplot2grid((10,9), (0,0), colspan=6, rowspan=7)
+        #ax3 = plt.subplot2grid((10,9), (0,8), rowspan=7)
+
+        cmap = "Blues"
+        center = matrix[0][0]
+        sns.set(font_scale=0.8)
+        hm1 = sns.heatmap(matrix, ax=ax1,annot=True, fmt=".1%",vmin=min_val, vmax=max_val, cbar=False,cmap=cmap,square=True,xticklabels=labels, yticklabels=labels)
+        #hm2 = sns.heatmap(avg_classifiers, ax=ax3, annot=True, fmt=".1%", cbar=False, xticklabels=False, yticklabels=False,vmin=min_val, vmax=max_val,cmap=cmap,square=True)
+        hm1.set_xticklabels(labels, rotation=90, ha='center')
+        
+        
+        ax1.set_title(type_name)
+        ax1.xaxis.tick_top()
+        ax1.tick_params(length=0)
+        ax1.set(xlabel='Test sets', ylabel='Classifiers')
+        ax1.xaxis.set_label_coords(0.5, 1.4)
+
+        #ax3.set(xlabel='Combined\n test set', ylabel='')
+        #ax3.xaxis.tick_top()
+        #ax3.xaxis.set_label_coords(0.5, 1.13)
+        
+        fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
+        fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
 # tokenize datasets
 def tokenize(batch):
     return tokenizer(batch['text'], padding=True, truncation=True, max_length=512)
@@ -212,8 +221,6 @@ if __name__ == '__main__':
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
     
-    print(dataset_names)
-    SEED =321
     SPLIT_RATIO = 0.15
     COMBINED_RATIO = 0.5
     model_name= 'deepset/gbert-base'
@@ -235,7 +242,9 @@ if __name__ == '__main__':
     # prepare data sets
     data_sets = []
     for dataset in data_sets_text:
-        data_sets.append(prepareData(dataset))
+        dset = prepareData(dataset)
+        dset = dset.class_encode_column("label")
+        data_sets.append(dset)
 
     print('-'*50)
     print('Preparing data sets...')
