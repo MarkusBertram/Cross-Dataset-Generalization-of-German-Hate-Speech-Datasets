@@ -217,7 +217,7 @@ if __name__ == '__main__':
     for dset in dataset_names:
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
-    SEED = 321
+
     SPLIT_RATIO = 0.15
     COMBINED_RATIO = 0.5
     model_name= 'deepset/gbert-base'
@@ -271,7 +271,7 @@ if __name__ == '__main__':
         ## train/test split
         #tokenized_dataset = tokenize(dataset, tokenizer)
         #ds_dict['train'], ds_dict['test'] = train_test_split(dataset, test_size=size_test,train_size=size_train,shuffle=True)
-        ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train,shuffle=True,seed=SEED)
+        ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train,shuffle=True)
         
         training_sets.append(ds_dict['train'])
         #validation_sets.append(ds_dict_2['test'])
@@ -319,11 +319,10 @@ if __name__ == '__main__':
             args=training_args,                  # training arguments, defined above
             train_dataset=train_dataset,         # training dataset
             compute_metrics=compute_metrics,
-            #tokenizer = tokenizer
         )
         
         # train model
-        #trainer.train()
+        trainer.train()
         
         # evaluate model
         accuracy = []
