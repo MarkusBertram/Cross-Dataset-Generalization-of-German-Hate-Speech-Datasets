@@ -212,6 +212,7 @@ if __name__ == '__main__':
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
     
+    print(dataset_names)
     SEED =321
     SPLIT_RATIO = 0.15
     COMBINED_RATIO = 0.5
@@ -219,7 +220,8 @@ if __name__ == '__main__':
     path = './tmp2/'
     number_of_tokens = 50
     batch = 10
-    num_epochs = 3
+    num_epochs = 10
+    fair = False
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
@@ -239,12 +241,16 @@ if __name__ == '__main__':
     print('Preparing data sets...')
     print('-'*50)
     
-    # find lengths of smallest data set
-    min_length = 99999999
-    for dataset in data_sets:
-        min_length = min(min_length,len(dataset))
-    size_train = round(min_length*(1-SPLIT_RATIO))
-    size_test = min_length - size_train
+    if fair == True:
+        # find lengths of smallest data set
+        min_length = 99999999
+        for dataset in data_sets:
+            min_length = min(min_length,len(dataset))
+        size_train = round(min_length*(1-SPLIT_RATIO))
+        size_test = min_length - size_train
+    else:
+        size_train = 1-SPLIT_RATIO
+        size_test = SPLIT_RATIO
 
     # split data into train and test set  
     training_sets = []
@@ -266,19 +272,21 @@ if __name__ == '__main__':
         test_sets.append(ds_dict['test'])
 
         # combined test set
-        #ds_dict_2['train'], ds_dict_2['test'] = train_test_split(ds_dict['test'],train_size=COMBINED_RATIO,shuffle=True)
-        ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,shuffle=True,seed=SEED)
-        if combined_test_set is None:
-            combined_test_set = ds_dict_2['train']
-        else:
-            #combined_test_set = pd.concat([combined_test_set,ds_dict_2['train']])
-            combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
-    test_sets.append(combined_test_set)
-
+        if fair == True:
+            ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,stratify_by_column = "label",shuffle=True)
+        
+            if combined_test_set is None:
+                combined_test_set = ds_dict_2['train']
+            else:
+                #combined_test_set = pd.concat([combined_test_set,ds_dict_2['train']])
+                combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
+    if combined_test_set is not None:
+        test_sets.append(combined_test_set)
     path_combined_test = path_datasets / 'combined_test'
     Path(path_combined_test).mkdir(parents=True, exist_ok=True)
     #test_sets.append(path_combined_test)
-    combined_test_set.save_to_disk(path_combined_test)
+    if combined_test_set is not None:
+        combined_test_set.save_to_disk(path_combined_test)
 
     # train and evaluate classifiers
     for i in tqdm(range(len(data_sets))):
@@ -297,9 +305,7 @@ if __name__ == '__main__':
             num_train_epochs=num_epochs,              # total # of training epochs
             per_device_train_batch_size=batch,  # batch size per device during training
             per_device_eval_batch_size=64,   # batch size for evaluation
-            #warmup_steps=500,                # number of warmup steps for learning rate scheduler
-            weight_decay=0.01,               # strength of weight decay
-            logging_dir=path_logs
+            learning_rate = 2e-5
         )
 
         trainer = Trainer(
@@ -311,28 +317,7 @@ if __name__ == '__main__':
         )
         
         # train model
-        trainer.train()
-        # num_training_steps = num_epochs * len(train_dataloader)
-        # lr_scheduler = get_scheduler(
-        #         "linear",
-        #         optimizer=optimizer,
-        #         num_warmup_steps=0,
-        #         num_training_steps=num_training_steps
-        #     )
-        # model.train()
-        # for epoch in range(num_epochs):
-        #     for x, y in train_dataloader:
-        #         #input_id = x[:, 0].to(device)
-        #         #attention_masks = x[:, 1].to(device)
-        #         #outputs = model(**batch)
-        #         #outputs = model(input_ids = input_id, attention_mask = attention_masks, labels = y)
-        #         outputs = model(input_ids = x[:, 0], attention_mask = x[:, 1], labels = y)
-        #         loss = outputs.loss
-                
-        #         accelerator.backward(loss)
-        #         optimizer.step()
-        #         lr_scheduler.step()
-        #         optimizer.zero_grad()        
+        #trainer.train()
         
         # evaluate model
         accuracy = []
@@ -343,9 +328,9 @@ if __name__ == '__main__':
             
         for j in range(len(test_sets)):
             # prepare evluation test set
-            # eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(train_dataset))
-            # eval_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
-            eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(train_dataset))
+
+            eval_dataset = test_sets[j].map(tokenize, batched=True, batch_size=len(test_sets[j]))
+
             eval_dataset.set_format('torch', columns=['input_ids', 'attention_mask', 'label'])
             
             # predict
