@@ -61,9 +61,11 @@ def prepareData(data):
     return convertLabelsToInt(utils_pipeline.get_huggingface_dataset_format(data))
 
 def convertLabelsToInt(datset):
-    df = pd.DataFrame(datset)
-    #labels = list(set(df['label'].tolist()))
-    ds = Dataset.from_pandas(df) 
+    label_to_int = {
+        "neutral": 0,
+        "abusive": 1
+    }
+    dataset = dataset.map(lambda convertLabels: {"label": label_to_int[convertLabels["label"]]})
     return dataset
 
 # define a prediction function
