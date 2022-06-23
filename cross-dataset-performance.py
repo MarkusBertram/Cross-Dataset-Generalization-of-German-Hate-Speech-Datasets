@@ -126,10 +126,11 @@ def transform_to_dataset(dataset, tokenizer):
 
     return tensordataset
 
-def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""):
+def plotMatrix(eval_metrics,labels,results_dir, fair, selected_type='f1', type_name=""):
+    path_fig = results_dir
+    sns.set(font_scale=1.0)
     if fair == True:
-        path_fig = results_dir
-        sns.set(font_scale=1.0)
+        
         matrix = np.empty([len(eval_metrics),len(eval_metrics)])
         for i in range(len(eval_metrics)):
             for j in range(len(eval_metrics[i][selected_type])-1):
@@ -174,8 +175,6 @@ def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""
         fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
         fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
     else:
-        path_fig = results_dir
-        sns.set(font_scale=1.0)
         matrix = np.empty([len(eval_metrics),len(eval_metrics)])
         for i in range(len(eval_metrics)):
             for j in range(len(eval_metrics[i][selected_type])):
@@ -204,11 +203,7 @@ def plotMatrix(eval_metrics,labels,results_dir, selected_type='f1', type_name=""
         ax1.tick_params(length=0)
         ax1.set(xlabel='Test sets', ylabel='Classifiers')
         ax1.xaxis.set_label_coords(0.5, 1.4)
-
-        #ax3.set(xlabel='Combined\n test set', ylabel='')
-        #ax3.xaxis.tick_top()
-        #ax3.xaxis.set_label_coords(0.5, 1.13)
-        
+       
         fig.savefig(path_fig + "classification_cross_" + selected_type +".pdf", bbox_inches='tight', dpi=300)
         fig.savefig(path_fig + "classification_cross_" + selected_type +".png", bbox_inches='tight', dpi=300)
 # tokenize datasets
@@ -381,12 +376,12 @@ if __name__ == '__main__':
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     print("Macro F1")
-    plotMatrix(evaluation_results,dataset_names, results_dir,selected_type="f1")
+    plotMatrix(evaluation_results,dataset_names, results_dir,fair, selected_type="f1")
     print("Precision")
-    plotMatrix(evaluation_results,dataset_names, results_dir,selected_type="precision")
+    plotMatrix(evaluation_results,dataset_names, results_dir,fair, selected_type="precision")
     print("Recall")
-    plotMatrix(evaluation_results,dataset_names, results_dir,selected_type="recall")
+    plotMatrix(evaluation_results,dataset_names, results_dir,fair, selected_type="recall")
     print("Accuracy")
-    plotMatrix(evaluation_results,dataset_names, results_dir,selected_type="accuracy")
+    plotMatrix(evaluation_results,dataset_names, results_dir,fair, selected_type="accuracy")
 
     
