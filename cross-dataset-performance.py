@@ -220,7 +220,7 @@ if __name__ == '__main__':
     for dset in dataset_names:
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
-    
+    SEED = 321
     SPLIT_RATIO = 0.15
     COMBINED_RATIO = 0.5
     model_name= 'deepset/gbert-base'
