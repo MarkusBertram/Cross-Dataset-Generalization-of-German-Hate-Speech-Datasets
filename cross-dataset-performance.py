@@ -218,7 +218,7 @@ if __name__ == '__main__':
     path = './tmp2/'
     number_of_tokens = 50
     batch = 10
-    num_epochs = 10
+    num_epochs = 20
     fair = False
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -304,10 +304,11 @@ if __name__ == '__main__':
         # define trainer
         training_args = TrainingArguments(
             output_dir=path_model,          # output directory
+            save_strategy = "no",
             num_train_epochs=num_epochs,              # total # of training epochs
             per_device_train_batch_size=batch,  # batch size per device during training
             per_device_eval_batch_size=64,   # batch size for evaluation
-            learning_rate = 2e-5
+            learning_rate = 1e-5
         )
 
         trainer = Trainer(
