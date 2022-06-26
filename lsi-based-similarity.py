@@ -5,8 +5,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import yaml
+import re
+import unicodedata
 from gensim import corpora, models, similarities
 from datetime import datetime
+from transformers import AutoTokenizer
 from spacy.tokenizer import Tokenizer
 from spacy.lang.de import German
 from utils.utils import fetch_import_module
@@ -17,19 +20,45 @@ pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', 1000) 
 sns.set_style("dark", {'axes.grid' : True, 'axes.linewidth':1})
 
+def cleanTweets(dataset):
+    cleaned_dataset = []
+    twitter_username_re = re.compile(r'@([A-Za-z0-9_]+)')
+    lbr_re = re.compile(r'\|LBR\|')
+
+    #hashtag_re = re.compile(r'\B(\#[a-zA-Z0-9]+\b)(?!;)')
+    html_symbol_re = re.compile(r'&[^ ]+')
+    url_re = re.compile(r'(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})')
+    for tweet in dataset:
+        #text = twitter_username_re.sub("[UNK]",tweet['text'])
+        text = lbr_re.sub(' ', tweet)
+        text = twitter_username_re.sub("[UNK]",text)
+        text = unicodedata.normalize('NFKC',text)
+        text = text.replace('\n',' ')
+        text = text.replace('RT ',' ')
+        #text = hashtag_re.sub("[UNK]",text)
+        text = html_symbol_re.sub(" ",text)
+        text = url_re.sub("[UNK]",text)
+        cleaned_dataset.append(text)
+        #tweet['text'] = text
+    return cleaned_dataset #dataset
+
 # Cleaning up raw input text
 def filter_corpus(corpus_input, tokenizer, stop_words):
 
-    filtered_corpus = []
-    for document in corpus_input:
-        text_tokens = tokenizer(document)
+    data = cleanTweets(corpus_input)
 
+    filtered_corpus = []
+    #text_tokens = tokenizer(data,add_special_tokens =False, return_token_type_ids =False, return_attention_mask =False)
+    #print(tokenizer.batch_decode(text_tokens["input_ids"]))
+
+    for document in data:
+        text_tokens = tokenizer(document)
         text_tokens = [token.text for token in text_tokens]
         # remove stop words
-        tokens_without_sw = [word.lower() for word in text_tokens if not word.lower() in stop_words]
+        tokens_without_sw = [word.lower() for word in text_tokens if not word.lower() in stop_words and len(word.lower()) > 1]
 
         filtered_corpus.append(tokens_without_sw)
-    
+
     corp_frequency = defaultdict(int)
     for text in filtered_corpus:
         for token in text:

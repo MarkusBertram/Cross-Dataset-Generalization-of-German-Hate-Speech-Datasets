@@ -33,9 +33,11 @@ def cleanTweets(dataset):
     twitter_username_re = re.compile(r'@([A-Za-z0-9_]+)')
     hashtag_re = re.compile(r'\B(\#[a-zA-Z0-9]+\b)(?!;)')
     html_symbol_re = re.compile(r'&[^ ]+')
+    lbr_re = re.compile(r'\|LBR\|')
     url_re = re.compile(r'(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})')
     for tweet in dataset:
         text = twitter_username_re.sub("[UNK]",tweet['text'])
+        text = lbr_re.sub(' ', text)
         text = unicodedata.normalize('NFKC',text)
         text = text.replace('\n',' ')
         text = text.replace('RT ',' ')
