@@ -12,7 +12,7 @@ train = data_path / "german hatespeech refugees.csv"
 def get_labeled_data():  
     dset_list = list()     
 
-    with open(train, 'r', encoding="utf8") as file:
+    with open(train, 'r', encoding="utf-8") as file:
         reader=csv.reader(file)
 
         for row in reader:

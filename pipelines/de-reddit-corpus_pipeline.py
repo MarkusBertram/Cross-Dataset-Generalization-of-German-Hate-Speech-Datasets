@@ -7,7 +7,7 @@ data_path = Path(__file__).resolve().parents[1] / 'data' / 'de-reddit-corpus'
 train = data_path / "german_subredditcorpus.json"
 
 def get_labeled_data():
-    with open(train, 'r') as f:
+    with open(train, 'r', encoding = "utf-8") as f:
         dset_list = json.load(f)
     return dset_list
 

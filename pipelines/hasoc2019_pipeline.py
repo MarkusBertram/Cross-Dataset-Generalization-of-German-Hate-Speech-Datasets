@@ -14,7 +14,7 @@ test = data_path / "hasoc_de_test_gold.tsv"
 def read_file(filename):
     read_data=list()
 
-    with open(filename, 'r', encoding="utf8") as file:
+    with open(filename, 'r', encoding="utf-8") as file:
         reader=csv.reader(file, delimiter='\t')
 
         for row in reader:

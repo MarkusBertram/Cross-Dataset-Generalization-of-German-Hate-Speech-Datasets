@@ -14,7 +14,7 @@ test = data_path / "germeval2018.test.txt"
 def read_file(filename):
     read_data=list()
 
-    with open(filename, 'r', encoding="utf8") as file:
+    with open(filename, 'r', encoding="utf-8") as file:
         reader=csv.reader(file, delimiter='\t', quotechar="'")
 
         for row in reader:

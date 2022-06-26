@@ -10,7 +10,7 @@ unlabeled = data_path / 'tweets.csv'
 
 def get_labeled_data():
     dset_list = list()
-    with open(train, 'r', encoding="utf8") as file:
+    with open(train, 'r', encoding="utf-8") as file:
         #reader = csv.reader(file, delimiter='\t')
         reader=(line for line in csv.reader(file, delimiter = "\t", dialect='excel'))
         for row in reader:

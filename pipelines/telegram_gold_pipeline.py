@@ -10,7 +10,7 @@ train = data_path / 'annotated_dataset.txt'
 def get_labeled_data():
     dset_list = []
     
-    with open(train, 'r') as f:
+    with open(train, 'r', encoding='utf-8') as f:
         data_json = json.load(f)
 
     for message in data_json["messages"]:

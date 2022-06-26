@@ -23,7 +23,6 @@ from gensim.scripts.glove2word2vec import glove2word2vec
 from gensim.test.utils import datapath, get_tmpfile
 from matplotlib import cm
 from torch.utils.data import Dataset, DataLoader
-from nltk.corpus import stopwords
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.manifold import TSNE
@@ -41,13 +40,11 @@ from torch.utils.data import Dataset
 from processing.preprocessing_multilingual import preprocess_text
 from sklearn import preprocessing
 from utils.utils import fetch_import_module
-from nltk.corpus import stopwords  
 from nltk.tokenize import word_tokenize  
 from nltk.tokenize import wordpunct_tokenize
 from spacy.tokenizer import Tokenizer
 from spacy.lang.de import German
 nltk.download('punkt')
-nltk.download('stopwords')
 
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', 1000) 
@@ -62,6 +59,7 @@ def getMatrix(X):
     
     X_vec = cv.fit_transform(X)
     words = cv.get_feature_names()
+
     return X_vec,words
 
 def getPmisPerClass(X_vec,Y,words):
@@ -73,7 +71,9 @@ def getPmisPerClass(X_vec,Y,words):
         pmis_per_class[label] = dict()
 
     X_matrix = np.array(X_vec.toarray())
+
     Y = np.array(Y)
+    
     for i in range(len(X_matrix[0,:])):
         pmis = []
         for label in labels:
@@ -92,11 +92,9 @@ def getPmisPerClass(X_vec,Y,words):
 
 if __name__ == "__main__":
     config = yaml.safe_load(open("settings/config.yaml"))
-    # print("\n --- Downloading Stopwords ---")
-    # nltk.download('stopwords')
     dataset_names = list(config['datasets'].keys())
     datasets, exclude = [], []
-    
+    hate_classes = False
     for dset in dataset_names:
         dset_module = fetch_import_module(dset)
         datasets.append(dset_module.get_labeled_data())
@@ -107,9 +105,9 @@ if __name__ == "__main__":
             exclude.append(non_hate_labels)
         else:
             pass
-    
-    
+
     print("\n --- Calculating PMI-based word ranking for classes... ---")
+    
     nlp = German()
     tokenizer = nlp.tokenizer
 
@@ -117,24 +115,33 @@ if __name__ == "__main__":
         stop_words = f.read().splitlines()
     
     n = 10
-    
+   
     content_table = dict()
     for dataset,dataset_name,exclude_labels in zip(datasets,dataset_names,exclude):
-        X = [preprocess_text(x['text'], tokenizer, stop_words) for x in dataset]
-        Y = [x['label'] for x in dataset]
+        x_list = [preprocess_text(x['text'], tokenizer, stop_words) for x in dataset]
+        y_list = [x['label'] for x in dataset]
+ 
+        X_vec,words = getMatrix(x_list)
 
-        X_vec,words = getMatrix(X)
+        pmis_per_class = getPmisPerClass(X_vec,y_list,words)
 
-        pmis_per_class = getPmisPerClass(X_vec,Y,words)
         for label in pmis_per_class.keys():
-            if label in exclude_labels:
-                continue
+            if hate_classes == True:
+                if label in exclude_labels:
+                    continue
+            elif hate_classes == False:
+                if label not in exclude_labels:
+                    continue
+
             sorted_dict = dict(sorted(pmis_per_class[label].items(), key=lambda item: item[1],reverse=True))
             column = []
-            for i,word in enumerate(sorted_dict.keys()):
+            i = 0
+            for word in sorted_dict.keys():
                 if i >= n:
                     break
-                column.append(word)
+                if word not in stop_words:
+                    column.append(word)
+                    i+=1
 
             content_table[dataset_name + " - " + label] = column
 
