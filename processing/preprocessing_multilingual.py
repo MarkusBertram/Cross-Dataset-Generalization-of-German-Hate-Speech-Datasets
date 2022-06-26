@@ -36,7 +36,7 @@ def preprocess_text(text, tokenizer, stop_words):
     return cleaned_text
 
 def clean_text(text):
-    text = lbr_re.sub(' ', text)
+    text = lbr_re.sub("", text)
     text = twitter_username_re.sub("",text)
     text = emoji_re.sub("",text)
     text = number_re.sub("",text)

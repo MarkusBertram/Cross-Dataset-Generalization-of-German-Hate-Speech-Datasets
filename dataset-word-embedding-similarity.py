@@ -163,8 +163,8 @@ if __name__ == "__main__":
         datasets.append(dset_module.get_labeled_data())
 
     print("\n --- Calculating Word embedding based inter- and intra-dataset class similarity... ---")
-    config = AutoConfig.from_pretrained("deepset/gbert-base")
-    model =  AutoModelForMaskedLM.from_pretrained("deepset/gbert-base", config = config)
+    #config = AutoConfig.from_pretrained("deepset/gbert-base")
+    model =  AutoModelForMaskedLM.from_pretrained("deepset/gbert-base")
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained("deepset/gbert-base")
     
