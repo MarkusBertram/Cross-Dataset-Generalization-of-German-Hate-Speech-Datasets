@@ -102,9 +102,9 @@ def plot_embedding_annotate(tsne_embedded, axis_labels,dataset_names,palette = "
     ax.set_xlabel('standardized PC1 ({:.2%} explained var.)'.format(axis_labels[0]))
     ax.set_ylabel('standardized PC2 ({:.2%} explained var.)'.format(axis_labels[1]))
     
-    fig.savefig(path_fig + "-vocab_inter-intra-class-sim.pdf", bbox_inches='tight', dpi=300)
-    fig.savefig(path_fig + "-vocab_inter-intra-class-sim.png", bbox_inches='tight', dpi=300)
-    fig.savefig(path_fig + "-vocab_inter-intra-class-sim.eps", bbox_inches='tight', dpi=600)
+    fig.savefig(path_fig + "dataset-vocab_inter-intra-class-sim.pdf", bbox_inches='tight', dpi=300)
+    fig.savefig(path_fig + "dataset-vocab_inter-intra-class-sim.png", bbox_inches='tight', dpi=300)
+    fig.savefig(path_fig + "dataset-vocab_inter-intra-class-sim.eps", bbox_inches='tight', dpi=600)
     return fig
 
 # tokenize datasets
