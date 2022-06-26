@@ -10,22 +10,22 @@ datasets:
     non-hate-label: "False"
   hasoc2019:
     unlabeled-dataset: False
-    non-hate-label: none
+    non-hate-label: NOT
   hasoc2020:
     unlabeled-dataset: False
-    non-hate-label: none
+    non-hate-label: NOT
   ihs_data:
     unlabeled-dataset: True
-    non-hate-label: none
+    non-hate-label: Other
   IWG_hatespeech_public:
     unlabeled-dataset: False
-    non-hate-label: none
+    non-hate-label: "NO"
   covid_2021:
     unlabeled-dataset: False
     non-hate-label: not
   telegram_gold:
     unlabeled-dataset: False
-    non-hate-label: none 
+    non-hate-label: NEUTRAL 
   # telegram_unlabeled:
   #   unlabeled-dataset: True
   #   non-hate-label: none 
