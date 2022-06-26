@@ -76,8 +76,6 @@ def plot_embedding_annotate(tsne_embedded, axis_labels,dataset_names,palette = "
     emb_x = tsne_embedded[:,0]
     emb_y = tsne_embedded[:,1]
     
-    int_labels = labels
-
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(111)
     
@@ -97,7 +95,7 @@ def plot_embedding_annotate(tsne_embedded, axis_labels,dataset_names,palette = "
         # offset = end
 
     iterations = adjust_text(texts,lim=2000,arrowprops=dict(arrowstyle='-', color='grey'))
-    print(iterations)
+
     handles, labels = scatter.legend_elements()
     ax.set_xlabel('standardized PC1 ({:.2%} explained var.)'.format(axis_labels[0]))
     ax.set_ylabel('standardized PC2 ({:.2%} explained var.)'.format(axis_labels[1]))
