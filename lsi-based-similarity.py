@@ -9,7 +9,6 @@ import re
 import unicodedata
 from gensim import corpora, models, similarities
 from datetime import datetime
-from transformers import AutoTokenizer
 from spacy.tokenizer import Tokenizer
 from spacy.lang.de import German
 from utils.utils import fetch_import_module
