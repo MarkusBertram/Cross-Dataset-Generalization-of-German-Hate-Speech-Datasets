@@ -123,7 +123,7 @@ def transform_to_embed_sentence(dataset, model, tokenizer):
         sentence["text"] = preprocessing_multilingual.clean_text(sentence['text'])
 
     df = pd.DataFrame(dataset)
-    df.drop(["label", "fine-grained_label"], axis=1, inplace=True)
+    df.drop(["label", "fine-grained_label"], axis=1, inplace=True, errors = "ignore")
     ds = Dataset.from_pandas(df) 
     del dataset
     del df
