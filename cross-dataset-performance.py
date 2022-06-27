@@ -220,7 +220,7 @@ if __name__ == '__main__':
     path = './tmp2/'
     number_of_tokens = 50
     batch = 10
-    num_epochs = 20
+    num_epochs = 25
     fair = False
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -286,16 +286,6 @@ if __name__ == '__main__':
     if combined_test_set is not None:
         combined_test_set.save_to_disk(path_combined_test)
 
-    # for i in range(len(training_sets)):
-    #     print(data_sets[i])
-    #     print(training_sets[i])
-    #     print(test_sets[i])
-    #     print(f"{len(training_sets[i])} + {len(test_sets[i])} = {len(training_sets[i])+len(test_sets[i])} ")
-    #     print("*"*10)
-    # print(len(training_sets))
-    # print(len(test_sets))
-    # sys.exit(0)
-    # train and evaluate classifiers
     for i in tqdm(range(len(data_sets))):
         path_model = path_models / "{}_{}_model".format(str(i),dataset_names[i])
 
@@ -354,7 +344,7 @@ if __name__ == '__main__':
         #results['predictions'] = predictions
             
         # save model
-        #trainer.save_model(path_model)
+        trainer.save_model(path_model)
 
         pickle.dump(results, open("{}{}_{}.pkl".format(path_output,str(i),dataset_names[i]), "wb"))
 
