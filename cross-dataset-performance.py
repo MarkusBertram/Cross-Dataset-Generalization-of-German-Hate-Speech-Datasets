@@ -222,6 +222,7 @@ if __name__ == '__main__':
     batch = 10
     num_epochs = 25
     fair = False
+    save_combined_test = True
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
@@ -280,11 +281,43 @@ if __name__ == '__main__':
                 combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
     if combined_test_set is not None:
         test_sets.append(combined_test_set)
-    path_combined_test = path_datasets / 'combined_test'
-    Path(path_combined_test).mkdir(parents=True, exist_ok=True)
+
     #test_sets.append(path_combined_test)
     if combined_test_set is not None:
+        path_combined_test = path_datasets / 'combined_test'
+        Path(path_combined_test).mkdir(parents=True, exist_ok=True)
         combined_test_set.save_to_disk(path_combined_test)
+
+    # Just save the combined test set
+    if save_combined_test == True:
+        min_length = 99999999
+        for dataset in data_sets:
+            min_length = min(min_length,len(dataset))
+        size_train = round(min_length*(1-SPLIT_RATIO))
+        size_test = min_length - size_train
+
+        for i,dataset in enumerate(data_sets):
+            ds_dict = {}
+            ds_dict_1 = {}
+            ds_dict_2 = {}
+            # split data sets and tokenize
+            ## train/test split
+            ds_dict = dataset.train_test_split(test_size=size_test,train_size=size_train, stratify_by_column = "label", shuffle=True)
+            
+            # combined test set
+            ds_dict_2 = ds_dict['test'].train_test_split(train_size=COMBINED_RATIO,stratify_by_column = "label", shuffle=True)
+        
+            if combined_test_set is None:
+                combined_test_set = ds_dict_2['train']
+            else:
+                #combined_test_set = pd.concat([combined_test_set,ds_dict_2['train']])
+                combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
+        
+        #test_sets.append(path_combined_test)
+        if combined_test_set is not None:
+            path_combined_test = path_datasets / 'combined_test'
+            Path(path_combined_test).mkdir(parents=True, exist_ok=True)
+            combined_test_set.save_to_disk(path_combined_test)
 
     for i in tqdm(range(len(data_sets))):
         path_model = path_models / "{}_{}_model".format(str(i),dataset_names[i])
