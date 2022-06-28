@@ -80,13 +80,14 @@ def getPmisPerClass(X_vec,Y,words):
             p_label = np.sum(Y == label) / len(Y)
             select_y = Y == label
             column = X_matrix[:,i]
+            p_x = np.sum(column) / len(column)            
             select_column = column[select_y]
             p_label_x = np.sum(select_column) / len(select_column)
             if p_label_x <= 0:
-                pass
-                #pmis_per_class[label][words[i]] = 0
+                #pass
+                pmis_per_class[label][words[i]] = 0
             else:
-                pmi = log((p_label_x/p_label))
+                pmi = log((p_label_x/(p_label*p_x)))
                 pmis_per_class[label][words[i]] = pmi
     return pmis_per_class
 
