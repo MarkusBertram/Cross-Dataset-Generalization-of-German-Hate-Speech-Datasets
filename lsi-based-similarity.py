@@ -74,10 +74,13 @@ def getSimilarityScores(data, tokenizer, stop_words):
     total_corpus = list()
     for label in labels:
         total_corpus.append(filter_corpus(class_separated_dicts[label], tokenizer, stop_words))
-        
+    
     ### CLASS SIMILARITIES
+    # all unique words in dataset
     dictionary = corpora.Dictionary([item for sublist in total_corpus for item in sublist])
+    # transform each document to a bag-of-word vector
     corpus = [dictionary.doc2bow(text) for text in [item for sublist in total_corpus for item in sublist]]
+
     #LSI similarity
     lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=16)
     index = similarities.MatrixSimilarity(lsi[corpus])
