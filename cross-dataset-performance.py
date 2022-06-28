@@ -227,7 +227,7 @@ if __name__ == '__main__':
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
     # get paths and create folders
-    path_models,path_datasets,path_output,path_logs =getPaths(path)
+    path_models,path_datasets,path_output,path_logs = getPaths(path)
 
     print('-'*50)
     print('Loading data sets...')
