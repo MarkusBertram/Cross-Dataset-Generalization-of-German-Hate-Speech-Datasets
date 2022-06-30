@@ -66,6 +66,8 @@ def filter_corpus(corpus_input, tokenizer, stop_words):
                         [token for token in text if corp_frequency[token] > 1]
                         for text in filtered_corpus
     ]
+    filtered_corpus = [text for text in filtered_corpus if len(text) > 0]
+
     return filtered_corpus
 
 def getSimilarityScores(data, tokenizer, stop_words):
@@ -131,7 +133,9 @@ if __name__ == "__main__":
     global stop_words
     with open("german_stop_words.txt", 'r', encoding = 'utf8') as f:
         stop_words = f.read().splitlines()
+    
     dataset_names = list(config['datasets'].keys())
+
     datasets = []
     for dset in dataset_names:
         dset_module = fetch_import_module(dset)
@@ -158,9 +162,6 @@ if __name__ == "__main__":
     fig2 = plt.figure(constrained_layout=True,figsize=(width, height))
     fig2.suptitle(title,y=1.05,fontsize=16)
     spec2 = gridspec.GridSpec(ncols=cols, nrows=rows, figure=fig2)
-
-    with open("german_stop_words.txt", 'r', encoding = 'utf8') as f:
-        stop_words = f.read().splitlines()
 
     global_min = 1
     global_max = 0

@@ -28,6 +28,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.manifold import TSNE
 from sklearn.metrics import SCORERS
 from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoConfig
+from decimal import *
 import torch
 import processing.basic_stats
 import processing.emoji as emoji
@@ -42,8 +43,10 @@ from sklearn import preprocessing
 from utils.utils import fetch_import_module
 from nltk.tokenize import word_tokenize  
 from nltk.tokenize import wordpunct_tokenize
+import spacy
 from spacy.tokenizer import Tokenizer
 from spacy.lang.de import German
+import de_dep_news_trf
 nltk.download('punkt')
 
 pd.set_option('display.width', 1000)
@@ -73,21 +76,21 @@ def getPmisPerClass(X_vec,Y,words):
     X_matrix = np.array(X_vec.toarray())
 
     Y = np.array(Y)
-    
+    getcontext().prec = 50
     for i in range(len(X_matrix[0,:])):
         pmis = []
         for label in labels:
-            p_label = np.sum(Y == label) / len(Y)
+            p_label = Decimal(np.sum(Y == label) / len(Y))
             select_y = Y == label
             column = X_matrix[:,i]
-            p_x = np.sum(column) / len(column)            
+            p_x = Decimal(np.sum(column) / len(column))            
             select_column = column[select_y]
-            p_label_x = np.sum(select_column) / len(select_column)
+            p_label_x = Decimal(np.sum(select_column) / len(select_column))
             if p_label_x <= 0:
                 #pass
                 pmis_per_class[label][words[i]] = 0
             else:
-                pmi = log((p_label_x/(p_label*p_x)))
+                pmi = Decimal(log((p_label_x/(p_label*p_x))))
                 pmis_per_class[label][words[i]] = pmi
     return pmis_per_class
 
@@ -95,7 +98,7 @@ if __name__ == "__main__":
     config = yaml.safe_load(open("settings/config.yaml"))
     dataset_names = list(config['datasets'].keys())
     datasets, exclude = [], []
-    hate_classes = False
+    hate_classes = True
     for dset in dataset_names:
         dset_module = fetch_import_module(dset)
         datasets.append(dset_module.get_labeled_data())
@@ -109,8 +112,9 @@ if __name__ == "__main__":
 
     print("\n --- Calculating PMI-based word ranking for classes... ---")
     
-    nlp = German()
-    tokenizer = nlp.tokenizer
+    nlp = de_dep_news_trf.load()
+    #nlp = #German()
+    #tokenizer = nlp.tokenizer
 
     with open("german_stop_words.txt", 'r', encoding = 'utf8') as f:
         stop_words = f.read().splitlines()
@@ -119,7 +123,7 @@ if __name__ == "__main__":
    
     content_table = dict()
     for dataset,dataset_name,exclude_labels in zip(datasets,dataset_names,exclude):
-        x_list = [preprocess_text(x['text'], tokenizer, stop_words) for x in dataset]
+        x_list = [preprocess_text(x['text'], nlp, stop_words) for x in dataset]
         y_list = [x['label'] for x in dataset]
  
         X_vec,words = getMatrix(x_list)
@@ -141,6 +145,7 @@ if __name__ == "__main__":
                 if i >= n:
                     break
                 if word not in stop_words:
+                    print(sorted_dict[word])
                     column.append(word)
                     i+=1
 

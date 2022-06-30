@@ -18,11 +18,9 @@ def preprocess_text(text, tokenizer, stop_words):
     if not isinstance(text,str):
         return ''
     text = clean_text(text)
-    
     text_tokens = tokenizer(text)
-
-    text_tokens = [token.text for token in text_tokens]
-
+    text_tokens = [token.lemma_ for token in text_tokens]
+    
     # remove stop words
     tokens_without_sw = [word.lower() for word in text_tokens if word.lower() not in stop_words]
 
