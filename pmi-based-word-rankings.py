@@ -11,6 +11,7 @@ from pprint import pprint
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import nltk
+from scipy.stats import fisher_exact
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -90,8 +91,11 @@ def getPmisPerClass(X_vec,Y,words):
                 #pass
                 pmis_per_class[label][words[i]] = 0
             else:
-                pmi = Decimal(log((p_label_x/(p_label*p_x))))
+                pmi = Decimal(Decimal(log((p_label_x/(p_label*p_x))))*p_label_x)
                 pmis_per_class[label][words[i]] = pmi
+
+
+            #oddsratio, p_value = fisher_exact()
     return pmis_per_class
 
 if __name__ == "__main__":
