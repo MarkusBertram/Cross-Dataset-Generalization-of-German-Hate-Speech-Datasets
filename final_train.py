@@ -51,7 +51,16 @@ def run_experiments(log_dir, config):
 
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-            model = get_model("base")
+            # feature_extractor = exp_settings.get("feature_extractor", "f1")
+            # task_classifier = exp_settings.get("task_classifer", "c1")
+
+
+
+            # alignment_component = exp_settings.get("alignment_component", "DANN")
+
+            #model = get_model(feature_extractor, task_classifer, alignment_component)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Prepare run of Domain Adaptation",
