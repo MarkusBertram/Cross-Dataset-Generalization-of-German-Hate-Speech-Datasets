@@ -240,6 +240,9 @@ if __name__ == '__main__':
         dset = dset.class_encode_column("label")
         data_sets.append(dset)
 
+    del data_sets_text
+    del dset
+
     print('-'*50)
     print('Preparing data sets...')
     print('-'*50)
@@ -281,12 +284,9 @@ if __name__ == '__main__':
                 combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
     if combined_test_set is not None:
         test_sets.append(combined_test_set)
-
-    #test_sets.append(path_combined_test)
-    if combined_test_set is not None:
         path_combined_test = path_datasets / 'combined_test'
         Path(path_combined_test).mkdir(parents=True, exist_ok=True)
-        combined_test_set.save_to_disk(path_combined_test)
+        combined_test_set.save_to_disk(path_combined_test)       
 
     # Just save the combined test set
     if save_combined_test == True:

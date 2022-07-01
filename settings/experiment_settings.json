@@ -1,10 +1,114 @@
 {
     "experiments": [
         {
-        "labeled_target_size": 100
+        "basic_settings": {
+          "target_labelled": "telegram_gold",
+          "target_unlabelled": "telegram_unlabeled",
+          "sources": [
+            "germeval2018", 
+            "germeval2019",
+            "hasoc2019",
+            "hasoc2020",
+            "ihs_labelled",
+            "covid_2021"
+        ],
+        "unlabelled_size": 200000,
+        "equal_labelled_size": false,
+        "epochs": 10,
+        "batch_size": 64,
+        "weight_decay": 0,
+        "lr": 2e-5,
+        "momentum": 0,
+        "lr_scheduler": true,
+        "validation_split": 0.1,
+        "test_split": 0.1,
+        "freeze_BERT_weights": true,
+        "verbose": 1
         },
-        {
-        "labeled_target_size": 200
-        }
+        "exp_settings": [
+          {
+            "exp_type": "baseline",
+            "exp_name": "baseline-cifar-030-noOOD",
+            "oracle": "baseline",
+            "model": "bert_cls",
+            "plots": false
+          },
+          {
+            "exp_type": "genodin",
+            "exp_name": "genodin-cifar-030",
+            "similarity": "C",
+            "oracle": "highest-entropy",
+            "do_pertubed_images": true,
+            "scaling_factor": "R",
+            "model": "GenOdin",
+            "bugged_and_working": false,
+            "plotsettings": {
+              "do_plot": false,
+              "density_plot": true,
+              "layer_plot": false
+            },
+            "perform_experiment": true
+          }
+          
+        ]
+      },
+
+      {
+        "basic_settings": {
+          "oracle_stepsize": 150,
+          "oracle_steps": 20,
+          "iD": "CIFAR10",
+          "OoD": ["A_CIFAR100_ood", "SVHN"],
+          "grayscale": false,
+          "subclass": {
+            "do_subclass": false,
+            "iD_classes": [],
+            "OoD_classes": []
+          },
+          "labelled_size": 3000,
+          "pool_size": 50000,
+          "OOD_ratio": 0.3,
+          "epochs": 100,
+          "batch_size": 64,
+          "weight_decay": 1e-4,
+          "metric": "accuracy",
+          "lr": 0.1,
+          "nesterov": false,
+          "momentum": 0.9,
+          "lr_sheduler": true,
+          "num_classes": 10,
+          "validation_split": 0.1,
+          "validation_source": "test",
+          "criterion": "crossentropy",
+          "verbose": 1
+        },
+        "exp_settings": [
+          {
+            "exp_type": "baseline",
+            "exp_name": "baseline-cifar-030-noOOD",
+            "oracle": "baseline",
+            "model": "base",
+            "plots": false,
+            "perform_experiment": true
+          },
+          {
+            "exp_type": "genodin",
+            "exp_name": "genodin-cifar-030",
+            "similarity": "C",
+            "oracle": "highest-entropy",
+            "do_pertubed_images": true,
+            "scaling_factor": "R",
+            "model": "GenOdin",
+            "bugged_and_working": false,
+            "plotsettings": {
+              "do_plot": false,
+              "density_plot": true,
+              "layer_plot": false
+            },
+            "perform_experiment": true
+          }
+          
+        ]
+      }
     ]
 }

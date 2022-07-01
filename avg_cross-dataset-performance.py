@@ -233,7 +233,7 @@ if __name__ == '__main__':
         dset_module = fetch_import_module(dset)
         data_sets_text.append(dset_module.get_data_binary())
 
-    number_of_runs = 5
+    number_of_runs = 10
     fair = False
     SPLIT_RATIO = 0.2
     COMBINED_RATIO = 0.5
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     path = './tmp3/'
     number_of_tokens = 50
     batch = 16
-    num_epochs = 10
+    num_epochs = 3
     accelerator = Accelerator()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     device = accelerator.device
@@ -303,12 +303,9 @@ if __name__ == '__main__':
                     combined_test_set = concatenate_datasets([combined_test_set,ds_dict_2['train']])
         if combined_test_set is not None:
             test_sets.append(combined_test_set)
-
-        path_combined_test = path_datasets / 'combined_test'
-        Path(path_combined_test).mkdir(parents=True, exist_ok=True)
-        #test_sets.append(path_combined_test)
-        if combined_test_set is not None:
-            combined_test_set.save_to_disk(path_combined_test)
+            path_combined_test = path_datasets / 'combined_test'
+            Path(path_combined_test).mkdir(parents=True, exist_ok=True)
+            combined_test_set.save_to_disk(path_combined_test)            
 
         # train and evaluate classifiers
         for i in tqdm(range(len(data_sets))):
