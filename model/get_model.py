@@ -1,5 +1,7 @@
 def get_model(
-    model_name,
+    feature_extractor, 
+    task_classifer, 
+    alignment_component,
     **kwargs,
 ):
     """get_model [[function which returns instance of the experiments model]]
@@ -17,6 +19,9 @@ def get_model(
     Returns:
         [nn.Module]: [parametrized Neural Network]
     """
+    # feature_extractor = get_feature_extractor(feature_extractor_name)
+
+    # task_classifier = get_task_classifer(task_classifier_name)
     if model_name == "base":
         return resnet20(
             num_classes=kwargs.get("num_classes", 10),

@@ -12,6 +12,7 @@
             "ihs_labelled",
             "covid_2021"
         ],
+        "labelled_size": 0.05,
         "unlabelled_size": 200000,
         "equal_labelled_size": false,
         "epochs": 10,
@@ -27,12 +28,14 @@
         },
         "exp_settings": [
           {
-            "exp_type": "baseline",
-            "exp_name": "baseline-cifar-030-noOOD",
+            "exp_type": "unsupervised",
+            "exp_name": "DANN_cls",
             "oracle": "baseline",
-            "model": "bert_cls",
-            "plots": false
-          },
+            "feature_extractor": "bert_cls",
+            "task_classifier": "base",
+            "alignment_component": "DANN",
+            "model": "DANN"
+                    },
           {
             "exp_type": "genodin",
             "exp_name": "genodin-cifar-030",
