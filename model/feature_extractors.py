@@ -1,0 +1,97 @@
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments, AdamW
+
+import torch
+from torch import nn
+from transformers import BertModel
+from torch.nn import CrossEntropyLoss
+import gc
+
+class BERT_cls(nn.Module):
+    def __init__(self):
+        super(BERT_cls, self).__init__()
+        self.num_labels = 2
+        self.bert = BertModel.from_pretrained("deepset/gbert-base")
+        ### New layers:
+        self.feature_extractor_linear1 = nn.Linear(768, 768)
+        self.feature_extractor_linear2 = nn.Linear(768, 768)
+        self.feature_extractor_linear3 = nn.Linear(768, 2)
+        self.feature_extractor_relu = nn.LeakyReLU()
+        self.feature_extractor_softmax = nn.Softmax(dim=1)
+        self.feature_extractor_dropout = nn.Dropout(0.1)
+       
+    def feature_extractor_forward(
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+        ):
+
+        outputs = self.bert(
+            input_ids= input_ids, 
+            attention_mask=attention_mask)
+
+        x = outputs[1]
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_linear1(x) 
+        x = self.feature_extractor_relu(x)
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_linear2(x)
+        x = self.feature_extractor_relu(x)
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_linear3(x)
+
+        return x
+
+
+class BERT_cnn(nn.Module):
+    def __init__(self):
+        super(BERT_cnn, self).__init__()
+        self.num_labels = 2
+        self.feature_extractor_bert = BertModel.from_pretrained("deepset/gbert-base")
+        ### New layers:
+        self.feature_extractor_conv = nn.Conv2d(in_channels=13, out_channels=13, kernel_size=(3, 768), padding=True)
+        self.feature_extractor_relu = nn.ReLU()
+        self.feature_extractor_pool = nn.MaxPool2d(kernel_size=3, stride=1)
+        self.feature_extractor_dropout = nn.Dropout(0.1)
+        self.feature_extractor_fc = nn.Linear(442, 3)
+        self.feature_extractor_flat = nn.Flatten()
+        self.feature_extractor_softmax = nn.LogSoftmax(dim=1)
+       
+    def feature_extractor_forward(
+        self,
+        input_ids=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        labels=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+        ):
+        _, _, all_layers = self.feature_extractor_bert(input_ids, attention_mask=attention_mask, output_hidden_states=True)
+        # all_layers  = [13, 32, 64, 768]
+        x = torch.transpose(torch.cat(tuple([t.unsqueeze(0) for t in all_layers]), 0), 0, 1)
+        del all_layers
+        gc.collect()
+        torch.cuda.empty_cache()
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_conv(x)
+        x = self.feature_extractor_relu(x)
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_pool(x)
+        
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_flat(x)
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_fc(x)
+        return self.feature_extractor_softmax(x)
+

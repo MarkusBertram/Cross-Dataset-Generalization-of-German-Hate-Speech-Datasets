@@ -36,22 +36,24 @@
             "alignment_component": "DANN",
             "model": "DANN"
                     },
+            {
+              "exp_type": "semi-supervised",
+              "exp_name": "MME_cls",
+              "oracle": "baseline",
+              "feature_extractor": "bert_cls",
+              "task_classifier": "base",
+              "alignment_component": "DANN",
+              "model": "DANN"
+          },
           {
-            "exp_type": "genodin",
-            "exp_name": "genodin-cifar-030",
-            "similarity": "C",
-            "oracle": "highest-entropy",
-            "do_pertubed_images": true,
-            "scaling_factor": "R",
-            "model": "GenOdin",
-            "bugged_and_working": false,
-            "plotsettings": {
-              "do_plot": false,
-              "density_plot": true,
-              "layer_plot": false
-            },
-            "perform_experiment": true
-          }
+            "exp_type": "multi-source",
+            "exp_name": "M3SDN_cls",
+            "oracle": "baseline",
+            "feature_extractor": "bert_cls",
+            "task_classifier": "base",
+            "alignment_component": "DANN",
+            "model": "DANN"
+        }
           
         ]
       },
