@@ -34,8 +34,12 @@
             "feature_extractor": "bert_cls",
             "task_classifier": "base",
             "alignment_component": "DANN",
-            "model": "DANN"
-                    },
+            "model": "DANN",
+            "model_specific_parameters": {
+              "l1":10
+
+            }
+          },
             {
               "exp_type": "semi-supervised",
               "exp_name": "MME_cls",
@@ -43,7 +47,11 @@
               "feature_extractor": "bert_cls",
               "task_classifier": "base",
               "alignment_component": "DANN",
-              "model": "DANN"
+              "model": "DANN",
+              "model_specific_parameters": {
+                "l1":10
+  
+              }
           },
           {
             "exp_type": "multi-source",
@@ -52,7 +60,11 @@
             "feature_extractor": "bert_cls",
             "task_classifier": "base",
             "alignment_component": "DANN",
-            "model": "DANN"
+            "model": "DANN",
+            "model_specific_parameters": {
+              "l1":10
+
+            }
         }
           
         ]

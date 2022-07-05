@@ -54,11 +54,25 @@ def run_experiments(log_dir, config):
             # feature_extractor = exp_settings.get("feature_extractor", "f1")
             # task_classifier = exp_settings.get("task_classifer", "c1")
 
-
+            
 
             # alignment_component = exp_settings.get("alignment_component", "DANN")
 
             #model = get_model(feature_extractor, task_classifer, alignment_component)
+
+            # if "VADA" == True:
+                # do VADA
+
+            # ...
+
+            # if "unsupervised " == TRue:
+                # do train unsupervised
+            # elif "semi-supervised" == True:
+                # do semi-supervise
+            # elif "multi-source" == True:
+                # do multi-source
+            # else:
+                # error: please specify "adaptation_type", either unsupervised, semi-supervised or multisource in experiment settings
 
 
 def main():

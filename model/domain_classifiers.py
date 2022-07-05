@@ -6,6 +6,7 @@ import gc
 
 class domain_classifier1(nn.Module):
     def __init__(self):
+        super().__init__()
         self.num_labels = 2
         
         self.domain_classifier_linear1 = nn.Linear(768, 768)
@@ -21,4 +22,3 @@ class domain_classifier1(nn.Module):
     ):
         x = self.domain_classifier_linear1(feature_extractor_output)
 
-        

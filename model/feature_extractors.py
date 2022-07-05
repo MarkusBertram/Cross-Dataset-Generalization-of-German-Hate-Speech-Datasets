@@ -10,7 +10,7 @@ class BERT_cls(nn.Module):
     def __init__(self):
         super(BERT_cls, self).__init__()
         self.num_labels = 2
-        self.bert = BertModel.from_pretrained("deepset/gbert-base")
+        # self.bert = BertModel.from_pretrained("deepset/gbert-base")
         ### New layers:
         self.feature_extractor_linear1 = nn.Linear(768, 768)
         self.feature_extractor_linear2 = nn.Linear(768, 768)
@@ -54,7 +54,7 @@ class BERT_cnn(nn.Module):
     def __init__(self):
         super(BERT_cnn, self).__init__()
         self.num_labels = 2
-        self.feature_extractor_bert = BertModel.from_pretrained("deepset/gbert-base")
+        # self.feature_extractor_bert = BertModel.from_pretrained("deepset/gbert-base")
         ### New layers:
         self.feature_extractor_conv = nn.Conv2d(in_channels=13, out_channels=13, kernel_size=(3, 768), padding=True)
         self.feature_extractor_relu = nn.ReLU()
