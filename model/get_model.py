@@ -9,10 +9,7 @@ import gc
 import sys
 
 def get_model(
-    feature_extractor, 
-    task_classifier,
-    domain_classifier, 
-    alignment_component,
+    config,
     **kwargs,
 ):
     """get_model [[function which returns instance of the experiments model]]
@@ -30,94 +27,31 @@ def get_model(
     Returns:
         [nn.Module]: [parametrized Neural Network]
     """
-    # feature_extractor = get_feature_extractor(feature_extractor_name)
 
-    # task_classifier = get_task_classifer(task_classifier_name)
-
-    if feature_extractor == "bert_cls":
+    if config["feature_extractor"] == "BERT_cls":
         from feature_extractors import BERT_cls
-        feature_extractor_module = BERT_cls()
+        feature_extractor = BERT_cls()
         output_hidden_states = False
-    elif feature_extractor == "bert_cnn":
+    elif config["feature_extractor"] == "BERT_cnn":
         from feature_extractors import BERT_cnn
-        feature_extractor_module = BERT_cnn()
+        feature_extractor = BERT_cnn()
         output_hidden_states = True
-
-    if task_classifier == "tc1":
-        # from task_classifiers import task_classifier1
-        # task_classifier_module = task_classifier1()
-        class_classifier = nn.Sequential()
-        class_classifier.add_module('c_fc1', nn.Linear(50 * 4 * 4, 100))
-        class_classifier.add_module('c_bn1', nn.BatchNorm1d(100))
-        class_classifier.add_module('c_relu1', nn.ReLU(True))
-        class_classifier.add_module('c_drop1', nn.Dropout2d())
-        class_classifier.add_module('c_fc2', nn.Linear(100, 100))
-        class_classifier.add_module('c_bn2', nn.BatchNorm1d(100))
-        class_classifier.add_module('c_relu2', nn.ReLU(True))
-        class_classifier.add_module('c_fc3', nn.Linear(100, 10))
-        class_classifier.add_module('c_softmax', nn.LogSoftmax())
+    else:
+        print("error, can't find this feature extractor. please specify bert_cls or bert_cnn in experiment settings.")
     
-    if domain_classifier == "dc1":
+    if config["task_classifier"] == "tc1":
+        from task_classifiers import task_classifier1
+        task_classifier = task_classifier1()
+        
+    if config["domain_classifier"] == "dc1":
         from domain_classifiers import domain_classifier1
-        domain_classifier_module = domain_classifier1()
-    
-    print(feature_extractor_module)
-    print("aaa")
-    #     return resnet20(
-    #         num_classes=kwargs.get("num_classes", 10),
-    #         similarity=kwargs.get("similarity", None),
-    #     )
-    
-    # elif model_name == "LOOC":
-    #     return resnet20(**kwargs)
-    
-    # elif model_name == "gram_resnet":
-    #     return get_gram_resnet(num_classes=kwargs.get("num_classes", 10))
-    
-    # else:
-    #     raise ValueError(f"Model {model_name} not found")
+        domain_classifier = domain_classifier1()
 
-    class MultiHeadNetwork(nn.Module):
-        def __init__(self):
-            super(MultiHeadNetwork, self).__init__()
-            self.bert = BertModel.from_pretrained("deepset/gbert-base")
-            self.output_hidden_states = output_hidden_states
-            self.feature_extractor = feature_extractor_module
-            #self.task_classifier = task_classifier_module
-            self.task_classifier = class_classifier
-            self.domain_classifier = domain_classifier_module
-
-        def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        ):
-            bert_output = self.bert(input_ids, attention_mask=attention_mask, output_hidden_states=self.output_hidden_states)
-            feature_extractor_output = self.feature_extractor(bert_output)
-
-            class_output = self.task_classifier(feature_extractor_output)
-            domain_output = self.domain_classifier(feature_extractor_output)
+    if config["model"] == "DANN":
+        from model.DANN_model import DANN_model     
+        return DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states)
 
 
-            # if reverse_gradient == True:
-            # do reverse 
-
-            # if ... == True:
-            # do ...
-            return class_output, domain_output
-
-
-
-    return MultiHeadNetwork
-
-model = get_model("bert_cls", "tc1", "dc1", None)
-model = model()
-print(model())
+config = {"model":"DANN","feature_extractor": "BERT_cnn", "task_classifier": "tc1", "domain_classifier": "dc1" }
+model = get_model(config)
+print(model)
