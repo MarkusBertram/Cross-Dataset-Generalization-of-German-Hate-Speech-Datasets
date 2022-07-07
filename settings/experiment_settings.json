@@ -24,19 +24,18 @@
         "validation_split": 0.1,
         "test_split": 0.1,
         "freeze_BERT_weights": true,
+        "save_model": true,
         "verbose": 1
         },
         "exp_settings": [
           {
-            "exp_type": "unsupervised",
+            "exp_type": "DANN",
             "exp_name": "DANN_cls",
-            "oracle": "baseline",
             "feature_extractor": "bert_cls",
             "task_classifier": "base",
-            "alignment_component": "DANN",
-            "model": "DANN",
             "model_specific_parameters": {
-              "l1":10
+              "l1":10,
+              "alpha": 0.1
 
             }
           },

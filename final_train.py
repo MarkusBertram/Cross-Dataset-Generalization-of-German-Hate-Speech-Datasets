@@ -4,75 +4,149 @@ import os
 from pathlib import Path
 from datetime import datetime
 import torch
-from model.get_model import get_model
+from model.get_model_alt import get_model
+from torch.utils.tensorboard import SummaryWriter
+import gc
+from experiment_DANN import experiment_DANN
 
 def run_experiments(log_dir, config):
-    log_file = Path(log_dir / "results.csv")
+    #log_file = Path(log_dir / "results.csv")
+    log_file = Path(log_dir)
 
     for experiment in config["experiments"]:
+        writer = SummaryWriter(os.path.join(log_file, "writer_dir"))
+
         basic_settings = experiment["basic_settings"]
         
-        # data settings
-        target_labelled = basic_settings.get("target_labelled", "telegram_gold")
-        target_unlabelled = basic_settings.get("target_unlabelled", "telegram_unlabeled")
-        unlabelled_size = basic_settings.get("unlabelled_size", 200000)
-        validation_split = basic_settings.get("validation_split", 0)
-        test_split = basic_settings.get("test_split", 0.2)
-        sources = basic_settings.get("sources", [
-            "germeval2018", 
-            "germeval2019",
-            "hasoc2019",
-            "hasoc2020",
-            "ihs_labelled",
-            "covid_2021"
-        ])
         
-        # training settings
-        epochs = basic_settings.get("epochs", 10)
-        batch_size = basic_settings.get("batch_size", 64)
-        weight_decay = basic_settings.get("weight_decay", 0)
-        lr = basic_settings.get("lr", 2e-5)
-        momentum = basic_settings.get("momentum", 0)
-        freeze_BERT_weights = basic_settings.get("freeze_BERT_weights", True)
 
-        with open(
-            log_file, "w", encoding="utf-8"
-        ) as result_file:
-            result_file.write(
-                "exp_name,avg_train_acc,avg_train_loss,avg_test_acc,avg_test_loss\n"
-            )
+        
 
         for exp_setting in experiment["exp_settings"]:
-            exp_name = exp_setting.get("exp_name", "standard_name")
 
-            print(f"Performing training for: {exp_name}")
+            if exp_setting.get("perform_experiment", True):
+                print(
+                    f'\n\nINFO ---- Experiment {exp_setting["exp_type"]} is being performed.\n\n'
+                )
+            else:
+                print(
+                    f'\n\nINFO ---- Experiment {exp_setting["exp_type"]} is not being performed.\n\n'
+                )
+                continue
 
-            exp_type = exp_setting.get("exp_type", "baseline")
+            # exp_name = exp_setting.get("exp_name", "standard_name")
 
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            # print(f"Performing training for: {exp_name}")
 
-            # feature_extractor = exp_settings.get("feature_extractor", "f1")
-            # task_classifier = exp_settings.get("task_classifer", "c1")
+            exp_type = exp_setting["exp_type"]
 
+            if exp_type == "DANN":
+                current_exp = experiment_DANN(
+                    basic_settings, exp_setting#, log_path, writer
+                )
+
+            elif exp_type == "DIRT_T":
+                current_exp = experiment_DIRT_T(
+                    basic_settings, exp_setting#, log_path, writer
+                )
+            elif exp_type == "MME":
+                current_exp = experiment_MME(
+                    basic_settings, exp_setting#, log_path, writer
+                )
+            elif exp_type == "LIRR":
+                current_exp = experiment_LIRR(
+                    basic_settings, exp_setting#, log_path, writer
+                )
+            elif exp_type == "MDAN":
+                current_exp = experiment_MDAN(
+                    basic_settings, exp_setting#, log_path, writer
+                )
+            elif exp_type == "M3SDA":
+                current_exp = experiment_M3SDA(
+                    basic_settings, exp_setting#, log_path, writer
+                )
+
+            try:
+                current_exp.perform_experiment()
+                del current_exp
+                gc.collect()
+
+            except Exception as e:
+                name = exp_setting["exp_name"]
+                print("\n\n")
+                print("**********" * 12)
+                print(f"Experiment {name} failed with Exception {e}")
+                print("**********" * 12)
+                print("\n\n")
+
+            #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             
+            # model = get_model(exp_setting)
 
-            # alignment_component = exp_settings.get("alignment_component", "DANN")
+            # trainer = get_trainer(model, exp_setting)
 
-            #model = get_model(feature_extractor, task_classifer, alignment_component)
+            # trainer.train()
 
-            # if "VADA" == True:
-                # do VADA
+            # model.to(device)
+            # model.train()
+            ###### create dataloader
+
+            # if exp_type == "unsupervised "
+                # get unsupervised train dataloader(target_unlabeled, unlabelled_size, sources, validation_split, test_split)
+                # get unsupervised test dataloader(target_labelled, validation_split, test_split)
+                # do train unsupervised
+                # train_loader = get_unsupervised_dataloader()
+            # elif exp_type == "semi-supervised":
+                # get semi-supervised dataloader
+                # do semi-supervise
+                # train_loader = get_semi_supervised_dataloader()
+            # elif exp_type == "multi-source":
+                # get multi-source dataloader
+                # do multi-source
+                # train_loader = get_multi_source_dataloader()
+            # else:
+                # error: please specify "exp_type", either unsupervised, semi-supervised or multisource in experiment settings
+
+
+
+            ####### create optimizer
+            # self.optimizer = get_optimizer(...)
+            # self.optimizer = optim.SGD(
+        #     [
+        #         {"params": base_params},
+        #         {"params": gen_odin_params, "weight_decay": 0.0},
+        #     ],
+        #     weight_decay=self.weight_decay,
+        #     lr=self.lr,
+        #     momentum=self.momentum,
+        #     nesterov=self.nesterov,
+        # )
+
+            ###### create criterion
+            # criterion = get_criterion(...)
+
+
+            ######### train
+            # for epoch in range(1, epochs + 1):
+            #
+            #       for batch_idx, (data, target) in enumerate(train_loader):
+                        # 
+                        # optimizer.zero_grad(set_to_none=True)
+                        # task_output, domain_output = model(data).to(device)
+                        # model_output = model(data).to(device)
+                        # loss = criterion(model_output)
+
+                        # loss.backward()
+                        # optimizer.step()
+
+
+            # if config["model"] == "DIRT_T"
+                # if "VADA" == True:
+                    # do VADA
 
             # ...
 
-            # if "unsupervised " == TRue:
-                # do train unsupervised
-            # elif "semi-supervised" == True:
-                # do semi-supervise
-            # elif "multi-source" == True:
-                # do multi-source
-            # else:
-                # error: please specify "adaptation_type", either unsupervised, semi-supervised or multisource in experiment settings
+            
 
 
 def main():

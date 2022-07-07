@@ -8,16 +8,15 @@ from torch.nn import CrossEntropyLoss
 import gc
 import sys
 
-def get_dann_model(feature_extractor_module, task_classifier_module, domain_classifier_module, output_hidden_states):
+def get_MME_model(feature_extractor_module, task_classifier_module, domain_classifier_module, output_hidden_states):
 
-    class DANN_model(nn.Module):
+    class MME_model(nn.Module):
             def __init__(self):
-                super(DANN_model, self).__init__()
+                super(MME_model, self).__init__()
                 self.bert = BertModel.from_pretrained("deepset/gbert-base")
                 self.output_hidden_states = output_hidden_states
                 self.feature_extractor = feature_extractor_module
                 self.task_classifier = task_classifier_module
-                self.domain_classifier = domain_classifier_module
 
             def forward(
             self,
@@ -29,10 +28,6 @@ def get_dann_model(feature_extractor_module, task_classifier_module, domain_clas
 
                 class_output = self.task_classifier(feature_extractor_output)
                 
-                reverse_feature = ReverseLayerF.apply(feature_extractor_output, alpha)
+                return class_output
 
-                domain_output = self.domain_classifier(reverse_feature)
-
-                return class_output, domain_output
-
-    return DANN_model
+    return MME_model

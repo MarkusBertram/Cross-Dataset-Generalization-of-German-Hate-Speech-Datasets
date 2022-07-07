@@ -16,16 +16,16 @@ class task_classifier1(nn.Module):
         # self.task_classifier_softmax = nn.Softmax(dim=1)
         # self.task_classifier_dropout = nn.Dropout(0.1)
 
-        class_classifier = nn.Sequential()
-        class_classifier.add_module('c_fc1', nn.Linear(50 * 4 * 4, 100))
-        class_classifier.add_module('c_bn1', nn.BatchNorm1d(100))
-        class_classifier.add_module('c_relu1', nn.ReLU(True))
-        class_classifier.add_module('c_drop1', nn.Dropout2d())
-        class_classifier.add_module('c_fc2', nn.Linear(100, 100))
-        class_classifier.add_module('c_bn2', nn.BatchNorm1d(100))
-        class_classifier.add_module('c_relu2', nn.ReLU(True))
-        class_classifier.add_module('c_fc3', nn.Linear(100, 10))
-        class_classifier.add_module('c_softmax', nn.LogSoftmax())
+        self.class_classifier = nn.Sequential()
+        self.class_classifier.add_module('c_fc1', nn.Linear(50 * 4 * 4, 100))
+        self.class_classifier.add_module('c_bn1', nn.BatchNorm1d(100))
+        self.class_classifier.add_module('c_relu1', nn.ReLU(True))
+        self.class_classifier.add_module('c_drop1', nn.Dropout2d())
+        self.class_classifier.add_module('c_fc2', nn.Linear(100, 100))
+        self.class_classifier.add_module('c_bn2', nn.BatchNorm1d(100))
+        self.class_classifier.add_module('c_relu2', nn.ReLU(True))
+        self.class_classifier.add_module('c_fc3', nn.Linear(100, 10))
+        self.class_classifier.add_module('c_softmax', nn.LogSoftmax())
 
 
     def task_classifier_forward(
