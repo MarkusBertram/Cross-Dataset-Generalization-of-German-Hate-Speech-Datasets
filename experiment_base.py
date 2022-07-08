@@ -92,16 +92,60 @@ class experiment_base(ABC):
 
         return dset_dataset
 
+
+    def load_basic_settings(self):
+        # data settings
+        # self.labelled_size = self.current_experiment.get("labelled_size", 3000)
+        self.target_labelled = self.current_experiment.get("target_labelled", "telegram_gold")
+        self.target_unlabelled = self.current_experiment.get("target_unlabelled", "telegram_unlabeled")
+        self.unlabelled_size = self.current_experiment.get("unlabelled_size", 200000)
+        self.validation_split = self.current_experiment.get("validation_split", 0)
+        self.test_split = self.current_experiment.get("test_split", 0.95)
+        self.sources = self.current_experiment.get("sources", [
+            "germeval2018", 
+            "germeval2019",
+            "hasoc2019",
+            "hasoc2020",
+            "ihs_labelled",
+            "covid_2021"
+        ])
+        self.num_workers = self.current_experiment.get("num_workers", 8)
+        # training settings
+        self.freeze_BERT_weights = self.current_experiment.get("freeze_BERT_weights", True)
+
+        # training settings
+        self.epochs = self.current_experiment.get("epochs", 100)
+        self.batch_size = self.current_experiment.get("batch_size", 128)
+        self.weight_decay = self.current_experiment.get("weight_decay", 1e-4)
+        self.metric = self.current_experiment.get("metric", 10)
+        self.lr = self.current_experiment.get("lr", 0.1)
+        self.nesterov = self.current_experiment.get("nesterov", False)
+        self.momentum = self.current_experiment.get("momentum", 0.9)
+        self.lr_sheduler = self.current_experiment.get("lr_sheduler", True)
+        self.num_classes = self.current_experiment.get("num_classes", 10)
+        self.validation_split = self.current_experiment.get("validation_split", 0.3)
+        self.validation_source = self.current_experiment.get(
+            "validation_source", "test"
+        )
+        # self.criterion = self.current_experiment.get("criterion", "crossentropy")
+        self.create_criterion()
+        self.metric = self.current_experiment.get("metric", "accuracy")
+
+
+        
+        #self.set_sampler(self.oracle)
+        pass
+    
+    @abstractmethod
+    def load_exp_settings(self) -> NoReturn:
+        pass
+
     @abstractmethod
     def create_dataloader(self) -> NoReturn:
         pass
 
     @abstractmethod
-    def load_settings(self) -> NoReturn:
-        pass
-
-    @abstractmethod
-    def get_model(self) -> NoReturn:
+    def create_model(self) -> NoReturn:
         pass
 
     # @abstractmethod
@@ -110,5 +154,4 @@ class experiment_base(ABC):
 
     @abstractmethod
     def perform_experiment(self):
-        self.data_manager = None
         pass

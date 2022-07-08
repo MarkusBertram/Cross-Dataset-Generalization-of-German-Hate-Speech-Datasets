@@ -41,10 +41,10 @@ class experiment_DANN(experiment_base):
         #self.writer = writer
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        basic_settings.update(exp_settings)
-        self.current_experiment = basic_settings
+        #basic_settings.update(exp_settings)
+        self.current_experiment = exp_settings
 
-        self.load_settings()
+        #self.load_settings()
         
         if self.device == "cuda":
             torch.backends.cudnn.benchmark = True
@@ -178,7 +178,7 @@ class experiment_DANN(experiment_base):
         )  # return avg testloss
 
     def create_optimizer(self) -> None:
-        self.optimizer = optim.SGD(
+        self.optimizer = optim.Adam(
             self.model.parameters(),
             weight_decay=self.weight_decay,
             lr=self.lr,
@@ -190,54 +190,14 @@ class experiment_DANN(experiment_base):
         self.criterion = nn.CrossEntropyLoss()
 
     # overrides load_settings
-    def load_settings(self) -> None:       
-
-        # data settings
-        # self.labelled_size = self.current_experiment.get("labelled_size", 3000)
-        self.target_labelled = self.current_experiment.get("target_labelled", "telegram_gold")
-        self.target_unlabelled = self.current_experiment.get("target_unlabelled", "telegram_unlabeled")
-        self.unlabelled_size = self.current_experiment.get("unlabelled_size", 200000)
-        self.validation_split = self.current_experiment.get("validation_split", 0)
-        self.test_split = self.current_experiment.get("test_split", 0.95)
-        self.sources = self.current_experiment.get("sources", [
-            "germeval2018", 
-            "germeval2019",
-            "hasoc2019",
-            "hasoc2020",
-            "ihs_labelled",
-            "covid_2021"
-        ])
-        self.num_workers = self.current_experiment.get("num_workers", 8)
-        # training settings
-        self.freeze_BERT_weights = self.current_experiment.get("freeze_BERT_weights", True)
+    def load_exp_settings(self) -> None:
+        self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
         self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
         self.domain_classifier = self.current_experiment.get("domain_classifier", "dc1")
-
-        # training settings
-        self.epochs = self.current_experiment.get("epochs", 100)
-        self.batch_size = self.current_experiment.get("batch_size", 128)
-        self.weight_decay = self.current_experiment.get("weight_decay", 1e-4)
-        self.metric = self.current_experiment.get("metric", 10)
-        self.lr = self.current_experiment.get("lr", 0.1)
-        self.nesterov = self.current_experiment.get("nesterov", False)
-        self.momentum = self.current_experiment.get("momentum", 0.9)
-        self.lr_sheduler = self.current_experiment.get("lr_sheduler", True)
-        self.num_classes = self.current_experiment.get("num_classes", 10)
-        self.validation_split = self.current_experiment.get("validation_split", 0.3)
-        self.validation_source = self.current_experiment.get(
-            "validation_source", "test"
-        )
-        # self.criterion = self.current_experiment.get("criterion", "crossentropy")
-        self.create_criterion()
-        self.metric = self.current_experiment.get("metric", "accuracy")
-
-
         
-        #self.set_sampler(self.oracle)
-        self.exp_name = self.current_experiment.get("exp_name", "standard_name")
 
-    def get_model(self):
+    def create_model(self):
 
         if self.feature_extractor == "BERT_cls":
             from .model.feature_extractors import BERT_cls
@@ -261,17 +221,7 @@ class experiment_DANN(experiment_base):
 
         self.model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states)
 
-    def create_dataloader(self, sources, labelled_target, unlabelled_target):
-        pass
-        # self.dataloader_source = DataLoader(dataset=sources, batch_size = self.batch_size, shuffle=True, num_workers=self.num_workers)
-        # self.dataloader_unlabelled_target = DataLoader(dataset=unlabelled_target, batch_size = self.batch_size, shuffle=True, num_workers=self.num_workers)
-        
-        # self.val_dataloader = None
-        # self.test_dataloader = DataLoader(dataset=labelled_target, batch_size = self.batch_size, shuffle=True, num_workers=self.num_workers)
-
-    # overrides perform_experiment
-    def perform_experiment(self):
-        
+    def create_dataloader(self):
         # fetch source datasets
         source_datasets = []
         for source_name in self.sources:
@@ -304,7 +254,23 @@ class experiment_DANN(experiment_base):
         self.test_dataloader = DataLoader(dataset=labelled_target_dataset_test, batch_size = self.batch_size, shuffle=True, num_workers=self.num_workers)               
         del labelled_target_dataset_test
         gc.collect()
+
+    # overrides perform_experiment
+    def perform_experiment(self):
         
+        # load basic settings
+        self.load_basic_settings()
+
+        # load specific experiment settings
+        self.load_exp_settings()
+
+        # fetch datasets and create dataloader
+        self.create_dataloader()
+
+        # create model using components
+        self.create_model()
+
+        # create optimizer
         self.create_optimizer()
 
         # , train_loader, val_loader, optimizer, criterion, device
