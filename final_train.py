@@ -4,11 +4,11 @@ import os
 from pathlib import Path
 from datetime import datetime
 import torch
-from model.get_model_alt import get_model
+#from model.get_model_alt import get_model
 from torch.utils.tensorboard import SummaryWriter
 import gc
 from experiment_DANN import experiment_DANN
-
+import sys
 def run_experiments(log_dir, config):
     #log_file = Path(log_dir / "results.csv")
     log_file = Path(log_dir)
@@ -45,40 +45,40 @@ def run_experiments(log_dir, config):
                     basic_settings, exp_setting#, log_path, writer
                 )
 
-            elif exp_type == "DIRT_T":
-                current_exp = experiment_DIRT_T(
-                    basic_settings, exp_setting#, log_path, writer
-                )
-            elif exp_type == "MME":
-                current_exp = experiment_MME(
-                    basic_settings, exp_setting#, log_path, writer
-                )
-            elif exp_type == "LIRR":
-                current_exp = experiment_LIRR(
-                    basic_settings, exp_setting#, log_path, writer
-                )
-            elif exp_type == "MDAN":
-                current_exp = experiment_MDAN(
-                    basic_settings, exp_setting#, log_path, writer
-                )
-            elif exp_type == "M3SDA":
-                current_exp = experiment_M3SDA(
-                    basic_settings, exp_setting#, log_path, writer
-                )
+            # elif exp_type == "DIRT_T":
+            #     current_exp = experiment_DIRT_T(
+            #         basic_settings, exp_setting#, log_path, writer
+            #     )
+            # elif exp_type == "MME":
+            #     current_exp = experiment_MME(
+            #         basic_settings, exp_setting#, log_path, writer
+            #     )
+            # elif exp_type == "LIRR":
+            #     current_exp = experiment_LIRR(
+            #         basic_settings, exp_setting#, log_path, writer
+            #     )
+            # elif exp_type == "MDAN":
+            #     current_exp = experiment_MDAN(
+            #         basic_settings, exp_setting#, log_path, writer
+            #     )
+            # elif exp_type == "M3SDA":
+            #     current_exp = experiment_M3SDA(
+            #         basic_settings, exp_setting#, log_path, writer
+            #     )
+            current_exp.perform_experiment()
+            # try:
+            #     current_exp.perform_experiment()
+            #     del current_exp
+            #     gc.collect()
 
-            try:
-                current_exp.perform_experiment()
-                del current_exp
-                gc.collect()
-
-            except Exception as e:
-                name = exp_setting["exp_name"]
-                print("\n\n")
-                print("**********" * 12)
-                print(f"Experiment {name} failed with Exception {e}")
-                print("**********" * 12)
-                print("\n\n")
-
+            # except Exception as e:
+            #     name = exp_setting["exp_name"]
+            #     print("\n\n")
+            #     print("**********" * 12)
+            #     print(f"Experiment {name} failed with Exception {e}")
+            #     print("**********" * 12)
+            #     print("\n\n")
+            sys.exit(0)
             #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             
             # model = get_model(exp_setting)

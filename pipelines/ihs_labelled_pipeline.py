@@ -2,7 +2,7 @@ import csv
 import pickle
 from pathlib import Path
 
-data_path = Path(__file__).resolve().parents[1] / 'data' / 'ihs_data'
+data_path = Path(__file__).resolve().parents[1] / 'data' / 'ihs_labelled'
 
 train = data_path / 'iHS-data_anno.tsv'
 

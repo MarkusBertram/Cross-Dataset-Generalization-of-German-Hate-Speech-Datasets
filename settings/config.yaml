@@ -5,21 +5,21 @@ datasets:
   germeval2019:
     unlabeled-dataset: False
     non-hate-label: OTHER
-  de-reddit-corpus:
-    unlabeled-dataset: True
-    non-hate-label: "False"
+  # de-reddit-corpus:
+  #   unlabeled-dataset: True
+  #   non-hate-label: "False"
   hasoc2019:
     unlabeled-dataset: False
     non-hate-label: NOT
   hasoc2020:
     unlabeled-dataset: False
     non-hate-label: NOT
-  ihs_data:
+  ihs_labelled:
     unlabeled-dataset: True
     non-hate-label: Other
-  IWG_hatespeech_public:
-    unlabeled-dataset: False
-    non-hate-label: "NO"
+  # IWG_hatespeech_public:
+  #   unlabeled-dataset: False
+  #   non-hate-label: "NO"
   covid_2021:
     unlabeled-dataset: False
     non-hate-label: not

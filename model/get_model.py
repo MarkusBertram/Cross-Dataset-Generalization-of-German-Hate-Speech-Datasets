@@ -52,6 +52,6 @@ def get_model(
         return DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states)
 
 
-config = {"model":"DANN","feature_extractor": "BERT_cnn", "task_classifier": "tc1", "domain_classifier": "dc1" }
-model = get_model(config)
-print(model)
+# config = {"model":"DANN","feature_extractor": "BERT_cnn", "task_classifier": "tc1", "domain_classifier": "dc1" }
+# model = get_model(config)
+# print(model)

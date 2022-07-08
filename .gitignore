@@ -31,3 +31,4 @@ german_subredditcorpus.json
 test2.ipynb
 tmp3
 pmi-based-word-rankings_alt.py
+log_dir/*
