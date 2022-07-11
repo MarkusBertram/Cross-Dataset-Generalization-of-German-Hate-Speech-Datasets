@@ -7,12 +7,13 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, Auto
 import re
 import unicodedata
 import sys
+import numpy as np
 from utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
                          separate_text_by_classes)
 import pandas as pd
-from datasets import Dataset, Features, ClassLabel, DatasetInfo
-
+#from datasets import Dataset, Features, ClassLabel, DatasetInfo
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 twitter_username_re = re.compile(r'@([A-Za-z0-9_]+)')
 hashtag_re = re.compile(r'\B(\#[a-zA-Z0-9]+\b)(?!;)')
 html_symbol_re = re.compile(r'&[^ ]+')
@@ -48,7 +49,7 @@ class experiment_base(ABC):
         self.exp_settings = exp_settings
         self.abusive_ratio = None
         #basic_settings.update(exp_settings)
-        #self.current_experiment = basic_settings
+        #self.basic_settings = basic_settings
 
     @abstractmethod
     def train(self):
@@ -59,14 +60,13 @@ class experiment_base(ABC):
         pass
 
     def preprocess(self, batch):
-        
-        batch["text"] = [cleanTweets(b) for b in batch["text"]]
-
-        return self.tokenizer(batch["text"], padding="longest", truncation=True, max_length=512, return_tensors="pt")
+        batch = cleanTweets(batch)
+        #batch["text"] = [cleanTweets(b) for b in batch["text"]]
+        #batch = [cleanTweets(b) for b in batch]
+        return pd.Series(self.tokenizer(batch, padding="max_length", truncation=True, max_length=512, return_token_type_ids = False))
     
     def fetch_dataset(self, dataset_name, labelled = True, target = False):
 
-        dsetinfo = DatasetInfo(description=dataset_name)
         ###### fetch datasets
         label2id = {"neutral": 0, "abusive":1}
         # import dataset pipeline
@@ -82,26 +82,33 @@ class experiment_base(ABC):
         dset_df = pd.DataFrame(dset_list_of_dicts)
         if labelled == True and target == True:
            self.abusive_ratio = dset_df["label"].value_counts(normalize = True)["abusive"]
-        # convert dataframe to HuggingFace Dataset format
-        dset_dataset = Dataset.from_pandas(dset_df, info=dsetinfo)
-        dset_dataset = dset_dataset.class_encode_column("label")
-        dset_dataset = dset_dataset.align_labels_with_mapping(label2id, "label")
-        dset_dataset = dset_dataset.with_format("torch", device = self.device)
-        # set lazy tokenize transform on the fly
-        dset_dataset.set_transform(self.preprocess, columns = ["text"], output_all_columns = True)
+        
+        # tokenize each row in dataframe
+        #tokens_df = dset_df.apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
+        tokens_df = dset_df.parallel_apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
+        tokens_array = np.array(tokens_df[["input_ids", "attention_mask"]].values.tolist())
+        tokens_tensor = torch.from_numpy(tokens_array)
 
-        return dset_dataset
+        if labelled == True:
+            # map neutral to 0 and abusive to 1
+            label_df = dset_df["label"].map(label2id)
+            labels_array = np.array(label_df.values.tolist())
+            labels_tensor = torch.from_numpy(labels_array)
+        else:
+            labels_tensor = None
+
+        return tokens_tensor, labels_tensor
 
 
     def load_basic_settings(self):
         # data settings
-        # self.labelled_size = self.current_experiment.get("labelled_size", 3000)
-        self.target_labelled = self.current_experiment.get("target_labelled", "telegram_gold")
-        self.target_unlabelled = self.current_experiment.get("target_unlabelled", "telegram_unlabeled")
-        self.unlabelled_size = self.current_experiment.get("unlabelled_size", 200000)
-        self.validation_split = self.current_experiment.get("validation_split", 0)
-        self.test_split = self.current_experiment.get("test_split", 0.95)
-        self.sources = self.current_experiment.get("sources", [
+        # self.labelled_size = self.basic_settings.get("labelled_size", 3000)
+        self.target_labelled = self.basic_settings.get("target_labelled", "telegram_gold")
+        self.target_unlabelled = self.basic_settings.get("target_unlabelled", "telegram_unlabeled")
+        self.unlabelled_size = self.basic_settings.get("unlabelled_size", 200000)
+        self.validation_split = self.basic_settings.get("validation_split", 0)
+        self.train_split = self.basic_settings.get("train_split", 0.05)
+        self.sources = self.basic_settings.get("sources", [
             "germeval2018", 
             "germeval2019",
             "hasoc2019",
@@ -109,27 +116,27 @@ class experiment_base(ABC):
             "ihs_labelled",
             "covid_2021"
         ])
-        self.num_workers = self.current_experiment.get("num_workers", 8)
+        self.num_workers = self.basic_settings.get("num_workers", 8)
         # training settings
-        self.freeze_BERT_weights = self.current_experiment.get("freeze_BERT_weights", True)
+        self.freeze_BERT_weights = self.basic_settings.get("freeze_BERT_weights", True)
 
         # training settings
-        self.epochs = self.current_experiment.get("epochs", 100)
-        self.batch_size = self.current_experiment.get("batch_size", 128)
-        self.weight_decay = self.current_experiment.get("weight_decay", 1e-4)
-        self.metric = self.current_experiment.get("metric", 10)
-        self.lr = self.current_experiment.get("lr", 0.1)
-        self.nesterov = self.current_experiment.get("nesterov", False)
-        self.momentum = self.current_experiment.get("momentum", 0.9)
-        self.lr_sheduler = self.current_experiment.get("lr_sheduler", True)
-        self.num_classes = self.current_experiment.get("num_classes", 10)
-        self.validation_split = self.current_experiment.get("validation_split", 0.3)
-        self.validation_source = self.current_experiment.get(
+        self.epochs = self.basic_settings.get("epochs", 100)
+        self.batch_size = self.basic_settings.get("batch_size", 128)
+        self.weight_decay = self.basic_settings.get("weight_decay", 1e-4)
+        self.metric = self.basic_settings.get("metric", 10)
+        self.lr = self.basic_settings.get("lr", 0.1)
+        self.nesterov = self.basic_settings.get("nesterov", False)
+        self.momentum = self.basic_settings.get("momentum", 0.9)
+        self.lr_sheduler = self.basic_settings.get("lr_sheduler", True)
+        self.num_classes = self.basic_settings.get("num_classes", 10)
+        self.validation_split = self.basic_settings.get("validation_split", 0.3)
+        self.validation_source = self.basic_settings.get(
             "validation_source", "test"
         )
-        # self.criterion = self.current_experiment.get("criterion", "crossentropy")
+        # self.criterion = self.basic_settings.get("criterion", "crossentropy")
         self.create_criterion()
-        self.metric = self.current_experiment.get("metric", "accuracy")
+        self.metric = self.basic_settings.get("metric", "accuracy")
 
 
         

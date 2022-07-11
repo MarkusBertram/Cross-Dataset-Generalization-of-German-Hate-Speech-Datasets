@@ -6,11 +6,7 @@
           "target_unlabelled": "telegram_unlabeled",
           "sources": [
             "germeval2018", 
-            "germeval2019",
-            "hasoc2019",
-            "hasoc2020",
-            "ihs_labelled",
-            "covid_2021"
+            "germeval2019"
         ],
         "labelled_size": 0.05,
         "unlabelled_size": 20000,
@@ -23,8 +19,8 @@
         "momentum": 0,
         "lr_scheduler": true,
         "validation_split": 0.1,
-        "test_split": 0.95,
-        "num_workers": 8,
+        "train_split": 0.05,
+        "num_workers": 2,
         "freeze_BERT_weights": true,
         "save_model": true,
         "verbose": 1
