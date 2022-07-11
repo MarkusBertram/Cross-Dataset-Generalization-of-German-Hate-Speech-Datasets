@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 from datetime import datetime
+from torch.multiprocessing import Pool, Process, set_start_method
 import torch
 #from model.get_model_alt import get_model
 from torch.utils.tensorboard import SummaryWriter
@@ -14,14 +15,10 @@ def run_experiments(log_dir, config):
     log_file = Path(log_dir)
 
     for experiment in config["experiments"]:
-        writer = SummaryWriter(os.path.join(log_file, "writer_dir"))
+        #writer = SummaryWriter(os.path.join(log_file, "writer_dir"))
 
         basic_settings = experiment["basic_settings"]
         
-        
-
-        
-
         for exp_setting in experiment["exp_settings"]:
 
             if exp_setting.get("perform_experiment", True):
@@ -187,4 +184,10 @@ def main():
     run_experiments(log_dir, config)
 
 if __name__ == "__main__":
+    # try:
+    #     set_start_method('spawn')
+    # except RuntimeError:
+    #     pass
+    
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
     main()
