@@ -170,7 +170,7 @@ class experiment_DANN(experiment_base):
         Returns:
             [type]: [description]
         """
-
+        alpha = 0
         correct = 0
         predictions = []
         targets = []
@@ -180,7 +180,7 @@ class experiment_DANN(experiment_base):
             target_features = target_features.to(self.device)
             target_labels = target_labels.to(self.device)
             
-            target_class_output, _ = self.model(target_features)
+            target_class_output, _ = self.model(target_features, alpha)
             
             target_class_predictions = torch.argmax(target_class_output, dim=1)
 
