@@ -4,6 +4,7 @@ from typing import Dict, List, Union
 import datetime
 import os
 import json
+from xml.etree.ElementPath import prepare_descendant
 import numpy as np
 from model.DANN_model import DANN_model     
 from utils.utils import (fetch_import_module, get_tweet_timestamp,
@@ -12,7 +13,7 @@ from utils.utils import (fetch_import_module, get_tweet_timestamp,
 
 import pandas as pd
 from pandarallel import pandarallel
-
+from torchmetrics import F1Score
 import yaml
 from torch.utils.tensorboard.writer import SummaryWriter
 from sklearn.model_selection import train_test_split
@@ -47,8 +48,11 @@ class experiment_DANN(experiment_base):
         self,
         basic_settings: Dict,
         exp_settings: Dict,
+        #log_path: str,
+        writer: SummaryWriter,
+
     ):
-        super(experiment_DANN, self).__init__(basic_settings, exp_settings)#, log_path, writer)
+        super(experiment_DANN, self).__init__(basic_settings, exp_settings, writer)#, log_path, writer)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.current_experiment = exp_settings
@@ -58,7 +62,7 @@ class experiment_DANN(experiment_base):
 
         
 
-    # overrides train
+    # ovlossides train
     def train(self):
         """train [main training function of the project]
         [extended_summary]
@@ -88,173 +92,112 @@ class experiment_DANN(experiment_base):
             if "bert" in name:
                 param.requires_grad = False
 
-        for epoch in range(1, self.epochs + 1):
-            len_dataloader = len(self.train_dataloader)
-            print(len_dataloader)
-            sys.exit(0)
-            # data_source_iter = iter(self.dataloader_source)
-            # data_target_iter = iter(self.dataloader_unlabelled_target)
+        self.model.train()
 
-            # i = 0
-            # while i < len_dataloader:
+        for epoch in range(1, self.epochs + 1):
+
+            total_loss = 0
+
+            len_dataloader = len(self.train_dataloader)
+
             for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
 
-                print(i)
-                source_features = source_batch[0].squeeze().to(self.device)
-                source_labels = source_batch[1].squeeze().to(self.device)
-                unlabelled_target_features = unlabelled_target_features.squeeze().to(self.device)
-                
+                self.optimizer.zero_grad(set_to_none=True)
                 p = float(i + epoch * len_dataloader) / self.epochs / len_dataloader
                 alpha = 2. / (1. + np.exp(-10 * p)) - 1
 
                 # training model using source data
-                data_source = data_source_iter.next()
-                s_features, s_label = data_source
-
+                source_features = source_batch[0][0].to(self.device)
+                source_labels = source_batch[1][0].to(self.device)
+                
                 self.model.zero_grad()
-                batch_size = len(s_label)
+                batch_size = len(source_labels)
 
-                #input_features = torch.FloatTensor(batch_size, 3, image_size, image_size)
-                class_label = torch.LongTensor(batch_size)
+                class_label = torch.LongTensor(batch_size).to(self.device)
                 domain_label = torch.zeros(batch_size)
-                domain_label = domain_label.long()
+                domain_label = domain_label.long().to(self.device)
 
-                s_features = s_features.to(self.device)
-                s_label = s_label.to(self.device)
-                input_features = input_features.to(self.device)
-                class_label = class_label.to(self.device)
-                domain_label = domain_label.to(self.device)
-
-
-                input_features.resize_as_(s_features).copy_(s_features)
-                class_label.resize_as_(s_label).copy_(s_label)
-
-                class_output, domain_output = self.model(input_data=input_features, alpha=alpha)
-                err_s_label = loss_class(class_output, class_label)
-                err_s_domain = loss_domain(domain_output, domain_label)
+                class_label.resize_as_(source_labels).copy_(source_labels)
+                if epoch == 0 and i == 0:
+                    self.writer.add_graph(self.model, input_to_model=[source_features, alpha], verbose=False)
+                class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
+                
+                loss_s_label = loss_class(class_output, class_label)
+                loss_s_domain = loss_domain(domain_output, domain_label)
 
                 # training model using target data
-                data_target = data_target_iter.next()
-                t_features, _ = data_target
+                unlabelled_target_features = unlabelled_target_features[0].to(self.device)
 
-                batch_size = len(t_features)
+                batch_size = len(unlabelled_target_features)
 
-                #input_features = torch.FloatTensor(batch_size, 3, image_size, image_size)
                 domain_label = torch.ones(batch_size)
-                domain_label = domain_label.long()
+                domain_label = domain_label.long().to(self.device)
 
-                t_features = t_features.to(self.device)
-                input_features = input_features.to(self.device)
-                domain_label = domain_label.to(self.device)
+                _, domain_output = self.model(input_data=unlabelled_target_features, alpha=alpha)
+                loss_t_domain = loss_domain(domain_output, domain_label)
+                loss = loss_t_domain + loss_s_domain + loss_s_label
 
-                input_features.resize_as_(t_features).copy_(t_features)
+                total_loss += loss.item()
+                
 
-                _, domain_output = self.model(input_data=input_features, alpha=alpha)
-                err_t_domain = loss_domain(domain_output, domain_label)
-                err = err_t_domain + err_s_domain + err_s_label
-                err.backward()
+                loss.backward()
                 self.optimizer.step()
 
                 i += 1
-        #     train_loss = 0
-        #     train_acc = 0
-        #     for batch_idx, (data, target) in enumerate(train_loader):
-        #         if len(data) > 1:
-        #             self.model.train()
-        #             data, target = data.to(device).float(), target.to(device).long()
 
-        #             optimizer.zero_grad(set_to_none=True)
-        #             yhat = self.model(data).to(device)
-        #             loss = criterion(yhat, target)
-        #             try:
-        #                 train_loss += loss.item()
-        #             except:
-        #                 print("loss item skipped loss")
-        #             train_acc += torch.sum(torch.argmax(yhat, dim=1) == target).item()
+            self.writer.add_scalar("total_loss/train", total_loss, epoch)
 
-        #             loss.backward()
-        #             optimizer.step()
-        #         else:
-        #             pass
+        # add hparams
+        self.writer.add_hparams(
+            {
+                "lr": self.lr,
 
-        #     avg_train_loss = train_loss / len(train_loader)
-        #     avg_train_acc = train_acc / len(train_loader.dataset)
+            },
 
-        #     if epoch % 1 == 0:
-        #         if validation:
-        #             val_loss = 0
-        #             val_acc = 0
-        #             self.model.eval()  # prep self.model for evaluation
-        #             with torch.no_grad():
-        #                 for vdata, vtarget in val_loader:
-        #                     vdata, vtarget = (
-        #                         vdata.to(device).float(),
-        #                         vtarget.to(device).long(),
-        #                     )
-        #                     voutput = self.model(vdata)
-        #                     vloss = criterion(voutput, vtarget)
-        #                     val_loss += vloss.item()
-        #                     val_acc += torch.sum(
-        #                         torch.argmax(voutput, dim=1) == vtarget
-        #                     ).item()
+            {
+                "hparam/total_loss/train": total_loss
+            },
+            run_name = self.exp_name
+        )
 
-        #             avg_val_loss = val_loss / len(self.val_loader)
-        #             avg_val_acc = val_acc / len(self.val_loader.dataset)
+        self.test(epoch)
 
-        #             early_stopping(avg_val_loss, self.model)
-        #             if kwargs.get("lr_sheduler", True):
-        #                 lr_sheduler.step(avg_val_loss)
-
-        #             verbosity(
-        #                 f"Val_loss: {avg_val_loss:.4f} Val_acc : {100*avg_val_acc:.2f}",
-        #                 self.verbose,
-        #                 epoch,
-        #             )
-
-        #             if early_stopping.early_stop:
-        #                 print(
-        #                     f"Early stopping epoch {epoch} , avg train_loss {avg_train_loss}, avg val loss {avg_val_loss}"
-        #                 )
-        #                 break
-
-        #     verbosity(
-        #         f"Train_loss: {avg_train_loss:.4f} Train_acc : {100*avg_train_acc:.2f}",
-        #         self.verbose,
-        #         epoch,
-        #     )
-
-        # self.avg_train_loss_hist = avg_train_loss
-        # self.avg_val_loss_hist = avg_val_loss
-        # self.avg_train_acc_hist = avg_train_acc
-        # self.avg_val_loss_hist = avg_val_acc
-
-    # overrides test
+    # ovlossides test
     @torch.no_grad()
-    def test(self):
+    def test(self, epoch):
         """test [computes loss of the test set]
         [extended_summary]
         Returns:
             [type]: [description]
         """
-        test_loss = 0
-        test_acc = 0
+
+        correct = 0
+        predictions = []
+        targets = []
+        f1 = F1Score(num_class = 2)
         self.model.eval()
-        for (t_data, t_target) in self.test_loader:
-            t_data, t_target = (
-                t_data.to(self.device).float(),
-                t_target.to(self.device).long(),
-            )
+        for (target_features, target_labels) in self.test_dataloader:
+            target_features = target_features.to(self.device)
+            target_labels = target_labels.to(self.device)
+            
+            target_class_output, _ = self.model(target_features)
+            
+            target_class_predictions = torch.argmax(target_class_output, dim=1)
 
-            t_output = self.model(t_data)
-            t_output.to(self.device).long()
-            t_loss = self.criterion(t_output, t_target)
-            test_loss += t_loss
-            test_acc += torch.sum(torch.argmax(t_output, dim=1) == t_target).item()
+            predictions.append(target_class_predictions)
+            targets.append(target_labels)
+            #f1_score = f1(preds, target_labels)
 
-        self.avg_test_acc = test_acc / len(self.test_loader.dataset)
-        self.avg_test_loss = test_loss.to("cpu").detach().numpy() / len(
-            self.test_loader
-        )  # return avg testloss
+            correct += torch.sum(target_class_predictions == target_labels).item()
+
+        avg_test_acc = correct / len(self.test_dataloader.dataset)
+
+        outputs = np.concatenate(predictions)
+        targets = np.concatenate(targets)
+        f1score = f1(outputs, targets, average = "macro")
+        
+        self.writer.add_scalar("Accuracy/Test", avg_test_acc, epoch)
+        self.writer.add_scalar("F1_score/Test", f1score, epoch)
 
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
@@ -266,14 +209,13 @@ class experiment_DANN(experiment_base):
     def create_criterion(self) -> None:
         self.criterion = nn.CrossEntropyLoss()
 
-    # overrides load_settings
+    # ovlossides load_settings
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
         self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
         self.domain_classifier = self.current_experiment.get("domain_classifier", "dc1")
         
-
     def create_model(self):
 
         if self.feature_extractor.lower() == "bert_cls":
@@ -286,7 +228,7 @@ class experiment_DANN(experiment_base):
             feature_extractor = BERT_cnn()
             output_hidden_states = True
         else:
-            print("error, can't find this feature extractor. please specify bert_cls or bert_cnn in experiment settings.")
+            print("lossor, can't find this feature extractor. please specify bert_cls or bert_cnn in experiment settings.")
         
         if self.task_classifier.lower() == "tc1":
             from model.task_classifiers import task_classifier1
@@ -360,7 +302,7 @@ class experiment_DANN(experiment_base):
         del labelled_target_dataset_test
         gc.collect()
 
-    # overrides perform_experiment
+    # ovlossides perform_experiment
     def perform_experiment(self):
         
         # load basic settings
@@ -385,7 +327,7 @@ class experiment_DANN(experiment_base):
         self.train()
         
         # perform test
-        self.test()
+        #self.test()
 
         # plot
         # self.plot()

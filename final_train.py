@@ -10,12 +10,11 @@ from torch.utils.tensorboard import SummaryWriter
 import gc
 from experiment_DANN import experiment_DANN
 import sys
-def run_experiments(log_dir, config):
+def run_experiments(config):
     #log_file = Path(log_dir / "results.csv")
-    log_file = Path(log_dir)
 
     for experiment in config["experiments"]:
-        #writer = SummaryWriter(os.path.join(log_file, "writer_dir"))
+        writer = SummaryWriter()
 
         basic_settings = experiment["basic_settings"]
         
@@ -39,7 +38,7 @@ def run_experiments(log_dir, config):
 
             if exp_type == "DANN":
                 current_exp = experiment_DANN(
-                    basic_settings, exp_setting#, log_path, writer
+                    basic_settings, exp_setting, writer
                 )
 
             # elif exp_type == "DIRT_T":
@@ -160,28 +159,30 @@ def main():
         default=Path("settings/experiment_settings.json"),
     )
 
-    parser.add_argument(
-        "-l",
-        "--log",
-        help="Log-instructions in json",
-        type=str,
-        default=Path("log_dir"),
-    )
+    # parser.add_argument(
+    #     "-l",
+    #     "--log",
+    #     help="Log-instructions in json",
+    #     type=str,
+    #     default=Path("log_dir"),
+    # )
 
     args = parser.parse_args()
 
     config = args.config
-    log_dir_parent = args.log
+    #log_dir_parent = args.log
+    #log_dir = args.log
 
     with open(config, mode="r", encoding="utf-8") as config_f:
         config = json.load(config_f)
 
     now = datetime.now()
 
-    log_dir = Path(log_dir_parent / f"experiments_{now.strftime('%H%M%S-%Y%m%d')}")
-    log_dir.mkdir(parents=True, exist_ok=True)
+    #log_dir = Path(log_dir_parent / f"experiments_{now.strftime('%H%M%S-%Y%m%d')}")
+    #log_dir.mkdir(parents=True, exist_ok=True)
 
-    run_experiments(log_dir, config)
+    #run_experiments(log_dir, config)
+    run_experiments(config)
 
 if __name__ == "__main__":
     # try:

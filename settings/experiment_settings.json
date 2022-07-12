@@ -12,7 +12,7 @@
         "unlabelled_size": 20000,
         "stratify_unlabelled": true,
         "equal_labelled_size": false,
-        "epochs": 10,
+        "epochs": 2,
         "batch_size": 64,
         "weight_decay": 0,
         "lr": 2e-5,
@@ -20,7 +20,7 @@
         "lr_scheduler": true,
         "validation_split": 0.1,
         "train_split": 0.05,
-        "num_workers": 2,
+        "num_workers": 8,
         "freeze_BERT_weights": true,
         "save_model": true,
         "verbose": 1

@@ -39,10 +39,10 @@ class experiment_base(ABC):
         basic_settings: Dict,
         exp_settings: Dict,
         #log_path: str,
-        #writer: SummaryWriter,
+        writer: SummaryWriter,
     ) -> NoReturn:
         #self.log_path = log_path
-        #self.writer = writer
+        self.writer = writer
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained('deepset/gbert-base')
         self.basic_settings = basic_settings

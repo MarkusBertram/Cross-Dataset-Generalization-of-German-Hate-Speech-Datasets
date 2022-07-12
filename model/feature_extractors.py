@@ -14,31 +14,15 @@ class BERT_cls(nn.Module):
         ### New layers:
         self.feature_extractor_linear1 = nn.Linear(768, 768)
         self.feature_extractor_linear2 = nn.Linear(768, 768)
-        self.feature_extractor_linear3 = nn.Linear(768, 2)
+        self.feature_extractor_linear3 = nn.Linear(768, 768)
         self.feature_extractor_relu = nn.LeakyReLU()
-        self.feature_extractor_softmax = nn.Softmax(dim=1)
+        # self.feature_extractor_softmax = nn.Softmax(dim=1)
         self.feature_extractor_dropout = nn.Dropout(0.1)
        
-    def feature_extractor_forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        ):
+    def forward(self, bert_output):
 
-        outputs = self.bert(
-            input_ids= input_ids, 
-            attention_mask=attention_mask)
-
-        x = outputs[1]
-        x = self.feature_extractor_dropout(x)
+        cls_token = bert_output[0][:,0,:]
+        x = self.feature_extractor_dropout(cls_token)
         x = self.feature_extractor_linear1(x) 
         x = self.feature_extractor_relu(x)
         x = self.feature_extractor_dropout(x)
@@ -46,7 +30,8 @@ class BERT_cls(nn.Module):
         x = self.feature_extractor_relu(x)
         x = self.feature_extractor_dropout(x)
         x = self.feature_extractor_linear3(x)
-
+        x = self.feature_extractor_relu(x)
+        x = self.feature_extractor_dropout(x)
         return x
 
 
@@ -64,18 +49,9 @@ class BERT_cnn(nn.Module):
         self.feature_extractor_flat = nn.Flatten()
         self.feature_extractor_softmax = nn.LogSoftmax(dim=1)
        
-    def feature_extractor_forward(
+    def forward(
         self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+        cls_token
         ):
         _, _, all_layers = self.feature_extractor_bert(input_ids, attention_mask=attention_mask, output_hidden_states=True)
         # all_layers  = [13, 32, 64, 768]

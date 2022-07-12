@@ -9,6 +9,7 @@ class domain_classifier1(nn.Module):
         super().__init__()
         self.num_labels = 2
         
+
         self.domain_classifier_linear1 = nn.Linear(768, 768)
         self.domain_classifier_linear2 = nn.Linear(768, 768)
         self.domain_classifier_linear3 = nn.Linear(768, 2)
@@ -16,9 +17,20 @@ class domain_classifier1(nn.Module):
         self.domain_classifier_softmax = nn.Softmax(dim=1)
         self.domain_classifier_dropout = nn.Dropout(0.1)
 
-    def domain_classifier_forward(
+    def forward(
         self,
         feature_extractor_output
     ):
         x = self.domain_classifier_linear1(feature_extractor_output)
+        x = self.domain_classifier_relu(x)
+        x = self.domain_classifier_dropout(x)
+
+        x = self.domain_classifier_linear2(feature_extractor_output)
+        x = self.domain_classifier_relu(x)
+        x = self.domain_classifier_dropout(x)
+
+        x = self.domain_classifier_linear3(feature_extractor_output)
+        x = self.domain_classifier_relu(x)
+        x = self.domain_classifier_dropout(x)
+        return x
 
