@@ -85,7 +85,7 @@ class experiment_base(ABC):
         
         # tokenize each row in dataframe
         #tokens_df = dset_df.apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
-        tokens_df = dset_df.parallel_apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
+        tokens_df = dset_df.apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
         tokens_array = np.array(tokens_df[["input_ids", "attention_mask"]].values.tolist())
         tokens_tensor = torch.from_numpy(tokens_array)
 

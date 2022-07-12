@@ -12,12 +12,12 @@ from utils.utils import (fetch_import_module, get_tweet_timestamp,
                          separate_text_by_classes)
 
 import pandas as pd
-from pandarallel import pandarallel
 from torchmetrics import F1Score
 import yaml
 from torch.utils.tensorboard.writer import SummaryWriter
 from sklearn.model_selection import train_test_split
 import sys
+from time import time
 # torch
 import torch
 import torch.nn as nn
@@ -241,7 +241,6 @@ class experiment_DANN(experiment_base):
         self.model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device)
 
     def create_dataloader(self):
-        pandarallel.initialize(nb_workers = self.num_workers, progress_bar=True)
         # fetch source datasets
         source_features = []
         source_labels = []
@@ -304,7 +303,6 @@ class experiment_DANN(experiment_base):
 
     # ovlossides perform_experiment
     def perform_experiment(self):
-        
         # load basic settings
         self.load_basic_settings()
 
