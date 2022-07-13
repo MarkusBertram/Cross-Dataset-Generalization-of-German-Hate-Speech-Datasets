@@ -194,9 +194,7 @@ class experiment_DANN(experiment_base):
         outputs = torch.cat(predictions)
         targets = torch.cat(targets)
         f1score = f1(outputs, targets)
-        print(avg_test_acc)
-        print(f1score)
-        print(epoch)
+
         self.writer.add_scalar("Accuracy/Test", avg_test_acc, epoch)
         self.writer.add_scalar("F1_score/Test", f1score.item(), epoch)
 
