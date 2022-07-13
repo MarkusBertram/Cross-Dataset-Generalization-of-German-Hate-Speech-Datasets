@@ -117,7 +117,7 @@ class experiment_DANN(experiment_base):
 
                 class_label.resize_as_(source_labels).copy_(source_labels)
                 if epoch == 1 and i == 0:
-                    self.writer.add_graph(self.model, input_to_model=[source_features, alpha], verbose=False)
+                    self.writer.add_graph(self.model, input_to_model=[source_features, torch.tensor(alpha)], verbose=False)
                 class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
                 
                 loss_s_label = loss_class(class_output, class_label)
