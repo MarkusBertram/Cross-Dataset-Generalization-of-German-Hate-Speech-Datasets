@@ -198,7 +198,7 @@ class experiment_DANN(experiment_base):
         print(f1score)
         print(epoch)
         self.writer.add_scalar("Accuracy/Test", avg_test_acc, epoch)
-        self.writer.add_scalar("F1_score/Test", f1score, epoch)
+        self.writer.add_scalar("F1_score/Test", f1score.item(), epoch)
 
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
