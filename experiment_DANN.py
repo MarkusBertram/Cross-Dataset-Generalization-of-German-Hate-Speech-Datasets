@@ -116,7 +116,7 @@ class experiment_DANN(experiment_base):
                 domain_label = domain_label.long().to(self.device)
 
                 class_label.resize_as_(source_labels).copy_(source_labels)
-                if epoch == 0 and i == 0:
+                if epoch == 1 and i == 0:
                     self.writer.add_graph(self.model, input_to_model=[source_features, alpha], verbose=False)
                 class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
                 
@@ -147,7 +147,7 @@ class experiment_DANN(experiment_base):
             
             # test after each epoch
             self.test(epoch)
-    
+
         # add hparams
         self.writer.add_hparams(
             {
@@ -157,8 +157,8 @@ class experiment_DANN(experiment_base):
 
             {
                 "hparam/total_loss/train": total_loss
-            }#,#
-            #run_name = self.exp_name
+            },
+            run_name = self.exp_name
         )
 
     # ovlossides test
@@ -197,6 +197,21 @@ class experiment_DANN(experiment_base):
 
         self.writer.add_scalar("Accuracy/Test", avg_test_acc, epoch)
         self.writer.add_scalar("F1_score/Test", f1score.item(), epoch)
+
+        if epoch == self.epochs:
+            # add hparams
+            self.writer.add_hparams(
+                {
+                    "lr": self.lr,
+
+                },
+
+                {
+                    "hparam/Accuracy/Test": avg_test_acc,
+                    "F1_score/Test": f1score.item()
+                },
+                run_name = self.exp_name
+            )
 
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
