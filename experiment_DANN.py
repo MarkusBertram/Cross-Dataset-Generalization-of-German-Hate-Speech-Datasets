@@ -92,10 +92,8 @@ class experiment_DANN(experiment_base):
             if "bert" in name:
                 param.requires_grad = False
 
-        self.model.train()
-
         for epoch in range(1, self.epochs + 1):
-
+            self.model.train()
             total_loss = 0
 
             len_dataloader = len(self.train_dataloader)
@@ -196,7 +194,9 @@ class experiment_DANN(experiment_base):
         outputs = torch.cat(predictions)
         targets = torch.cat(targets)
         f1score = f1(outputs, targets)
-        
+        print(avg_test_acc)
+        print(f1score)
+        print(epoch)
         self.writer.add_scalar("Accuracy/Test", avg_test_acc, epoch)
         self.writer.add_scalar("F1_score/Test", f1score, epoch)
 
