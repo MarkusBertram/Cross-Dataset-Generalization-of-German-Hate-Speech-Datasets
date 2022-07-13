@@ -177,14 +177,9 @@ class experiment_DANN(experiment_base):
         f1 = F1Score(num_class = 2)
         self.model.eval()
         for (target_features, target_labels) in self.test_dataloader:
-            target_features = target_features.to(self.device)
-            target_labels = target_labels.to(self.device)
-            print(target_features)
-            print(target_labels)
-            print(target_features.size())
-            print(target_labels.size())
-            print(target_features[0].size())
-            print(target_labels.size())
+            target_features = target_features[0].to(self.device)
+            target_labels = target_labels[0].to(self.device)
+
             target_class_output, target_domain_output = self.model(target_features, alpha)
             
             target_class_predictions = torch.argmax(target_class_output, dim=1)
@@ -280,7 +275,7 @@ class experiment_DANN(experiment_base):
 
         combined_source_features = torch.cat(source_features)
         combined_source_labels = torch.cat(source_labels)
-
+        
         # concatenate datasets
         source_dataset = TensorDataset(combined_source_features, combined_source_labels)
         
