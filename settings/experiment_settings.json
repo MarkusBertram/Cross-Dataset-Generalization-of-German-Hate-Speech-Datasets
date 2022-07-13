@@ -12,7 +12,7 @@
         "unlabelled_size": 20000,
         "stratify_unlabelled": true,
         "equal_labelled_size": false,
-        "epochs": 2,
+        "epochs": 5,
         "batch_size": 64,
         "weight_decay": 0,
         "lr": 2e-5,

@@ -146,7 +146,10 @@ class experiment_DANN(experiment_base):
                 i += 1
 
             self.writer.add_scalar("total_loss/train", total_loss, epoch)
-
+            
+            # test after each epoch
+            self.test(epoch)
+    
         # add hparams
         self.writer.add_hparams(
             {
@@ -160,8 +163,6 @@ class experiment_DANN(experiment_base):
             run_name = self.exp_name
         )
 
-        self.test(epoch)
-
     # ovlossides test
     @torch.no_grad()
     def test(self, epoch):
@@ -174,7 +175,7 @@ class experiment_DANN(experiment_base):
         correct = 0
         predictions = []
         targets = []
-        f1 = F1Score(num_class = 2)
+        f1 = F1Score(num_classes = 2, average="macro")
         self.model.eval()
         for (target_features, target_labels) in self.test_dataloader:
             target_features = target_features[0].to(self.device)
@@ -184,17 +185,17 @@ class experiment_DANN(experiment_base):
             
             target_class_predictions = torch.argmax(target_class_output, dim=1)
 
-            predictions.append(target_class_predictions)
-            targets.append(target_labels)
+            predictions.append(target_class_predictions.cpu())
+            targets.append(target_labels.cpu())
             #f1_score = f1(preds, target_labels)
 
             correct += torch.sum(target_class_predictions == target_labels).item()
 
         avg_test_acc = correct / len(self.test_dataloader.dataset)
 
-        outputs = np.concatenate(predictions)
-        targets = np.concatenate(targets)
-        f1score = f1(outputs, targets, average = "macro")
+        outputs = torch.cat(predictions)
+        targets = torch.cat(targets)
+        f1score = f1(outputs, targets)
         
         self.writer.add_scalar("Accuracy/Test", avg_test_acc, epoch)
         self.writer.add_scalar("F1_score/Test", f1score, epoch)
