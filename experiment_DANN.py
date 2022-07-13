@@ -157,8 +157,8 @@ class experiment_DANN(experiment_base):
 
             {
                 "hparam/total_loss/train": total_loss
-            },
-            run_name = self.exp_name
+            }#,#
+            #run_name = self.exp_name
         )
 
     # ovlossides test
