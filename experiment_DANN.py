@@ -179,8 +179,13 @@ class experiment_DANN(experiment_base):
         for (target_features, target_labels) in self.test_dataloader:
             target_features = target_features.to(self.device)
             target_labels = target_labels.to(self.device)
-            
-            target_class_output, _ = self.model(target_features, alpha)
+            print(target_features)
+            print(target_labels)
+            print(target_features.size())
+            print(target_labels.size())
+            print(target_features[0].size())
+            print(target_labels.size())
+            target_class_output, target_domain_output = self.model(target_features, alpha)
             
             target_class_predictions = torch.argmax(target_class_output, dim=1)
 
