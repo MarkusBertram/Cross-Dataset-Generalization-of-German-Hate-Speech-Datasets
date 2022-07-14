@@ -34,6 +34,32 @@ class BERT_cls(nn.Module):
         x = self.feature_extractor_dropout(x)
         return x
 
+class BERT_cls_token_input(nn.Module):
+    def __init__(self):
+        super(BERT_cls_token_input, self).__init__()
+        self.num_labels = 2
+        # self.bert = BertModel.from_pretrained("deepset/gbert-base")
+        ### New layers:
+        self.feature_extractor_linear1 = nn.Linear(768, 768)
+        self.feature_extractor_linear2 = nn.Linear(768, 768)
+        self.feature_extractor_linear3 = nn.Linear(768, 768)
+        self.feature_extractor_relu = nn.LeakyReLU()
+        # self.feature_extractor_softmax = nn.Softmax(dim=1)
+        self.feature_extractor_dropout = nn.Dropout(0.1)
+       
+    def forward(self, cls_token):
+
+        x = self.feature_extractor_dropout(cls_token)
+        x = self.feature_extractor_linear1(x) 
+        x = self.feature_extractor_relu(x)
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_linear2(x)
+        x = self.feature_extractor_relu(x)
+        x = self.feature_extractor_dropout(x)
+        x = self.feature_extractor_linear3(x)
+        x = self.feature_extractor_relu(x)
+        x = self.feature_extractor_dropout(x)
+        return x
 
 class BERT_cnn(nn.Module):
     def __init__(self):

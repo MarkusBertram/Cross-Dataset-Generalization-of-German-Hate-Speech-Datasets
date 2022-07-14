@@ -8,7 +8,7 @@ import torch
 #from model.get_model_alt import get_model
 from torch.utils.tensorboard import SummaryWriter
 import gc
-from experiment_DANN import experiment_DANN
+
 import sys
 def run_experiments(config):
     #log_file = Path(log_dir / "results.csv")
@@ -37,14 +37,16 @@ def run_experiments(config):
             exp_type = exp_setting["exp_type"]
 
             if exp_type == "DANN":
+                from experiment_DANN import experiment_DANN
                 current_exp = experiment_DANN(
                     basic_settings, exp_setting, writer
                 )
 
-            # elif exp_type == "DIRT_T":
-            #     current_exp = experiment_DIRT_T(
-            #         basic_settings, exp_setting#, log_path, writer
-            #     )
+            elif exp_type == "DIRT_T":
+                from experiment_DIRT_T import experiment_DIRT_T
+                current_exp = experiment_DIRT_T(
+                    basic_settings, exp_setting, writer#, log_path, writer
+                )
             # elif exp_type == "MME":
             #     current_exp = experiment_MME(
             #         basic_settings, exp_setting#, log_path, writer

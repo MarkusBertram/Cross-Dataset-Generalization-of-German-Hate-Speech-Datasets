@@ -134,11 +134,9 @@ class experiment_base(ABC):
         self.validation_source = self.basic_settings.get(
             "validation_source", "test"
         )
+        self.test_after_each_epoch = self.basic_settings.get("test_after_each_epoch", False)
         # self.criterion = self.basic_settings.get("criterion", "crossentropy")
-        self.create_criterion()
-        self.metric = self.basic_settings.get("metric", "accuracy")
-
-
+        #self.metric = self.basic_settings.get("metric", "accuracy")
         
         #self.set_sampler(self.oracle)
         pass

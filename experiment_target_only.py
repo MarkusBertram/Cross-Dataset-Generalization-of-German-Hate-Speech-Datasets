@@ -6,7 +6,7 @@ import os
 import json
 from xml.etree.ElementPath import prepare_descendant
 import numpy as np
-from model.DANN_model import DANN_model     
+from model.labelled_only_model import labelled_only_model
 from utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
                          separate_text_by_classes)
@@ -34,7 +34,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 from experiment_base import experiment_base
 from utils.exp_utils import CustomConcatDataset
 
-class experiment_DANN(experiment_base):
+class experiment_target_only(experiment_base):
     def __init__(
         self,
         basic_settings: Dict,
@@ -43,15 +43,13 @@ class experiment_DANN(experiment_base):
         writer: SummaryWriter,
 
     ):
-        super(experiment_DANN, self).__init__(basic_settings, exp_settings, writer)#, log_path, writer)
+        super(experiment_target_only, self).__init__(basic_settings, exp_settings, writer)#, log_path, writer)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.current_experiment = exp_settings
         
         if self.device == "cuda":
             torch.backends.cudnn.benchmark = True
-
-        
 
     # ovlossides train
     def train(self):
@@ -68,16 +66,7 @@ class experiment_DANN(experiment_base):
             [tupel(trained network, train_loss )]:
         """
 
-        # lr_sheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        #     optimizer,
-        #     "min",
-        #     factor=0.1,
-        #     patience=int(self.epochs * 0.05),
-        #     min_lr=1e-7,
-        # )
-
         loss_class = torch.nn.NLLLoss().to(self.device)
-        loss_domain = torch.nn.NLLLoss().to(self.device)
 
         for name, param in self.model.named_parameters():
             if "bert" in name:
@@ -87,48 +76,25 @@ class experiment_DANN(experiment_base):
             self.model.train()
             total_loss = 0
 
-            len_dataloader = len(self.train_dataloader)
-
-            for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
+            for i, (target_features, target_labels) in enumerate(self.train_dataloader):
 
                 self.optimizer.zero_grad(set_to_none=True)
-                p = float(i + epoch * len_dataloader) / self.epochs / len_dataloader
-                alpha = 2. / (1. + np.exp(-10 * p)) - 1
 
-                # training model using source data
-                source_features = source_batch[0][0].to(self.device)
-                source_labels = source_batch[1][0].to(self.device)
-                
-                #self.model.zero_grad()
-                batch_size = len(source_labels)
+                # training model
+                target_features = target_features[0].to(self.device)
+                target_labels = target_labels[0].to(self.device)
 
-                class_label = torch.LongTensor(batch_size).to(self.device)
-                domain_label = torch.zeros(batch_size)
-                domain_label = domain_label.long().to(self.device)
-
-                class_label.resize_as_(source_labels).copy_(source_labels)
                 if epoch == 1 and i == 0:
-                    self.writer.add_graph(self.model, input_to_model=[source_features, torch.tensor(alpha)], verbose=False)
-                class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
+                    self.writer.add_graph(self.model, input_to_model=[target_features], verbose=False)
                 
-                loss_s_label = loss_class(class_output, class_label)
-                loss_s_domain = loss_domain(domain_output, domain_label)
+                class_output = self.model(input_data=target_features)
+                
+                loss_s_label = loss_class(class_output, target_labels)
 
-                # training model using target data
-                unlabelled_target_features = unlabelled_target_features[0].to(self.device)
-
-                batch_size = len(unlabelled_target_features)
-
-                domain_label = torch.ones(batch_size)
-                domain_label = domain_label.long().to(self.device)
-
-                _, domain_output = self.model(input_data=unlabelled_target_features, alpha=alpha)
-                loss_t_domain = loss_domain(domain_output, domain_label)
-                loss = loss_t_domain + loss_s_domain + loss_s_label
+                loss = loss_s_label
 
                 total_loss += loss.item()
                 
-
                 loss.backward()
                 self.optimizer.step()
 
@@ -168,8 +134,8 @@ class experiment_DANN(experiment_base):
             target_features = target_features[0].to(self.device)
             target_labels = target_labels[0].to(self.device)
 
-            target_class_output, target_domain_output = self.model(target_features, alpha)
-            
+            target_class_output = self.model(target_features)
+    
             target_class_predictions = torch.argmax(target_class_output, dim=1)
 
             predictions.append(target_class_predictions.cpu())
@@ -217,7 +183,6 @@ class experiment_DANN(experiment_base):
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
         self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
-        self.domain_classifier = self.current_experiment.get("domain_classifier", "dc1")
         
     def create_model(self):
         
@@ -241,25 +206,11 @@ class experiment_DANN(experiment_base):
         else:
             raise ValueError("Can't find the task classifier name. \
             Please specify the task classifier class name as key in experiment settings of the current experiment.")
-            
-        if self.domain_classifier.lower() == "dc1":
-            from model.domain_classifiers import domain_classifier1
-            domain_classifier = domain_classifier1()
-        else:
-            raise ValueError("Can't find the domain classifier name. \
-            Please specify the domain classifier class name as key in experiment settings of the current experiment.")
 
-        self.model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device)
+        self.model = labelled_only_model(feature_extractor, task_classifier, output_hidden_states).to(self.device)
 
     def create_dataloader(self):
-        # fetch source datasets
-        source_features = []
-        source_labels = []
-        for source_name in self.sources:
-            features, labels = self.fetch_dataset(source_name, labelled = True, target = False)
-            source_features.append(features)
-            source_labels.append(labels)
-            
+                
         # fetch labelled target dataset
         labelled_target_dataset_features, labelled_target_dataset_labels = self.fetch_dataset(self.target_labelled, labelled = True, target = True)
 
@@ -278,34 +229,16 @@ class experiment_DANN(experiment_base):
         labelled_target_labels_train = labelled_target_dataset_labels[train_indices]
         labelled_target_labels_test = labelled_target_dataset_labels[test_indices]
         
+        labelled_target_dataset_train = TensorDataset(labelled_target_features_train, labelled_target_labels_train)
+
         del labelled_target_dataset_features
         del labelled_target_dataset_labels
         gc.collect()
-        source_features.append(labelled_target_features_train)
-        source_labels.append(labelled_target_labels_train)
+        # create train dataloader
+        sampler = BatchSampler(RandomSampler(labelled_target_dataset_train), batch_size=self.batch_size, drop_last=False)
+        self.train_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=self.num_workers)            
 
-        combined_source_features = torch.cat(source_features)
-        combined_source_labels = torch.cat(source_labels)
-        
-        # concatenate datasets
-        source_dataset = TensorDataset(combined_source_features, combined_source_labels)
-        
-        del source_features
-        del source_labels
-        gc.collect()
-
-        # fetch unlabelled target dataset
-        unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
-        
-        # combine source dataset and unlabelled target dataset into one dataset
-        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
-        sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=self.batch_size, drop_last=False)
-        self.train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=self.num_workers)            
-        #self.train_dataloader = DataLoader(concatenated_train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
-        del concatenated_train_dataset
-        del unlabelled_target_dataset_features
         # create test dataloader
-        
         labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)
         sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=self.batch_size, drop_last=False)
         self.test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=self.num_workers)               
