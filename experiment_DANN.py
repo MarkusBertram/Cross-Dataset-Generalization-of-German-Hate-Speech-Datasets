@@ -32,16 +32,7 @@ from torch.utils.data.dataset import ConcatDataset
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
 from experiment_base import experiment_base
-
-class CustomConcatDataset(torch.utils.data.Dataset):
-    def __init__(self, *datasets):
-        self.datasets = datasets
-
-    def __getitem__(self, i):
-        return tuple(d[i] for d in self.datasets)
-
-    def __len__(self):
-        return min(len(d) for d in self.datasets)
+from utils.exp_utils import CustomConcatDataset
 
 class experiment_DANN(experiment_base):
     def __init__(
@@ -143,7 +134,7 @@ class experiment_DANN(experiment_base):
 
                 i += 1
 
-            self.writer.add_scalar("total_loss/train", total_loss, epoch)
+            self.writer.add_scalar(f"total_loss/train/{self.exp_name}", total_loss, epoch)
             
             # test after each epoch
             self.test(epoch)
@@ -195,8 +186,8 @@ class experiment_DANN(experiment_base):
         targets = torch.cat(targets)
         f1score = f1(outputs, targets)
 
-        self.writer.add_scalar("Accuracy/Test", avg_test_acc, epoch)
-        self.writer.add_scalar("F1_score/Test", f1score.item(), epoch)
+        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
+        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
 
         if epoch == self.epochs:
             # add hparams
@@ -231,7 +222,7 @@ class experiment_DANN(experiment_base):
         self.domain_classifier = self.current_experiment.get("domain_classifier", "dc1")
         
     def create_model(self):
-
+        
         if self.feature_extractor.lower() == "bert_cls":
             from model.feature_extractors import BERT_cls
             #import .model.feature_extractors
@@ -242,15 +233,23 @@ class experiment_DANN(experiment_base):
             feature_extractor = BERT_cnn()
             output_hidden_states = True
         else:
-            print("lossor, can't find this feature extractor. please specify bert_cls or bert_cnn in experiment settings.")
+            raise ValueError("Can't find the feature extractor name. \
+            Please specify bert_cls or bert_cnn as key in experiment settings of the current experiment.")
         
+
         if self.task_classifier.lower() == "tc1":
             from model.task_classifiers import task_classifier1
             task_classifier = task_classifier1()
+        else:
+            raise ValueError("Can't find the task classifier name. \
+            Please specify the task classifier class name as key in experiment settings of the current experiment.")
             
         if self.domain_classifier.lower() == "dc1":
             from model.domain_classifiers import domain_classifier1
             domain_classifier = domain_classifier1()
+        else:
+            raise ValueError("Can't find the domain classifier name. \
+            Please specify the domain classifier class name as key in experiment settings of the current experiment.")
 
         self.model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device)
 
