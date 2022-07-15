@@ -47,10 +47,11 @@ def run_experiments(config):
                 current_exp = experiment_DIRT_T(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
-            # elif exp_type == "MME":
-            #     current_exp = experiment_MME(
-            #         basic_settings, exp_setting#, log_path, writer
-            #     )
+            elif exp_type == "MME":
+                from experiment_MME import experiment_MME
+                current_exp = experiment_MME(
+                    basic_settings, exp_setting, writer#, log_path, writer
+                )
             # elif exp_type == "LIRR":
             #     current_exp = experiment_LIRR(
             #         basic_settings, exp_setting#, log_path, writer

@@ -120,53 +120,52 @@ class experiment_DIRT_T(experiment_base):
                
                 noise = True
                 
-                with autograd.detect_anomaly():
-                    #source_features = source_batch[0][0].to(self.device)
-                    source_labels = source_batch[1][0].to(self.device)
+                #source_features = source_batch[0][0].to(self.device)
+                source_labels = source_batch[1][0].to(self.device)
 
-                    source_input_ids = source_batch[0][0][:,0].to(self.device)
-                    source_attention_mask = source_batch[0][0][:,1].to(self.device)
+                source_input_ids = source_batch[0][0][:,0].to(self.device)
+                source_attention_mask = source_batch[0][0][:,1].to(self.device)
 
-                    unlabelled_target_features = unlabelled_target_features[0].to(self.device)
+                unlabelled_target_features = unlabelled_target_features[0].to(self.device)
 
-                    source_bert_output = self.bert(input_ids=source_input_ids, attention_mask=source_attention_mask, return_dict = False, output_hidden_states=self.output_hidden_states)
-                    target_bert_output = self.bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
+                source_bert_output = self.bert(input_ids=source_input_ids, attention_mask=source_attention_mask, return_dict = False, output_hidden_states=self.output_hidden_states)
+                target_bert_output = self.bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
 
-                    if self.output_hidden_states == False:
-                        source_bert_output = source_bert_output[0][:,0,:]
-                        target_bert_output = target_bert_output[0][:,0,:]
-                    
-                    if epoch == 1 and i == 0:
-                        self.writer.add_graph(self.model, input_to_model=[source_bert_output, torch.tensor(noise)], verbose=False)
-                    
-                    source_class_output, source_domain_output = self.model(input_features=source_bert_output, noise=noise)
-                    target_class_output, target_domain_output = self.model(input_features=target_bert_output, noise=noise)
+                if self.output_hidden_states == False:
+                    source_bert_output = source_bert_output[0][:,0,:]
+                    target_bert_output = target_bert_output[0][:,0,:]
+                
+                if epoch == 1 and i == 0:
+                    self.writer.add_graph(self.model, input_to_model=[source_bert_output, torch.tensor(noise)], verbose=False)
+                
+                source_class_output, source_domain_output = self.model(input_features=source_bert_output, noise=noise)
+                target_class_output, target_domain_output = self.model(input_features=target_bert_output, noise=noise)
 
-                    # Cross-Entropy Loss of Source Domain, Source Generalization Error
-                    crossE_loss     = self.crossE(source_class_output, source_labels)
+                # Cross-Entropy Loss of Source Domain, Source Generalization Error
+                crossE_loss     = self.crossE(source_class_output, source_labels)
 
-                    # conditional entropy with respect to target distribution, enforces cluster assumption
-                    conditionE_loss = self.conditionE(target_class_output)               
+                # conditional entropy with respect to target distribution, enforces cluster assumption
+                conditionE_loss = self.conditionE(target_class_output)               
 
-                    # Domain Discriminator, Divergence of Source and Target Domain
-                    domain_loss     = .5*self.disc(source_domain_output,torch.zeros_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.ones_like(target_domain_output))
-                    
-                    vat_src_loss    = self.src_vat(source_bert_output, source_class_output, self.model, noise)
-                    vat_tgt_loss    = self.tgt_vat(target_bert_output, target_class_output, self.model, noise)
+                # Domain Discriminator, Divergence of Source and Target Domain
+                domain_loss     = .5*self.disc(source_domain_output,torch.zeros_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.ones_like(target_domain_output))
+                
+                vat_src_loss    = self.src_vat(source_bert_output, source_class_output, self.model, noise)
+                vat_tgt_loss    = self.tgt_vat(target_bert_output, target_class_output, self.model, noise)
 
-                    disc_loss = 0.5*self.disc(source_domain_output,torch.ones_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.zeros_like(target_domain_output))
+                disc_loss = 0.5*self.disc(source_domain_output,torch.ones_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.zeros_like(target_domain_output))
 
-                    loss = crossE_loss +self.lambda_d*domain_loss + self.lambda_d*disc_loss +  self.lambda_s*vat_src_loss + self.lambda_t*vat_tgt_loss + self.lambda_t*conditionE_loss
-                    self.optimizer.zero_grad(set_to_none=True)
-                    
-                    #disc_loss = 0.5*self.disc(source_domain_output,torch.ones_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.zeros_like(target_domain_output))
-                    #self.optimizer2.zero_grad(set_to_none=True)
-                    
-                    loss.backward()
-                    #disc_loss.backward()
+                loss = crossE_loss +self.lambda_d*domain_loss + self.lambda_d*disc_loss +  self.lambda_s*vat_src_loss + self.lambda_t*vat_tgt_loss + self.lambda_t*conditionE_loss
+                self.optimizer.zero_grad(set_to_none=True)
+                
+                #disc_loss = 0.5*self.disc(source_domain_output,torch.ones_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.zeros_like(target_domain_output))
+                #self.optimizer2.zero_grad(set_to_none=True)
+                
+                loss.backward()
+                #disc_loss.backward()
 
-                    self.optimizer.step()
-                    #self.optimizer2.step()
+                self.optimizer.step()
+                #self.optimizer2.step()
 
 
         ############ DIRT_T Training
@@ -185,7 +184,7 @@ class experiment_DIRT_T(experiment_base):
         self.crossE      = nn.CrossEntropyLoss().to(self.device)
         self.conditionE  = ConditionalEntropy().to(self.device)
         self.tgt_vat     = VATLoss().to(self.device)#VATLoss(self.model, radius=self.radius).to(self.device)
-        self.dirt        = F.kl_div().to(self.device)#KLDivWithLogits()    
+        self.dirt        = KLDivWithLogits() #F.kl_div().to(self.device)#KLDivWithLogits()    
 
         self.model.train(True)
   #     self.teacher.eval()
@@ -229,85 +228,7 @@ class experiment_DIRT_T(experiment_base):
                 self.optimizer.step()
                 self.optimizer2.step()
 
-#     # ovlossides train
-#     def DIRT_T_train(self):
-#         """train [main training function of the project]
-#         [extended_summary]
-#         Args:
-#             train_loader ([torch.Dataloader]): [dataloader with the training data]
-#             optimizer ([torch.optim]): [optimizer for the network]
-#             criterion ([Loss function]): [Pytorch loss function]
-#             device ([str]): [device to train on cpu/cuda]
-#             epochs (int, optional): [epochs to run]. Defaults to 5.
-#             **kwargs (verbose and validation dataloader)
-#         Returns:
-#             [tupel(trained network, train_loss )]:
-#         """
-#         self.teacher = copy.deepcopy(self.model)
-        
-#         student_params   = list(self.model.parameters())
-#         teacher_params   = list(self.teacher.parameters())
-
-#         for param in teacher_params:
-#             param.requires_grad = False
-
-#         self.optimizer   = optim.Adam(self.model.parameters(), lr=self.lr, betas=(self.beta1, 0.999))
-#         self.optimizer2  = WeightEMA(teacher_params, student_params)#DelayedWeight(teacher_params, student_params)
-        
-#         self.crossE      = nn.CrossEntropyLoss().to(self.device)
-#         self.conditionE  = ConditionalEntropy().to(self.device)
-#         self.tgt_vat     = VATLoss(self.model, radius=self.radius).to(self.device)
-#         self.dirt        = KLDivWithLogits()    
-
-#         self.model.train(True)
-#   #      self.teacher.eval()
-#         batch_time = AverageMeter()
-#         data_time = AverageMeter()
-#         losses = AverageMeter()
-
-#         dirt_losses       = AverageMeter()
-#         conditionE_losses = AverageMeter()
-#         vat_tgt_losses    = AverageMeter()
-
-#         top1 = AverageMeter()
-#         top5 = AverageMeter()
-
-#         for name, param in self.model.named_parameters():
-#             if "bert" in name:
-#                 param.requires_grad = False
-
-#         for name, param in self.teacher.named_parameters():
-#             if "bert" in name:
-#                 param.requires_grad = False
-
-#         for epoch in range(1, self.epochs + 1):
-#             self.model.train()
-#             total_loss = 0
-
-#             len_dataloader = len(self.train_dataloader)
-
-#             for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
-
-#                 self.optimizer.zero_grad(set_to_none=True)
-#                 self.optimizer2.zero_grad(set_to_none=True)
-#                 noise = True
-
-#                 # training model using target data
-#                 unlabelled_target_features = unlabelled_target_features[0].to(self.device)
-
-#                 target_class_output, target_domain_output = self.model(input_data=unlabelled_target_features, noise=noise)
-#                 teacher_target_class_output, teacher_target_domain_output = self.teacher(input_data=unlabelled_target_features, noise=noise)
-
-#                 conditionE_loss = self.conditionE(target_class_output) # condition entropy
-#                 dirt_loss       = self.dirt(target_class_output, teacher_target_class_output)
-#                 vat_tgt_loss    = self.tgt_vat(unlabelled_target_features,target_class_output)
-                
-#                 loss = conditionE_loss + dirt_loss + vat_tgt_loss
-#                 loss.backward()
-#                 self.optimizer.step()
-#                 self.optimizer2.step()
-
-    # ovlossides test
+    # overrides test
     @torch.no_grad()
     def test(self, epoch):
         """test [computes loss of the test set]
@@ -366,8 +287,6 @@ class experiment_DIRT_T(experiment_base):
         params = list(self.model.feature_extractor.parameters()) + list(self.model.domain_classifier.parameters())
         self.optimizer2 = optim.Adam(params, lr = self.lr, betas=(self.beta1, 0.999))   
            
-        #self.ema = EMA(0.998)
-
     def create_criterion(self) -> None:
         self.crossE      = nn.CrossEntropyLoss().to(self.device)
         self.conditionE  = ConditionalEntropy().to(self.device)

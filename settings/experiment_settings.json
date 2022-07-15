@@ -28,6 +28,28 @@
         },
         "exp_settings": [
           {
+            "exp_type": "MME",
+            "exp_name": "MME_cls",
+            "oracle": "baseline",
+            "feature_extractor": "bert_cls",
+            "task_classifier": "tc1",
+            "domain_classifier": "dc1",
+            "alignment_component": "MME",
+            "model": "MME",
+            "steps": 50000,
+            "multiplication": 0.1,
+            "l1":10,
+            "beta1":0.01,
+            "radius": 0.01,
+            "xi": 10,
+            "eps": 1.0,
+            "ip": 1,
+            "beta_t": 0.01,
+            "lambda_d": 0.01,
+            "lambda_s": 0.01,
+            "lambda_t": 0.01
+          },
+          {
               "exp_type": "DIRT_T",
               "exp_name": "DIRT_T_cls",
               "oracle": "baseline",
