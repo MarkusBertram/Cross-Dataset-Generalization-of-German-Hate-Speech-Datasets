@@ -86,7 +86,7 @@ class experiment_MME(experiment_base):
         params = [{
             "params": self.model.feature_extractor.parameters(), "lr": self.lr
         }]
-        self.optimizer_g = optim.SGD(
+        optimizer_g = optim.SGD(
             params,
             momentum = self.momentum,
             weight_decay=self.weight_decay,
@@ -96,7 +96,7 @@ class experiment_MME(experiment_base):
             "params": self.model.task_classifier.parameters(), "lr": self.lr
         }]
 
-        self.optimizer_f = optim.SGD(
+        optimizer_f = optim.SGD(
             params,
             #self.model.task_classifier.parameters(),
             #lr=self.lr,
@@ -132,73 +132,29 @@ class experiment_MME(experiment_base):
                                        init_lr=self.lr)
             optimizer_f = inv_lr_scheduler(optimizer_f, step,
                                         init_lr=self.lr)
-            pass
-        # for epoch in range(1, self.epochs + 1):
-        #     self.model.train()
-        #     total_loss = 0
+            lr = optimizer_f.param_groups[0]['lr']
 
-        #     len_dataloader = len(self.train_dataloader)
+            if step % len_train_target == 0:
+                data_iter_t = iter(self.labelled_target_dataloader)
+            if step % len_train_target_semi == 0:
+                data_iter_t_unl = iter(self.unlabelled_target_dataloader)
+            if step % len_train_source == 0:
+                data_iter_s = iter(self.source_dataloader)
 
-        #     for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
+            data_s = next(data_iter_s)
+            data_t = next(data_iter_t)
+            data_t_unl = next(data_iter_t_unl) 
 
-        #         self.optimizer.zero_grad(set_to_none=True)
-        #         p = float(i + epoch * len_dataloader) / self.epochs / len_dataloader
-        #         alpha = 2. / (1. + np.exp(-10 * p)) - 1
+            source_features = data_s[0][0].to(self.device)
+            source_labels = data_s[1][0].to(self.device)
+            labelled_target_features = data_t[0][0].to(self.device)
+            labelled_target_labels = data_t[1][0].to(self.device)
+            unlabelled_target_features = data_t_unl[0].to(self.device)
+            
+            optimizer_g.zero_grad()
+            optimizer_f.zero_grad()
 
-        #         # training model using source data
-        #         source_features = source_batch[0][0].to(self.device)
-        #         source_labels = source_batch[1][0].to(self.device)
-                
-        #         #self.model.zero_grad()
-        #         batch_size = len(source_labels)
-
-        #         class_label = torch.LongTensor(batch_size).to(self.device)
-        #         domain_label = torch.zeros(batch_size)
-        #         domain_label = domain_label.long().to(self.device)
-
-        #         class_label.resize_as_(source_labels).copy_(source_labels)
-        #         if epoch == 1 and i == 0:
-        #             self.writer.add_graph(self.model, input_to_model=[source_features, torch.tensor(alpha)], verbose=False)
-        #         class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
-                
-        #         loss_s_label = loss_class(class_output, class_label)
-        #         loss_s_domain = loss_domain(domain_output, domain_label)
-
-        #         # training model using target data
-        #         unlabelled_target_features = unlabelled_target_features[0].to(self.device)
-
-        #         batch_size = len(unlabelled_target_features)
-
-        #         domain_label = torch.ones(batch_size)
-        #         domain_label = domain_label.long().to(self.device)
-
-        #         _, domain_output = self.model(input_data=unlabelled_target_features, alpha=alpha)
-        #         loss_t_domain = loss_domain(domain_output, domain_label)
-        #         loss = loss_t_domain + loss_s_domain + loss_s_label
-
-        #         total_loss += loss.item()
-                
-
-        #         loss.backward()
-        #         self.optimizer.step()
-
-        #     self.writer.add_scalar(f"total_loss/train/{self.exp_name}", total_loss, epoch)
-        #     # test after each epoch
-        #     if self.test_after_each_epoch == True:
-        #         self.test(epoch)
-
-        # # add hparams
-        # self.writer.add_hparams(
-        #     {
-        #         "lr": self.lr,
-
-        #     },
-
-        #     {
-        #         "hparam/total_loss/train": total_loss
-        #     },
-        #     run_name = self.exp_name
-        # )
+            sys.exit(0)
 
     # overrides test
     @torch.no_grad()
@@ -308,7 +264,7 @@ class experiment_MME(experiment_base):
         random_indices = np.random.permutation(indices)
     
         # split labelled target dataset into train and test
-        labelled_target_train_size = int((1-self.train_split) * len(labelled_target_dataset_features))
+        labelled_target_train_size = int(self.train_split * len(labelled_target_dataset_features))
         train_indices = random_indices[:labelled_target_train_size]
         test_indices = random_indices[labelled_target_train_size:]
         
@@ -318,9 +274,6 @@ class experiment_MME(experiment_base):
         labelled_target_labels_train = labelled_target_dataset_labels[train_indices]
         labelled_target_labels_test = labelled_target_dataset_labels[test_indices]
         
-
-        # source_features.append(labelled_target_features_train)
-        # source_labels.append(labelled_target_labels_train)
 
         # concatenate datasets
         combined_source_features = torch.cat(source_features)
@@ -336,10 +289,10 @@ class experiment_MME(experiment_base):
         gc.collect()
 
         # create labelled target dataloader
-        labelled_target_dataset = TensorDataset(labelled_target_features_train, labelled_target_labels_train)
+        labelled_target_dataset_train = TensorDataset(labelled_target_features_train, labelled_target_labels_train)
 
-        sampler = BatchSampler(RandomSampler(source_dataset), batch_size=min(self.batch_size, len(labelled_target_dataset)), drop_last=True)
-        self.labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset, sampler = sampler, num_workers=self.num_workers)            
+        sampler = BatchSampler(RandomSampler(source_dataset), batch_size=min(self.batch_size, len(labelled_target_dataset_train)), drop_last=True)
+        self.labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=self.num_workers)            
         del labelled_target_dataset_features
         del labelled_target_dataset_labels
         gc.collect()
@@ -356,6 +309,7 @@ class experiment_MME(experiment_base):
         labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)
         sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=2*self.batch_size, drop_last=True)
         self.test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=self.num_workers)               
+
         del labelled_target_dataset_test
         gc.collect()
 

@@ -359,7 +359,7 @@ class experiment_DIRT_T(experiment_base):
         random_indices = np.random.permutation(indices)
     
         # split labelled target dataset into train and test
-        labelled_target_train_size = int((1-self.train_split) * len(labelled_target_dataset_features))
+        labelled_target_train_size = int(self.train_split * len(labelled_target_dataset_features))
         train_indices = random_indices[:labelled_target_train_size]
         test_indices = random_indices[labelled_target_train_size:]
         
