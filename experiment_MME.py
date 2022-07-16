@@ -4,6 +4,7 @@ from typing import Dict, List, Union
 import datetime
 import os
 import json
+import torch.nn.functional as F
 from xml.etree.ElementPath import prepare_descendant
 import numpy as np
 from model.MME_model import MME_model     
@@ -149,12 +150,32 @@ class experiment_MME(experiment_base):
             source_labels = data_s[1][0].to(self.device)
             labelled_target_features = data_t[0][0].to(self.device)
             labelled_target_labels = data_t[1][0].to(self.device)
-            unlabelled_target_features = data_t_unl[0].to(self.device)
+            unlabelled_target_features = data_t_unl[0][0].to(self.device)
             
             optimizer_g.zero_grad()
             optimizer_f.zero_grad()
 
-            sys.exit(0)
+            data = torch.cat((source_features, labelled_target_features), 0)
+            target = torch.cat((source_labels, labelled_target_labels), 0)
+
+            output = self.model(data)
+
+            loss = self.criterion(output, target)
+            loss.backward(retain_graph=True)
+
+            optimizer_g.step()
+            optimizer_f.step()
+
+            optimizer_g.zero_grad()
+            optimizer_f.zero_grad()
+
+            out_t1 = self.model(unlabelled_target_features, reverse = True, eta = self.eta)
+            out_t1 = F.softmax(out_t1, dim = 1)
+            loss_t = self.lamda * torch.mean(torch.sum(out_t1 *
+                                              (torch.log(out_t1 + 1e-5)), 1))
+            loss_t.backward()
+            optimizer_f.step()
+            optimizer_g.step()
 
     # overrides test
     @torch.no_grad()
@@ -221,7 +242,8 @@ class experiment_MME(experiment_base):
         self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
         self.steps = self.current_experiment.get("steps", 50000)
         self.multiplication = self.current_experiment.get("multiplication", 50000)
-
+        self.lamda = self.current_experiment.get("lamda", 0.1)
+        self.eta = self.current_experiment.get("eta", 1.0)
     def create_model(self):
         
         if self.feature_extractor.lower() == "bert_cls":
@@ -259,11 +281,10 @@ class experiment_MME(experiment_base):
         # fetch labelled target dataset
         labelled_target_dataset_features, labelled_target_dataset_labels = self.fetch_dataset(self.target_labelled, labelled = True, target = True)
 
+        # split labelled target dataset into train and test
         indices = np.arange(len(labelled_target_dataset_features))
-        
         random_indices = np.random.permutation(indices)
     
-        # split labelled target dataset into train and test
         labelled_target_train_size = int(self.train_split * len(labelled_target_dataset_features))
         train_indices = random_indices[:labelled_target_train_size]
         test_indices = random_indices[labelled_target_train_size:]
@@ -291,8 +312,9 @@ class experiment_MME(experiment_base):
         # create labelled target dataloader
         labelled_target_dataset_train = TensorDataset(labelled_target_features_train, labelled_target_labels_train)
 
-        sampler = BatchSampler(RandomSampler(source_dataset), batch_size=min(self.batch_size, len(labelled_target_dataset_train)), drop_last=True)
+        sampler = BatchSampler(RandomSampler(labelled_target_dataset_train), batch_size=min(self.batch_size, len(labelled_target_dataset_train)), drop_last=True)
         self.labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=self.num_workers)            
+
         del labelled_target_dataset_features
         del labelled_target_dataset_labels
         gc.collect()

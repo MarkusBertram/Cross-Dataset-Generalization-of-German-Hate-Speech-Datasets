@@ -206,7 +206,7 @@ class experiment_DIRT_T(experiment_base):
             for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
 
                 self.optimizer.zero_grad(set_to_none=True)
-                self.optimizer2.zero_grad(set_to_none=True)
+                self.optimizer2.zero_grad()
                 noise = True
 
                 unlabelled_target_features = unlabelled_target_features[0].to(self.device)

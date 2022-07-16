@@ -11,6 +11,20 @@ import sys
 
 from torch.autograd import Function
 
+class ReverseLayerF(Function):
+
+    @staticmethod
+    def forward(ctx, x, alpha):
+        ctx.alpha = alpha
+
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        output = grad_output.neg() * ctx.alpha
+
+        return output, None
+
 class MME_model(nn.Module):
     def __init__(self, feature_extractor_module, task_classifier_module, output_hidden_states):
         super(MME_model, self).__init__()
@@ -19,11 +33,12 @@ class MME_model(nn.Module):
         self.feature_extractor = feature_extractor_module
         self.task_classifier = task_classifier_module
 
-    def forward(self, input_data):
+    def forward(self, input_data, reverse = False, eta = 0.1):
         bert_output = self.bert(input_ids=input_data[:,0], attention_mask=input_data[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
         
         feature_extractor_output = self.feature_extractor(bert_output)
-
+        if reverse == True:
+            feature_extractor_output = ReverseLayerF.apply(feature_extractor_output, eta)
         class_output = self.task_classifier(feature_extractor_output)
 
         return class_output
