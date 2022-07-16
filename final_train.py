@@ -52,10 +52,11 @@ def run_experiments(config):
                 current_exp = experiment_MME(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
-            # elif exp_type == "LIRR":
-            #     current_exp = experiment_LIRR(
-            #         basic_settings, exp_setting#, log_path, writer
-            #     )
+            elif exp_type == "LIRR":
+                from experiment_LIRR import experiment_LIRR
+                current_exp = experiment_LIRR(
+                    basic_settings, exp_setting, writer#, log_path, writer
+                )
             # elif exp_type == "MDAN":
             #     current_exp = experiment_MDAN(
             #         basic_settings, exp_setting#, log_path, writer
