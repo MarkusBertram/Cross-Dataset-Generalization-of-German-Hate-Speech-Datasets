@@ -80,25 +80,21 @@ class experiment_LIRR(experiment_base):
         Returns:
             [tupel(trained network, train_loss )]:
         """
-        # param_lr_g = []
-        # for param_group in self.optimizer_g.param_groups:
-        #     print(param_group)
 
-        params = [{
-            "params": self.model.feature_extractor.parameters(), "lr": self.lr
-        }]
-        optimizer_g = optim.SGD(
-            params,
+        main_optimizer = optim.SGD(
+            [
+            {"params": self.model.feature_extractor.parameters(), "lr": self.lr},
+            {"params": self.model.task_classifier.parameters(), "lr": self.lr}
+            ],
             momentum = self.momentum,
             weight_decay=self.weight_decay,
             nesterov = self.nesterov
         )
-        params = [{
-            "params": self.model.task_classifier.parameters(), "lr": self.lr
-        }]
 
-        optimizer_f = optim.SGD(
-            params,
+        dis_optimizer = optim.SGD(
+            [
+            {"params": self.model.domain_classifier.parameters(), "lr": self.lr}
+            ],
             #self.model.task_classifier.parameters(),
             #lr=self.lr,
             momentum = self.momentum,
@@ -114,21 +110,22 @@ class experiment_LIRR(experiment_base):
         data_iter_t = iter(self.labelled_target_dataloader)
         data_iter_t_unl = iter(self.unlabelled_target_dataloader)
         len_train_source = len(self.source_dataloader)
-        len_train_target = len(self.labelled_target_dataloader)
-        len_train_target_semi = len(self.unlabelled_target_dataloader)
+        len_train_target_l = len(self.labelled_target_dataloader)
+        len_train_target_unl = len(self.unlabelled_target_dataloader)
         best_acc = 0
         counter = 0
 
+        #for epoch in range(1, self.epochs)
         for step in range(self.steps):
-            optimizer_g = inv_lr_scheduler(optimizer_g, step,
-                                       init_lr=self.lr)
-            optimizer_f = inv_lr_scheduler(optimizer_f, step,
-                                        init_lr=self.lr)
-            lr = optimizer_f.param_groups[0]['lr']
+            # optimizer_g = inv_lr_scheduler(optimizer_g, step,
+            #                            init_lr=self.lr)
+            # optimizer_f = inv_lr_scheduler(optimizer_f, step,
+            #                             init_lr=self.lr)
+            #lr = optimizer_f.param_groups[0]['lr']
 
-            if step % len_train_target == 0:
+            if step % len_train_target_l == 0:
                 data_iter_t = iter(self.labelled_target_dataloader)
-            if step % len_train_target_semi == 0:
+            if step % len_train_target_unl == 0:
                 data_iter_t_unl = iter(self.unlabelled_target_dataloader)
             if step % len_train_source == 0:
                 data_iter_s = iter(self.source_dataloader)
@@ -143,8 +140,10 @@ class experiment_LIRR(experiment_base):
             labelled_target_labels = data_t[1][0].to(self.device)
             unlabelled_target_features = data_t_unl[0][0].to(self.device)
             
-            optimizer_g.zero_grad()
-            optimizer_f.zero_grad()
+            is_mask = len(data_s) > 2
+            src_masks = 
+            # optimizer_g.zero_grad()
+            # optimizer_f.zero_grad()
 
             data = torch.cat((source_features, labelled_target_features), 0)
             target = torch.cat((source_labels, labelled_target_labels), 0)
