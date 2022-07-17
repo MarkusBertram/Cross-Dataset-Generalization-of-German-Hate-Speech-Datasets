@@ -210,7 +210,7 @@ class experiment_DIRT_T(experiment_base):
                 noise = True
 
                 unlabelled_target_features = unlabelled_target_features[0].to(self.device)
-                target_bert_output = self.bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=self.output_hidden_states).to(self.device)
+                target_bert_output = self.bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
 
                 if self.output_hidden_states == False:
                     target_bert_output = target_bert_output[0][:,0,:]
