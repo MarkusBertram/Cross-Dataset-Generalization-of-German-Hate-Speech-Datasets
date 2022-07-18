@@ -141,7 +141,7 @@ class experiment_LIRR(experiment_base):
             unlabelled_target_features = data_t_unl[0][0].to(self.device)
             
             is_mask = len(data_s) > 2
-            src_masks = 
+            #src_masks = 
             # optimizer_g.zero_grad()
             # optimizer_f.zero_grad()
 
