@@ -13,7 +13,7 @@
         "stratify_unlabelled": true,
         "equal_labelled_size": false,
         "epochs": 2,
-        "batch_size": 2,
+        "batch_size": 3,
         "weight_decay": 0,
         "lr": 2e-5,
         "momentum": 0,
@@ -37,8 +37,8 @@
             "alignment_component": "LIRR",
             "model": "LIRR",
             "lamda": 10,
-            "eta": 1.0
-        
+            "eta": 1.0,
+            "steps": 50
           },
           {
             "exp_type": "MME",
