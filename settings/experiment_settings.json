@@ -21,12 +21,28 @@
         "validation_split": 0.1,
         "train_split": 0.05,
         "num_workers": 2,
+        "seed": 42,
         "test_after_each_epoch": true,
         "freeze_BERT_weights": true,
         "save_model": true,
         "verbose": 1
         },
         "exp_settings": [
+          {
+            "exp_type": "MDAN",
+            "exp_name": "MDAN_cls",
+            "oracle": "baseline",
+            "feature_extractor": "bert_cls",
+            "task_classifier": "tc1",
+            "domain_classifier": "dc1",
+            "alignment_component": "MDAN",
+            "model": "MDAN",
+            "lamda": 10,
+            "eta": 1.0,
+            "gamma": 10,
+            "mu": 1e-2,
+            "steps": 50
+          },
           {
             "exp_type": "LIRR",
             "exp_name": "LIRR_cls",

@@ -30,9 +30,44 @@ import gc
 from torch.utils.data.dataset import ConcatDataset
 #from .helpers.measures import accuracy, auroc, f1
 from torch.utils.data import Dataset, DataLoader, TensorDataset
-
+import torch.nn.functional as F
 from experiment_base import experiment_base
 from utils.exp_utils import CustomConcatDataset
+
+def multi_data_loader(source_dataloader_list, unlabelled_target_dataloader):
+
+    # Custom Data Generator that yields source batches and an unlabelled target batch
+
+    # Number of batches = number of batches of the larget dataset dataloader
+    input_sizes = [len(dloader) for dloader in source_dataloader_list]
+    number_of_batches = max(input_sizes)
+
+    # create iter instances of each dataloader
+    unlabelled_target_iter = iter(unlabelled_target_dataloader)
+    src_dataloader_iter_list = []
+    for dataloader in source_dataloader_list:
+        src_dataloader_iter_list.append(iter(dataloader))
+
+    # yield batches until the number of batches is reached
+    for batch in range(number_of_batches):
+        # iterate over source dataloader iters
+        source_batches = []
+        for i in range(len(src_dataloader_iter_list)):
+            # append next iter
+            try:
+                source_batches.append(next(src_dataloader_iter_list[i]))
+            # if dataloader is exhausted, reset dataloader iter
+            except StopIteration:
+                src_dataloader_iter_list[i] = iter(source_dataloader_list[i])
+                source_batches.append(next(src_dataloader_iter_list[i]))
+            
+        try:
+            unlabelled_target_batch = next(unlabelled_target_iter)
+        except StopIteration:
+            unlabelled_target_iter = iter(unlabelled_target_dataloader)
+            unlabelled_target_batch = next(unlabelled_target_iter)
+
+        yield source_batches, unlabelled_target_batch
 
 class experiment_MDAN(experiment_base):
     def __init__(
@@ -68,138 +103,96 @@ class experiment_MDAN(experiment_base):
             [tupel(trained network, train_loss )]:
         """
 
-        loss_class = torch.nn.NLLLoss().to(self.device)
-        loss_domain = torch.nn.NLLLoss().to(self.device)
-
         for name, param in self.model.named_parameters():
             if "bert" in name:
                 param.requires_grad = False
 
         for epoch in range(1, self.epochs + 1):
             self.model.train()
-            total_loss = 0
 
-            len_dataloader = len(self.train_dataloader)
+            train_dataloader = multi_data_loader(self.source_dataloader_list, self.unlabelled_target_dataloader)
 
-            for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
+            for i, (source_batches, unlabelled_target_batch) in enumerate(train_dataloader):
+                self.optimizer.zero_grad()
 
-                self.optimizer.zero_grad(set_to_none=True)
-                p = float(i + epoch * len_dataloader) / self.epochs / len_dataloader
-                alpha = 2. / (1. + np.exp(-10 * p)) - 1
+                source_feature_list = []
+                source_labels_list = []
 
-                # training model using source data
-                source_features = source_batch[0][0].to(self.device)
-                source_labels = source_batch[1][0].to(self.device)
+                for i in range(len(self.source_dataloader_list)):
+                    source_feature_list.append(source_batches[i][0][0].to(self.device))
+                    source_labels_list.append(source_batches[i][1][0].to(self.device))
                 
-                #self.model.zero_grad()
-                batch_size = len(source_labels)
-
-                class_label = torch.LongTensor(batch_size).to(self.device)
-                domain_label = torch.zeros(batch_size)
-                domain_label = domain_label.long().to(self.device)
-
-                class_label.resize_as_(source_labels).copy_(source_labels)
-                if epoch == 1 and i == 0:
-                    self.writer.add_graph(self.model, input_to_model=[source_features, torch.tensor(alpha)], verbose=False)
-                class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
+                unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
                 
-                loss_s_label = loss_class(class_output, class_label)
-                loss_s_domain = loss_domain(domain_output, domain_label)
+                slabels = torch.ones(self.batch_size, requires_grad=False).type(torch.LongTensor).to(self.device)
+                tlabels = torch.zeros(self.batch_size, requires_grad=False).type(torch.LongTensor).to(self.device)
 
-                # training model using target data
-                unlabelled_target_features = unlabelled_target_features[0].to(self.device)
+                logprobs, sdomains, tdomains = self.model(source_feature_list, unlabelled_target_features)
 
-                batch_size = len(unlabelled_target_features)
+                # Compute prediction accuracy on multiple training sources.
+                losses = torch.stack([F.nll_loss(logprobs[j], source_labels_list[j]) for j in range(len(self.source_dataloader_list))])
 
-                domain_label = torch.ones(batch_size)
-                domain_label = domain_label.long().to(self.device)
+                domain_losses = torch.stack([F.nll_loss(sdomains[j], slabels) +
+                                           F.nll_loss(tdomains[j], tlabels) for j in range(len(self.source_dataloader_list))])
 
-                _, domain_output = self.model(input_data=unlabelled_target_features, alpha=alpha)
-                loss_t_domain = loss_domain(domain_output, domain_label)
-                loss = loss_t_domain + loss_s_domain + loss_s_label
-
-                total_loss += loss.item()
-                
+                loss = torch.log(torch.sum(torch.exp(self.gamma * (losses + self.mu * domain_losses)))) / self.gamma
 
                 loss.backward()
                 self.optimizer.step()
 
-            self.writer.add_scalar(f"total_loss/train/{self.exp_name}", total_loss, epoch)
-            # test after each epoch
-            if self.test_after_each_epoch == True:
-                self.test(epoch)
+    # # ovlossides test
+    # @torch.no_grad()
+    # def test(self, epoch):
+    #     """test [computes loss of the test set]
+    #     [extended_summary]
+    #     Returns:
+    #         [type]: [description]
+    #     """
+    #     correct = 0
+    #     predictions = []
+    #     targets = []
+    #     f1 = F1Score(num_classes = 2, average="macro")
+    #     self.model.eval()
+    #     for (target_features, target_labels) in self.test_dataloader:
+    #         target_features = target_features[0].to(self.device)
+    #         target_labels = target_labels[0].to(self.device)
 
-        # add hparams
-        self.writer.add_hparams(
-            {
-                "lr": self.lr,
-
-            },
-
-            {
-                "hparam/total_loss/train": total_loss
-            },
-            run_name = self.exp_name
-        )
-
-    # ovlossides test
-    @torch.no_grad()
-    def test(self, epoch):
-        """test [computes loss of the test set]
-        [extended_summary]
-        Returns:
-            [type]: [description]
-        """
-        alpha = 0
-        correct = 0
-        predictions = []
-        targets = []
-        f1 = F1Score(num_classes = 2, average="macro")
-        self.model.eval()
-        for (target_features, target_labels) in self.test_dataloader:
-            target_features = target_features[0].to(self.device)
-            target_labels = target_labels[0].to(self.device)
-
-            target_class_output, target_domain_output = self.model(target_features, alpha)
+    #         target_class_output = self.model.inference(target_features)
             
-            target_class_predictions = torch.argmax(target_class_output, dim=1)
+    #         target_class_predictions = torch.argmax(target_class_output, dim=1)
 
-            predictions.append(target_class_predictions.cpu())
-            targets.append(target_labels.cpu())
-            #f1_score = f1(preds, target_labels)
+    #         predictions.append(target_class_predictions.cpu())
+    #         targets.append(target_labels.cpu())
+    #         #f1_score = f1(preds, target_labels)
 
-            correct += torch.sum(target_class_predictions == target_labels).item()
+    #         correct += torch.sum(target_class_predictions == target_labels).item()
 
-        avg_test_acc = correct / len(self.test_dataloader.dataset)
+    #     avg_test_acc = correct / len(self.test_dataloader.dataset)
 
-        outputs = torch.cat(predictions)
-        targets = torch.cat(targets)
-        f1score = f1(outputs, targets)
+    #     outputs = torch.cat(predictions)
+    #     targets = torch.cat(targets)
+    #     f1score = f1(outputs, targets)
 
-        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
-        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
+    #     self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
+    #     self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
 
-        if epoch == self.epochs:
-            # add hparams
-            self.writer.add_hparams(
-                {
-                    "lr": self.lr,
+    #     if epoch == self.epochs:
+    #         # add hparams
+    #         self.writer.add_hparams(
+    #             {
+    #                 "lr": self.lr,
 
-                },
+    #             },
 
-                {
-                    "hparam/Accuracy/Test": avg_test_acc,
-                    "F1_score/Test": f1score.item()
-                },
-                run_name = self.exp_name
-            )
+    #             {
+    #                 "hparam/Accuracy/Test": avg_test_acc,
+    #                 "F1_score/Test": f1score.item()
+    #             },
+    #             run_name = self.exp_name
+    #         )
 
     def create_optimizer(self) -> None:
-        self.optimizer = optim.Adam(
-            self.model.parameters(),
-            weight_decay=self.weight_decay,
-            lr=self.lr,
-        )
+        self.optimizer = optim.Adadelta(self.model.parameters(), lr=self.lr)
 
     def create_criterion(self) -> None:
         self.criterion = nn.CrossEntropyLoss()
@@ -210,7 +203,9 @@ class experiment_MDAN(experiment_base):
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
         self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
         self.domain_classifier = self.current_experiment.get("domain_classifier", "dc1")
-        
+        self.gamma = self.current_experiment.get("gamma", 10)
+        self.mu = self.current_experiment.get("mu", 1e-2)
+
     def create_model(self):
         
         if self.feature_extractor.lower() == "bert_cls":
@@ -241,63 +236,40 @@ class experiment_MDAN(experiment_base):
             raise ValueError("Can't find the domain classifier name. \
             Please specify the domain classifier class name as key in experiment settings of the current experiment.")
 
-        self.model = MDAN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device)
+        self.model = MDAN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states, len(self.source_dataloader_list)).to(self.device)
 
     def create_dataloader(self):
         # fetch source datasets
         source_datasets = []
-        #source_features = []
-        #source_labels = []
         for source_name in self.sources:
             features, labels = self.fetch_dataset(source_name, labelled = True, target = False)
-            source_datasets.append((features, labels))
-            #source_features.append(features)
-            #source_labels.append(labels)
-            
-        # fetch labelled target dataset
-        labelled_target_dataset_features, labelled_target_dataset_labels = self.fetch_dataset(self.target_labelled, labelled = True, target = True)
+            source_datasets.append(TensorDataset(features, labels))
+        
+        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
 
-        indices = np.arange(len(labelled_target_dataset_features))
+        # add labelled target train dataset to source domains
+        source_datasets.append(TensorDataset(labelled_target_features_train, labelled_target_labels_train))
         
-        random_indices = np.random.permutation(indices)
-    
-        # split labelled target dataset into train and test
-        labelled_target_train_size = int(self.train_split * len(labelled_target_dataset_features))
-        train_indices = random_indices[:labelled_target_train_size]
-        test_indices = random_indices[labelled_target_train_size:]
-        
-        labelled_target_features_train = labelled_target_dataset_features[train_indices]
-        labelled_target_features_test = labelled_target_dataset_features[test_indices]
-
-        labelled_target_labels_train = labelled_target_dataset_labels[train_indices]
-        labelled_target_labels_test = labelled_target_dataset_labels[test_indices]
-        
-        del labelled_target_dataset_features
-        del labelled_target_dataset_labels
-        gc.collect()
-        source_features.append(labelled_target_features_train)
-        source_labels.append(labelled_target_labels_train)
-
-        combined_source_features = torch.cat(source_features)
-        combined_source_labels = torch.cat(source_labels)
-        
-        # concatenate datasets
-        source_dataset = TensorDataset(combined_source_features, combined_source_labels)
-        
-        del source_features
-        del source_labels
         gc.collect()
 
-        # fetch unlabelled target dataset
+        # create source dataloaders
+        self.source_dataloader_list = []
+        for source_dataset in source_datasets:
+            sampler = BatchSampler(RandomSampler(source_dataset), batch_size=self.batch_size, drop_last=True)
+            dataloader = DataLoader(dataset=source_dataset, sampler = sampler, num_workers=self.num_workers)            
+            self.source_dataloader_list.append(dataloader)
+
+        # create unlabelled target dataloader
         unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+
+        # fetch unlabelled target dataset and create dataloader
+        unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+        unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features)
+        sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=self.batch_size, drop_last=True)
+        self.unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=self.num_workers)            
         
-        # combine source dataset and unlabelled target dataset into one dataset
-        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
-        sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=self.batch_size, drop_last=False)
-        self.train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=self.num_workers)            
-        #self.train_dataloader = DataLoader(concatenated_train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
-        del concatenated_train_dataset
         del unlabelled_target_dataset_features
+
         # create test dataloader
         
         labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)
@@ -330,8 +302,10 @@ class experiment_MDAN(experiment_base):
         self.train()
         
         # perform test
-        if self.test_after_each_epoch == False:
-            self.test()
+        self.test()
+        # # perform test
+        # if self.test_after_each_epoch == False:
+        #     self.test()
 
         # plot
         # self.plot()

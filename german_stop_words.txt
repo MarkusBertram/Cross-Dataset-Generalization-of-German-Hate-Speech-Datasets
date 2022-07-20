@@ -8,7 +8,6 @@ aaa
 al
 abe
 abc
-cn
 pic
 amp
 olg
