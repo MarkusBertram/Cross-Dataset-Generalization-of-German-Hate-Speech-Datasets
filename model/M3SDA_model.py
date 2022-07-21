@@ -26,51 +26,39 @@ class ReverseLayerF(Function):
         return output, None
 
 class M3SDA_model(nn.Module):
-    def __init__(self, feature_extractor_module, task_classifier_module, domain_classifier_module, output_hidden_states, num_src_domains):
+    def __init__(self, feature_extractor_module, task_classifier_module, output_hidden_states, num_src_domains):
         super(M3SDA_model, self).__init__()
         self.bert = BertModel.from_pretrained("deepset/gbert-base")
         self.output_hidden_states = output_hidden_states
         self.feature_extractor = feature_extractor_module
-        self.task_classifier = task_classifier_module
+        #self.task_classifier = task_classifier_module
         self.num_src_domains = num_src_domains
         # Domain Classifiers
-        self.domain_classifiers = nn.ModuleList([domain_classifier_module for _ in range(self.num_src_domains)])
+        self.task_classifiers = nn.ModuleList([nn.ModuleList([task_classifier_module, task_classifier_module]) for _ in range(self.num_src_domains)])
 
         # Gradient reversal layer.
-        self.grls = [ReverseLayerF() for _ in range(self.num_src_domains)]
+        #self.grls = [ReverseLayerF() for _ in range(self.num_src_domains)]
 
-    def forward(self, src_input_data, tgt_input_data, alpha=1):
+    def forward(self, input_data, reverse = False, alpha=1):
         """
-        :param sinputs:     A list of k inputs from k source domains.
-        :param tinputs:     Input from the target domain.
+        :src_input_data:     A list of inputs from k source domains.
+        :tgt_input_data:     Input from the target domain.
         :return:
         """
-        sh_relu, th_relu = src_input_data, tgt_input_data
+        
+        bert_output = self.bert(input_ids=input_data[:,0], attention_mask=input_data[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
+        feature_extractor_output = self.feature_extractor(bert_output)
 
-        # Source Feature Extractor Outputs:
+        if reverse:
+            feature_extractor_output = ReverseLayerF.apply(feature_extractor_output, alpha)
+
+        predictions = []
         for i in range(self.num_src_domains):
-            sh_relu[i] = self.bert(input_ids=sh_relu[i][:,0], attention_mask=sh_relu[i][:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
-            sh_relu[i] = self.feature_extractor(sh_relu[i])
-        # Target Feature Extractor Outputs:
-        th_relu = self.bert(input_ids=th_relu[:,0], attention_mask=th_relu[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
-        th_relu = self.feature_extractor(th_relu)
+            pred1 = self.task_classifiers[i][0](feature_extractor_output)
+            pred2 = self.task_classifiers[i][1](feature_extractor_output)
+            predictions.append((pred1, pred2))
 
-        # Task Classification probabilities on k source domains.
-        logprobs = []
-        for i in range(self.num_src_domains):
-            logprobs.append(self.task_classifier(sh_relu[i]))
-
-        # Domain classification accuracies.
-        sdomains, tdomains = [], []
-
-        for i in range(self.num_src_domains):
-            sh_relu[i] = self.grls[i].apply(sh_relu[i], alpha)
-            th_relu_i = self.grls[i].apply(th_relu, alpha)
-
-            sdomains.append(self.domain_classifiers[i](sh_relu[i]))
-            tdomains.append(self.domain_classifiers[i](th_relu_i))
-
-        return logprobs, sdomains, tdomains
+        return predictions
 
     def inference(self, input):
 

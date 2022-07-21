@@ -37,7 +37,7 @@ class MDAN_model(nn.Module):
         self.domain_classifiers = nn.ModuleList([domain_classifier_module for _ in range(self.num_src_domains)])
 
         # Gradient reversal layer.
-        self.grls = [ReverseLayerF() for _ in range(self.num_src_domains)]
+        #self.grls = [ReverseLayerF() for _ in range(self.num_src_domains)]
 
     def forward(self, src_input_data, tgt_input_data, alpha=1):
         """
@@ -64,8 +64,11 @@ class MDAN_model(nn.Module):
         sdomains, tdomains = [], []
 
         for i in range(self.num_src_domains):
-            sh_relu[i] = self.grls[i].apply(sh_relu[i], alpha)
-            th_relu_i = self.grls[i].apply(th_relu, alpha)
+            #sh_relu[i] = self.grls[i].apply(sh_relu[i], alpha)
+            #th_relu_i = self.grls[i].apply(th_relu, alpha)
+
+            sh_relu[i] = ReverseLayerF.apply(sh_relu[i], alpha)
+            th_relu_i = ReverseLayerF.apply(th_relu, alpha)
 
             sdomains.append(self.domain_classifiers[i](sh_relu[i]))
             tdomains.append(self.domain_classifiers[i](th_relu_i))

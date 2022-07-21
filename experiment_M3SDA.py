@@ -103,9 +103,19 @@ class experiment_M3SDA(experiment_base):
             [tupel(trained network, train_loss )]:
         """
 
+        N = len(self.source_dataloader_list)
+
+        print(N)
+        sys.exit(0)
+
         for name, param in self.model.named_parameters():
             if "bert" in name:
                 param.requires_grad = False
+
+        source_clf_optimizers = {}
+        for i in range():
+            pass
+        source_loss = {}
 
         for epoch in range(1, self.epochs + 1):
             self.model.train()
@@ -192,10 +202,15 @@ class experiment_M3SDA(experiment_base):
     #         )
 
     def create_optimizer(self) -> None:
-        self.optimizer = optim.Adadelta(self.model.parameters(), lr=self.lr)
+        self.extractor_optimizer = optim.Adadelta(self.model.feature_extractor.parameters(), lr=self.lr)
+        self.predictor_optimizers = []
+        for i in range(len(self.source_dataloader_list)):
+            self.predictor_optimizers.append(optim.Adam(list(self.model.task_classifiers[i][0].parameters()) + list(self.model.task_classifiers[i][1].parameters()), lr = self.lr))
 
     def create_criterion(self) -> None:
-        self.criterion = nn.CrossEntropyLoss()
+        self.loss_extractor = nn.CrossEntropyLoss()
+        self.loss_l1 = nn.L1Loss()
+        self.loss_l2 = nn.MSELoss()
 
     # ovlossides load_settings
     def load_exp_settings(self) -> None:
@@ -236,7 +251,7 @@ class experiment_M3SDA(experiment_base):
             raise ValueError("Can't find the domain classifier name. \
             Please specify the domain classifier class name as key in experiment settings of the current experiment.")
 
-        self.model = M3SDA_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states, len(self.source_dataloader_list)).to(self.device)
+        self.model = M3SDA_model(feature_extractor, task_classifier, output_hidden_states, len(self.source_dataloader_list)).to(self.device)
 
     def create_dataloader(self):
         # fetch source datasets
