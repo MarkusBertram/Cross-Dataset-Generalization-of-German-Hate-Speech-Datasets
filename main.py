@@ -62,10 +62,11 @@ def run_experiments(config):
                 current_exp = experiment_MDAN(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
-            # elif exp_type == "M3SDA":
-            #     current_exp = experiment_M3SDA(
-            #         basic_settings, exp_setting#, log_path, writer
-            #     )
+            elif exp_type == "M3SDA":
+                from experiment_M3SDA import experiment_M3SDA
+                current_exp = experiment_M3SDA(
+                    basic_settings, exp_setting, writer#, log_path, writer
+                )
             current_exp.perform_experiment()
             # try:
             #     current_exp.perform_experiment()
