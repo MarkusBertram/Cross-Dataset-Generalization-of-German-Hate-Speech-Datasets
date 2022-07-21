@@ -39,7 +39,7 @@ class M3SDA_model(nn.Module):
         # Gradient reversal layer.
         #self.grls = [ReverseLayerF() for _ in range(self.num_src_domains)]
 
-    def forward(self, input_data, reverse = False, alpha=1):
+    def forward(self, input_data, index, reverse = False, alpha=1):
         """
         :src_input_data:     A list of inputs from k source domains.
         :tgt_input_data:     Input from the target domain.
@@ -52,19 +52,21 @@ class M3SDA_model(nn.Module):
         if reverse:
             feature_extractor_output = ReverseLayerF.apply(feature_extractor_output, alpha)
 
-        predictions = []
-        for i in range(self.num_src_domains):
-            pred1 = self.task_classifiers[i][0](feature_extractor_output)
-            pred2 = self.task_classifiers[i][1](feature_extractor_output)
-            predictions.append((pred1, pred2))
+        
+        pred1 = self.task_classifiers[index][0](feature_extractor_output)
+        pred2 = self.task_classifiers[index][1](feature_extractor_output)
 
-        return predictions
+        return pred1, pred2
 
     def inference(self, input):
 
         bert_output = self.bert(input_ids=input[:,0], attention_mask=input[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
         feature_extractor_output = self.feature_extractor(bert_output)
 
+        logprobs = []
         # Classification probability.
-        logprobs = self.task_classifier(feature_extractor_output)
+        for i in range(self.num_src_domains):
+            pred1 = self.task_classifiers[i][0](feature_extractor_output)
+            pred2 = self.task_classifiers[i][1](feature_extractor_output)
+            logprobs.append((pred1, pred2))
         return logprobs

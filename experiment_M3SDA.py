@@ -10,7 +10,7 @@ from model.M3SDA_model import M3SDA_model
 from utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
                          separate_text_by_classes)
-
+from collections import defaultdict
 import pandas as pd
 from torchmetrics import F1Score
 import yaml
@@ -105,25 +105,43 @@ class experiment_M3SDA(experiment_base):
 
         N = len(self.source_dataloader_list)
 
-        print(N)
-        sys.exit(0)
-
         for name, param in self.model.named_parameters():
             if "bert" in name:
                 param.requires_grad = False
 
         source_clf_optimizers = {}
-        for i in range():
-            pass
+
         source_loss = {}
+        for i in range(N):
+            source_loss[i] = {}
+            for j in range(1, 3):
+                source_loss[i][str(j)] = {}
+                source_loss[i][str(j)]['loss'] = []
+                source_loss[i][str(j)]['ac'] = []
 
         for epoch in range(1, self.epochs + 1):
             self.model.train()
 
+            source_ac = {}
+            for i in range(N):
+                source_ac[i] = defaultdict(int)
+
+            record = {}
+            for i in range(N):
+                record[i] = {}
+                for j in range(1, 3):
+                    record[i][str(j)] = 0
+            mcd_loss = 0
+            dis_loss = 0
+
+
+            weights = [0, 0, 0]
             train_dataloader = multi_data_loader(self.source_dataloader_list, self.unlabelled_target_dataloader)
 
             for i, (source_batches, unlabelled_target_batch) in enumerate(train_dataloader):
-                self.optimizer.zero_grad()
+
+                loss_cls = 0
+                src_len = len(source_batches)
 
                 source_feature_list = []
                 source_labels_list = []
@@ -131,6 +149,17 @@ class experiment_M3SDA(experiment_base):
                 for i in range(len(self.source_dataloader_list)):
                     source_feature_list.append(source_batches[i][0][0].to(self.device))
                     source_labels_list.append(source_batches[i][1][0].to(self.device))
+                
+                # train extractor and source clssifier
+                for index, batch in enumerate(source_batches):
+                    features, labels = batch
+                    features = features.to(self.device)
+                    labels = labels.to(self.device)
+
+                    pred1, pred2 = self.model(features, index)
+
+                    source_ac[index]['c1'] += torch.sum(torch.max(pred1, dim=1)[1] == labels).item()
+				    source_ac[index]['c2'] += torch.sum(torch.max(pred2, dim=1)[1] == labels).item()
                 
                 unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
                 
