@@ -6,6 +6,7 @@ import os
 import json
 from xml.etree.ElementPath import prepare_descendant
 import numpy as np
+from responses import target
 from model.M3SDA_model import M3SDA_model     
 from utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
@@ -119,6 +120,14 @@ class experiment_M3SDA(experiment_base):
                 source_loss[i][str(j)]['loss'] = []
                 source_loss[i][str(j)]['ac'] = []
 
+        mcd_loss_plot = []
+        dis_loss_plot = []
+        min_ = float('inf')
+
+        
+        if len(self.unlabelled_target_dataloader) < min_:
+            min_ = len(self.unlabelled_target_dataloader)
+
         for epoch in range(1, self.epochs + 1):
             self.model.train()
 
@@ -185,8 +194,8 @@ class experiment_M3SDA(experiment_base):
                         features = features.to(self.device)
                         labels = labels.to(self.device)
 
-                        src_feature = self.model(features, only_features = True)
-                        tar_feature = self.model(unlabelled_target_features, only_features = True)
+                        src_feature = self.model(features, output_only_features = True)
+                        tar_feature = self.model(unlabelled_target_features, output_only_features = True)
 
                         
                         e_src = torch.mean(src_feature**k, dim=0)
@@ -201,7 +210,7 @@ class experiment_M3SDA(experiment_base):
                             other_x = other_x.to(self.device)
                             other_y = other_y.to(self.device)
 
-                            other_feature = self.model(other_x, only_features = True)
+                            other_feature = self.model(other_x, output_only_features = True)
 
                             e_other = torch.mean(other_feature**k, dim=0)
                             m2_dist = e_src.dist(e_other)
@@ -230,19 +239,164 @@ class experiment_M3SDA(experiment_base):
                     self.predictor_optimizers[i].step()
                     self.predictor_optimizers[i].zero_grad()
                     
-                self.extractor_optimizer.step().zero_grad()
+                self.extractor_optimizer.zero_grad()
 
                 unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
 
-                tar_feature = self.model(unlabelled_target_features, only_features = True)
+                #tar_feature = self.model(unlabelled_target_features, only_features = True)
                     
                 loss = 0
                 d_loss = 0
                 c_loss = 0
 
-                for index, batch in enumerate(src_batch):
-
+                for index, batch in enumerate(source_batches):
+                    features = batch[0][0]
+                    labels = batch[1][0]
                     
+                    features = features.to(self.device)
+                    labels = labels.to(self.device)
+
+                    src_pred1, src_pred2 = self.model(features, index=index)
+
+                    c_loss += self.loss_extractor(src_pred1, labels) + self.loss_extractor(src_pred2, labels)
+
+
+                    tgt_pred1, tgt_pred2 = self.model(unlabelled_target_features, index=index)
+
+                    combine1 = (F.softmax(tgt_pred1, dim=1) + F.softmax(tgt_pred2, dim=1))/2
+
+                    d_loss += self.loss_l1(tgt_pred1, tgt_pred2)
+
+                    for index_2, o_batch in enumerate(source_batches[index+1:]):
+                        
+                        pred_2_c1, pred_2_c2 = self.model(unlabelled_target_features, index = index_2+index)
+                        
+                        #pred_2_c1 = source_clf[source_domain[index_2+index]]['c1'](tar_feature)
+                        #pred_2_c2 = source_clf[source_domain[index_2+index]]['c2'](tar_feature)
+                        combine2 = (F.softmax(pred_2_c1, dim=1) + F.softmax(pred_2_c2, dim=1))/2
+
+                        d_loss += self.loss_l1(combine1, combine2) * 0.1
+
+                loss = c_loss - d_loss 
+                
+                loss.backward()
+                self.extractor_optimizer.zero_grad(set_to_none = True)
+
+                for i in range(N):
+                    self.predictor_optimizers[i].zero_grad()
+                
+                for i in range(N):
+                    self.predictor_optimizers[i].step()
+                
+                for i in range(N):
+                    self.predictor_optimizers[i].zero_grad()
+                
+                all_dis = 0
+
+                for i in range(3):
+                    discrepency_loss = 0
+                    tar_feature = self.model(unlabelled_target_features, output_only_features = True)
+
+                    for index, _ in enumerate(source_batches):
+                        
+                        pred_c1, pred_c2 = self.model(tar_feature, index = index, feature_extractor_input = True)
+                        
+                        combine1 = (F.softmax(pred_c1, dim=1) + F.softmax(pred_c2, dim=1))/2
+
+                        discrepency_loss += self.loss_l1(pred_c1, pred_c2)
+
+                        for index2, _ in enumerate(source_batches[index+1:]):
+                            
+                            pred_2_c1, pred_2_c2 = self.model(tar_feature, index = index2+index, feature_extractor_input = True)
+
+                            combine2 = (F.softmax(pred_2_c1, dim=1) + F.softmax(pred_2_c2, dim=1))/2
+
+                            discrepency_loss += self.loss_l1(combine1, combine2) * 0.1
+                        #discrepency_loss += torch.mean(torch.sum(abs(F.softmax(pred_c1, dim=1) - F.softmax(pred_c2, dim=1)), dim=1))
+                        #discrepency_loss += loss_l1(F.softmax(pred_c1, dim=1), F.softmax(pred_c2, dim=1)) 
+
+                    all_dis += discrepency_loss.item()
+
+                    self.extractor_optimizer.zero_grad(set_to_none = True)
+
+                    for i in range(N):
+                        self.predictor_optimizers[i].zero_grad(set_to_none = True)
+
+                    discrepency_loss.backward()
+
+                    self.extractor_optimizer.step()
+                    self.extractor_optimizer.zero_grad(set_to_none = True)
+                    
+                    for i in range(N):
+                        self.predictor_optimizers[i].zero_grad(set_to_none = True)
+
+                dis_loss += all_dis
+
+                if batch_index % 10 == 0:
+                    print('Discrepency Loss : [%.4f]' % (all_dis))
+
+            ###
+            for j in range(N):
+                for i in range(1, 3):
+                    source_loss[j][str(i)]['loss'].append(record[j][str(i)]/min_/self.batch_size)
+                    source_loss[j][str(i)]['ac'].append(source_ac[j]['c'+str(i)]/min_/self.batch_size)
+            dis_loss_plot.append(dis_loss/min_/self.batch_size)
+            mcd_loss_plot.append(mcd_loss/min_/self.batch_size)
+
+            ###
+    @torch.no_grad()
+    def test(self):
+        
+        self.model.feature_extractor.eval()
+        N = len(self.source_dataloader_list)
+
+        for i in range(N):
+            self.model.task_classifiers[i][0].eval()
+            self.model.task_classifiers[i][1].eval()
+
+        source_ac = {}
+        eval_loss = {}    
+
+        for i in range(N):
+            source_ac[i] = defaultdict(int)
+            eval_loss[i] = defaultdict(int)
+
+        final_ac = 0
+        with torch.no_grad():
+            for index, batch in enumerate(self.test_dataloader):
+                features = batch[0][0].to(self.device)
+                labels = batch[1][0].to(self.device)
+
+                feature = self.model(features, output_only_features = True)
+
+                final_pred = 1
+
+                for index_s in range(N):
+                    pred1, pred2 = self.model(feature, index = index_s, feature_extractor_input = True)
+
+                    eval_loss[index_s]["c1"] += self.loss_extractor(pred1, labels)
+                    eval_loss[index_s]["c2"] += self.loss_extractor(pred2, labels)
+
+                    if isinstance(final_pred, int):
+                            final_pred =(F.softmax(pred1, dim=1) + F.softmax(pred2, dim=1))/2	
+                    else:
+                        final_pred +=( F.softmax(pred1, dim=1) + F.softmax(pred2, dim=1))/2	
+                    
+                    source_ac[index_s]['c1'] += np.sum(np.argmax(pred1.cpu().detach().numpy(), axis=1) == labels.cpu().detach().numpy())
+                    source_ac[index_s]['c2'] += np.sum(np.argmax(pred2.cpu().detach().numpy(), axis=1) == labels.cpu().detach().numpy())
+
+                final_ac += np.sum(np.argmax(final_pred.cpu().detach().numpy(), axis=1) == labels.cpu().detach().numpy())
+
+        sources = self.sources.extend([self.target_labelled])
+
+        for i in range(N):
+            print('Current Source : ', sources[i])
+            print('Accuray for c1 : [%.4f]' % (source_ac[i]['c1']/self.batch_size/len(self.test_dataloader)))
+            print('Accuray for c2 : [%.4f]' % (source_ac[i]['c2']/self.batch_size/len(self.test_dataloader)))
+            print('eval loss c1 : [%.4f]' % (eval_loss[i]['c1']))
+            print('eval loss c2 : [%.4f]' % (eval_loss[i]['c2']))
+    
+        print('Combine Ac : [%.4f]' % (final_ac/self.batch_size/len(self.test_dataloader)))
 
     def create_optimizer(self) -> None:
         self.extractor_optimizer = optim.Adadelta(self.model.feature_extractor.parameters(), lr=self.lr)
