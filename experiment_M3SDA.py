@@ -138,97 +138,111 @@ class experiment_M3SDA(experiment_base):
             weights = [0, 0, 0]
             train_dataloader = multi_data_loader(self.source_dataloader_list, self.unlabelled_target_dataloader)
 
-            for i, (source_batches, unlabelled_target_batch) in enumerate(train_dataloader):
+            for batch_index, (source_batches, unlabelled_target_batch) in enumerate(train_dataloader):
 
                 loss_cls = 0
                 src_len = len(source_batches)
-
-                source_feature_list = []
-                source_labels_list = []
-
-                for i in range(len(self.source_dataloader_list)):
-                    source_feature_list.append(source_batches[i][0][0].to(self.device))
-                    source_labels_list.append(source_batches[i][1][0].to(self.device))
                 
                 # train extractor and source clssifier
                 for index, batch in enumerate(source_batches):
-                    features, labels = batch
+                    features = batch[0][0]
+                    labels = batch[1][0]
+                    
                     features = features.to(self.device)
                     labels = labels.to(self.device)
 
                     pred1, pred2 = self.model(features, index)
 
                     source_ac[index]['c1'] += torch.sum(torch.max(pred1, dim=1)[1] == labels).item()
-				    source_ac[index]['c2'] += torch.sum(torch.max(pred2, dim=1)[1] == labels).item()
+                    source_ac[index]['c2'] += torch.sum(torch.max(pred2, dim=1)[1] == labels).item()
+
+                    loss1 = self.loss_extractor(pred1, labels)
+                    loss2 = self.loss_extractor(pred2, labels)
+
+                    loss_cls += loss1 + loss2
+
+                    record[index]['1'] += loss1.item()
+                    record[index]['2'] += loss2.item()
                 
-                unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
+                if self.verbose:
+                    if batch_index % 10 == 0:
+                        for i in range(N):
+                                print('c1 : [%.8f]' % (source_ac[i]['c1']/(batch_index+1)/self.batch_size))
+                                print('c2 : [%.8f]' % (source_ac[i]['c2']/(batch_index+1)/self.batch_size))
+                                weights[index] = max([source_ac[i]['c1'], source_ac[i]['c2']])
                 
-                slabels = torch.ones(self.batch_size, requires_grad=False).type(torch.LongTensor).to(self.device)
-                tlabels = torch.zeros(self.batch_size, requires_grad=False).type(torch.LongTensor).to(self.device)
+                m1_loss = 0
+                m2_loss = 0
 
-                logprobs, sdomains, tdomains = self.model(source_feature_list, unlabelled_target_features)
+                for k in range(1,3):
+                    for i_index, batch in enumerate(source_batches):
+                        
+                        unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
+                        
+                        features = batch[0][0]
+                        labels = batch[1][0]
+                        
+                        features = features.to(self.device)
+                        labels = labels.to(self.device)
 
-                # Compute prediction accuracy on multiple training sources.
-                losses = torch.stack([F.nll_loss(logprobs[j], source_labels_list[j]) for j in range(len(self.source_dataloader_list))])
+                        src_feature = self.model(features, only_features = True)
+                        tar_feature = self.model(unlabelled_target_features, only_features = True)
 
-                domain_losses = torch.stack([F.nll_loss(sdomains[j], slabels) +
-                                           F.nll_loss(tdomains[j], tlabels) for j in range(len(self.source_dataloader_list))])
+                        
+                        e_src = torch.mean(src_feature**k, dim=0)
+                        e_tar = torch.mean(tar_feature**k, dim=0)
+                        m1_dist = e_src.dist(e_tar)
+                        m1_loss += m1_dist
 
-                loss = torch.log(torch.sum(torch.exp(self.gamma * (losses + self.mu * domain_losses)))) / self.gamma
+                        for j_index, other_batch in enumerate(source_batches[i_index+1:]):
+                            other_x = other_batch[0][0]
+                            other_y = other_batch[1][0]
 
+                            other_x = other_x.to(self.device)
+                            other_y = other_y.to(self.device)
+
+                            other_feature = self.model(other_x, only_features = True)
+
+                            e_other = torch.mean(other_feature**k, dim=0)
+                            m2_dist = e_src.dist(e_other)
+                            m2_loss += m2_dist
+
+                loss_m =  (self.epochs-epoch)/self.epochs * (m1_loss/N + m2_loss/N/(N-1)*2) * 0.8
+                mcd_loss += loss_m.item()
+
+                loss = loss_cls + loss_m
+
+                if batch_index % 10 == 0:
+                    print('[%d]/[%d]' % (batch_index, min_))
+                    print('class loss : [%.5f]' % (loss_cls))
+                    print('msd loss : [%.5f]' % (loss_m))
+                
+                self.extractor_optimizer.zero_grad(set_to_none = True)
+
+                for i in range(N):
+                    self.predictor_optimizers[i].zero_grad(set_to_none = True)
+                
                 loss.backward()
-                self.optimizer.step()
 
-    # # ovlossides test
-    # @torch.no_grad()
-    # def test(self, epoch):
-    #     """test [computes loss of the test set]
-    #     [extended_summary]
-    #     Returns:
-    #         [type]: [description]
-    #     """
-    #     correct = 0
-    #     predictions = []
-    #     targets = []
-    #     f1 = F1Score(num_classes = 2, average="macro")
-    #     self.model.eval()
-    #     for (target_features, target_labels) in self.test_dataloader:
-    #         target_features = target_features[0].to(self.device)
-    #         target_labels = target_labels[0].to(self.device)
+                self.extractor_optimizer.step()
+                
+                for i in range(N):
+                    self.predictor_optimizers[i].step()
+                    self.predictor_optimizers[i].zero_grad()
+                    
+                self.extractor_optimizer.step().zero_grad()
 
-    #         target_class_output = self.model.inference(target_features)
-            
-    #         target_class_predictions = torch.argmax(target_class_output, dim=1)
+                unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
 
-    #         predictions.append(target_class_predictions.cpu())
-    #         targets.append(target_labels.cpu())
-    #         #f1_score = f1(preds, target_labels)
+                tar_feature = self.model(unlabelled_target_features, only_features = True)
+                    
+                loss = 0
+                d_loss = 0
+                c_loss = 0
 
-    #         correct += torch.sum(target_class_predictions == target_labels).item()
+                for index, batch in enumerate(src_batch):
 
-    #     avg_test_acc = correct / len(self.test_dataloader.dataset)
-
-    #     outputs = torch.cat(predictions)
-    #     targets = torch.cat(targets)
-    #     f1score = f1(outputs, targets)
-
-    #     self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
-    #     self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
-
-    #     if epoch == self.epochs:
-    #         # add hparams
-    #         self.writer.add_hparams(
-    #             {
-    #                 "lr": self.lr,
-
-    #             },
-
-    #             {
-    #                 "hparam/Accuracy/Test": avg_test_acc,
-    #                 "F1_score/Test": f1score.item()
-    #             },
-    #             run_name = self.exp_name
-    #         )
+                    
 
     def create_optimizer(self) -> None:
         self.extractor_optimizer = optim.Adadelta(self.model.feature_extractor.parameters(), lr=self.lr)

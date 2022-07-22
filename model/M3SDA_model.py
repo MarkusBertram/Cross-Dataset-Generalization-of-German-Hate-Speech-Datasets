@@ -39,7 +39,7 @@ class M3SDA_model(nn.Module):
         # Gradient reversal layer.
         #self.grls = [ReverseLayerF() for _ in range(self.num_src_domains)]
 
-    def forward(self, input_data, index, reverse = False, alpha=1):
+    def forward(self, input_data, index = None, only_features = False, reverse = False, alpha=1):
         """
         :src_input_data:     A list of inputs from k source domains.
         :tgt_input_data:     Input from the target domain.
@@ -48,6 +48,9 @@ class M3SDA_model(nn.Module):
         
         bert_output = self.bert(input_ids=input_data[:,0], attention_mask=input_data[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
         feature_extractor_output = self.feature_extractor(bert_output)
+
+        if only_features == True:
+            return feature_extractor_output
 
         if reverse:
             feature_extractor_output = ReverseLayerF.apply(feature_extractor_output, alpha)

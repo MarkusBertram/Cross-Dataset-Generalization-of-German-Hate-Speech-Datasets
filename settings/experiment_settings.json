@@ -25,7 +25,7 @@
         "test_after_each_epoch": true,
         "freeze_BERT_weights": true,
         "save_model": true,
-        "verbose": 1
+        "verbose": true
         },
         "exp_settings": [
           {

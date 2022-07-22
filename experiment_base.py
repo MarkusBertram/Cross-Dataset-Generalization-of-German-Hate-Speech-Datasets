@@ -202,6 +202,7 @@ class experiment_base(ABC):
             "validation_source", "test"
         )
         self.test_after_each_epoch = self.basic_settings.get("test_after_each_epoch", False)
+        self.verbose = self.basic_settings.get("verbose", False)
         # self.criterion = self.basic_settings.get("criterion", "crossentropy")
         #self.metric = self.basic_settings.get("metric", "accuracy")
         
