@@ -75,11 +75,12 @@ class MDAN_model(nn.Module):
 
         return logprobs, sdomains, tdomains
 
-    def inference(self, input):
-
-        bert_output = self.bert(input_ids=input[:,0], attention_mask=input[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
+    # inference for testing
+    def inference(self, input_data):
+        bert_output = self.bert(input_ids=input_data[:,0], attention_mask=input_data[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
+        
         feature_extractor_output = self.feature_extractor(bert_output)
 
-        # Classification probability.
-        logprobs = self.task_classifier(feature_extractor_output)
-        return logprobs
+        class_output = self.task_classifier(feature_extractor_output)
+
+        return class_output

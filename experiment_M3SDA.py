@@ -332,8 +332,9 @@ class experiment_M3SDA(experiment_base):
 
                 dis_loss += all_dis
 
-                if batch_index % 10 == 0:
-                    print('Discrepency Loss : [%.4f]' % (all_dis))
+                if self.verbose:
+                    if batch_index % 10 == 0:
+                        print('Discrepency Loss : [%.4f]' % (all_dis))
 
             ###
             for j in range(N):
@@ -490,7 +491,7 @@ class experiment_M3SDA(experiment_base):
         del labelled_target_dataset_test
         gc.collect()
 
-    # ovlossides perform_experiment
+    # overrides perform_experiment
     def perform_experiment(self):
         # load basic settings
         self.load_basic_settings()
@@ -515,9 +516,3 @@ class experiment_M3SDA(experiment_base):
         
         # perform test
         self.test()
-        # # perform test
-        # if self.test_after_each_epoch == False:
-        #     self.test()
-
-        # plot
-        # self.plot()

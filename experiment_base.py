@@ -92,21 +92,24 @@ class experiment_base(ABC):
         self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
         self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
 
-        if epoch == self.epochs:
-            # add hparams
-            self.writer.add_hparams(
-                {
-                    "lr": self.lr,
+        # add hparams
+        self.writer.add_hparams(
+            {
+                "lr": self.lr,
+                "epochs": self.epochs,
+                "batchsize": self.batch_size,
+                "train_split": self.train_split,
+                "stratify_unlabelled": self.stratify_unlabelled
 
-                },
+            },
 
-                {
-                    "hparam/Accuracy/Test": avg_test_acc,
-                    "F1_score/Test": f1score.item()
-                },
-                run_name = self.exp_name
-            )
-    
+            {
+                "hparam/Accuracy/Test": avg_test_acc,
+                "hparam/F1_score/Test": f1score.item()
+            },
+            run_name = self.exp_name
+        )
+
     def get_target_dataset(self):
 
         # fetch labelled target dataset and split labelled target dataset into train and test
@@ -144,7 +147,7 @@ class experiment_base(ABC):
         elif labelled == True and target == True:
             dset_list_of_dicts = dset_module.get_data_binary()
         elif labelled == False and target == True:
-            dset_list_of_dicts = dset_module.get_data_binary(self.basic_settings["unlabelled_size"], stratify = self.basic_settings["stratify_unlabelled"], abusive_ratio = self.abusive_ratio)
+            dset_list_of_dicts = dset_module.get_data_binary(self.unlabelled_size, stratify = self.stratify_unlabelled, abusive_ratio = self.abusive_ratio)
         # convert list to dataframe
         dset_df = pd.DataFrame(dset_list_of_dicts)
         if labelled == True and target == True:
@@ -186,7 +189,7 @@ class experiment_base(ABC):
         self.num_workers = self.basic_settings.get("num_workers", 8)
         # training settings
         self.freeze_BERT_weights = self.basic_settings.get("freeze_BERT_weights", True)
-
+        self.stratify_unlabelled  = self.basic_settings.get("stratify_unlabelled", True)
         # training settings
         self.epochs = self.basic_settings.get("epochs", 100)
         self.batch_size = self.basic_settings.get("batch_size", 128)
@@ -203,6 +206,7 @@ class experiment_base(ABC):
         )
         self.test_after_each_epoch = self.basic_settings.get("test_after_each_epoch", False)
         self.verbose = self.basic_settings.get("verbose", False)
+
         # self.criterion = self.basic_settings.get("criterion", "crossentropy")
         #self.metric = self.basic_settings.get("metric", "accuracy")
         

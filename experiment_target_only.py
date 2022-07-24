@@ -116,57 +116,57 @@ class experiment_target_only(experiment_base):
             run_name = self.exp_name
         )
 
-    # ovlossides test
-    @torch.no_grad()
-    def test(self, epoch):
-        """test [computes loss of the test set]
-        [extended_summary]
-        Returns:
-            [type]: [description]
-        """
-        alpha = 0
-        correct = 0
-        predictions = []
-        targets = []
-        f1 = F1Score(num_classes = 2, average="macro")
-        self.model.eval()
-        for (target_features, target_labels) in self.test_dataloader:
-            target_features = target_features[0].to(self.device)
-            target_labels = target_labels[0].to(self.device)
+    # # ovlossides test
+    # @torch.no_grad()
+    # def test(self, epoch):
+    #     """test [computes loss of the test set]
+    #     [extended_summary]
+    #     Returns:
+    #         [type]: [description]
+    #     """
+    #     alpha = 0
+    #     correct = 0
+    #     predictions = []
+    #     targets = []
+    #     f1 = F1Score(num_classes = 2, average="macro")
+    #     self.model.eval()
+    #     for (target_features, target_labels) in self.test_dataloader:
+    #         target_features = target_features[0].to(self.device)
+    #         target_labels = target_labels[0].to(self.device)
 
-            target_class_output = self.model(target_features)
+    #         target_class_output = self.model(target_features)
     
-            target_class_predictions = torch.argmax(target_class_output, dim=1)
+    #         target_class_predictions = torch.argmax(target_class_output, dim=1)
 
-            predictions.append(target_class_predictions.cpu())
-            targets.append(target_labels.cpu())
-            #f1_score = f1(preds, target_labels)
+    #         predictions.append(target_class_predictions.cpu())
+    #         targets.append(target_labels.cpu())
+    #         #f1_score = f1(preds, target_labels)
 
-            correct += torch.sum(target_class_predictions == target_labels).item()
+    #         correct += torch.sum(target_class_predictions == target_labels).item()
 
-        avg_test_acc = correct / len(self.test_dataloader.dataset)
+    #     avg_test_acc = correct / len(self.test_dataloader.dataset)
 
-        outputs = torch.cat(predictions)
-        targets = torch.cat(targets)
-        f1score = f1(outputs, targets)
+    #     outputs = torch.cat(predictions)
+    #     targets = torch.cat(targets)
+    #     f1score = f1(outputs, targets)
 
-        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
-        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
+    #     self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
+    #     self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
 
-        if epoch == self.epochs:
-            # add hparams
-            self.writer.add_hparams(
-                {
-                    "lr": self.lr,
+    #     if epoch == self.epochs:
+    #         # add hparams
+    #         self.writer.add_hparams(
+    #             {
+    #                 "lr": self.lr,
 
-                },
+    #             },
 
-                {
-                    "hparam/Accuracy/Test": avg_test_acc,
-                    "F1_score/Test": f1score.item()
-                },
-                run_name = self.exp_name
-            )
+    #             {
+    #                 "hparam/Accuracy/Test": avg_test_acc,
+    #                 "F1_score/Test": f1score.item()
+    #             },
+    #             run_name = self.exp_name
+    #         )
 
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
@@ -269,8 +269,4 @@ class experiment_target_only(experiment_base):
         self.train()
         
         # perform test
-        if self.test_after_each_epoch == False:
-            self.test()
-
-        # plot
-        # self.plot()
+        self.test()

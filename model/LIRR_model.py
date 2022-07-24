@@ -92,3 +92,13 @@ class LIRR_model(nn.Module):
         # class_output = self.task_classifier(feature_extractor_output)
 
         return domain_dependant_output, domain_classifier_output, class_output
+
+    # inference for testing
+    def inference(self, input_data):
+        bert_output = self.bert(input_ids=input_data[:,0], attention_mask=input_data[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
+        
+        feature_extractor_output = self.feature_extractor(bert_output)
+
+        class_output = self.task_classifier(feature_extractor_output)
+
+        return class_output

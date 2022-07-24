@@ -142,58 +142,6 @@ class experiment_DANN(experiment_base):
             run_name = self.exp_name
         )
 
-    # ovlossides test
-    @torch.no_grad()
-    def test(self, epoch):
-        """test [computes loss of the test set]
-        [extended_summary]
-        Returns:
-            [type]: [description]
-        """
-        alpha = 0
-        correct = 0
-        predictions = []
-        targets = []
-        f1 = F1Score(num_classes = 2, average="macro")
-        self.model.eval()
-        for (target_features, target_labels) in self.test_dataloader:
-            target_features = target_features[0].to(self.device)
-            target_labels = target_labels[0].to(self.device)
-
-            target_class_output, target_domain_output = self.model(target_features, alpha)
-            
-            target_class_predictions = torch.argmax(target_class_output, dim=1)
-
-            predictions.append(target_class_predictions.cpu())
-            targets.append(target_labels.cpu())
-            #f1_score = f1(preds, target_labels)
-
-            correct += torch.sum(target_class_predictions == target_labels).item()
-
-        avg_test_acc = correct / len(self.test_dataloader.dataset)
-
-        outputs = torch.cat(predictions)
-        targets = torch.cat(targets)
-        f1score = f1(outputs, targets)
-
-        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
-        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
-
-        if epoch == self.epochs:
-            # add hparams
-            self.writer.add_hparams(
-                {
-                    "lr": self.lr,
-
-                },
-
-                {
-                    "hparam/Accuracy/Test": avg_test_acc,
-                    "F1_score/Test": f1score.item()
-                },
-                run_name = self.exp_name
-            )
-
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
             self.model.parameters(),
@@ -251,28 +199,10 @@ class experiment_DANN(experiment_base):
             features, labels = self.fetch_dataset(source_name, labelled = True, target = False)
             source_features.append(features)
             source_labels.append(labels)
-            
+        
         # fetch labelled target dataset
-        labelled_target_dataset_features, labelled_target_dataset_labels = self.fetch_dataset(self.target_labelled, labelled = True, target = True)
-
-        indices = np.arange(len(labelled_target_dataset_features))
+        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
         
-        random_indices = np.random.permutation(indices)
-    
-        # split labelled target dataset into train and test
-        labelled_target_train_size = int(self.train_split * len(labelled_target_dataset_features))
-        train_indices = random_indices[:labelled_target_train_size]
-        test_indices = random_indices[labelled_target_train_size:]
-        
-        labelled_target_features_train = labelled_target_dataset_features[train_indices]
-        labelled_target_features_test = labelled_target_dataset_features[test_indices]
-
-        labelled_target_labels_train = labelled_target_dataset_labels[train_indices]
-        labelled_target_labels_test = labelled_target_dataset_labels[test_indices]
-        
-        del labelled_target_dataset_features
-        del labelled_target_dataset_labels
-        gc.collect()
         source_features.append(labelled_target_features_train)
         source_labels.append(labelled_target_labels_train)
 
@@ -291,6 +221,7 @@ class experiment_DANN(experiment_base):
         
         # combine source dataset and unlabelled target dataset into one dataset
         concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
+
         sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=self.batch_size, drop_last=False)
         self.train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=self.num_workers)            
         #self.train_dataloader = DataLoader(concatenated_train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
@@ -328,8 +259,4 @@ class experiment_DANN(experiment_base):
         self.train()
         
         # perform test
-        if self.test_after_each_epoch == False:
-            self.test()
-
-        # plot
-        # self.plot()
+        self.test()

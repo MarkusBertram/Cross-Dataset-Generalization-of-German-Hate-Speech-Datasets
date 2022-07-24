@@ -303,9 +303,3 @@ class experiment_MDAN(experiment_base):
         
         # perform test
         self.test()
-        # # perform test
-        # if self.test_after_each_epoch == False:
-        #     self.test()
-
-        # plot
-        # self.plot()

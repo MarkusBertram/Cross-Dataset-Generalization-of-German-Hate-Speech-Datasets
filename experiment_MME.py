@@ -106,15 +106,6 @@ class experiment_MME(experiment_base):
             nesterov = self.nesterov
         )
 
-        #     param_lr_g.append(param_group["lr"])
-        # param_lr_f = []
-        # for param_group in self.optimizer_f.param_groups:
-        #     print(param_group)
-        #     param_lr_f.append(param_group["lr"])
-        
-        # loss_class = torch.nn.NLLLoss().to(self.device)
-        # loss_domain = torch.nn.NLLLoss().to(self.device)
-
         for name, param in self.model.named_parameters():
             if "bert" in name:
                 param.requires_grad = False
@@ -128,7 +119,10 @@ class experiment_MME(experiment_base):
         best_acc = 0
         counter = 0
 
-        for step in range(self.steps):
+        steps = self.epochs*len(self.source_dataloader)
+
+        # steps = self.epochs / ...?
+        for step in range(steps):
             optimizer_g = inv_lr_scheduler(optimizer_g, step,
                                        init_lr=self.lr)
             optimizer_f = inv_lr_scheduler(optimizer_f, step,
@@ -177,57 +171,6 @@ class experiment_MME(experiment_base):
             optimizer_f.step()
             optimizer_g.step()
 
-    # overrides test
-    @torch.no_grad()
-    def test(self, epoch):
-        """test [computes loss of the test set]
-        [extended_summary]
-        Returns:
-            [type]: [description]
-        """
-        alpha = 0
-        correct = 0
-        predictions = []
-        targets = []
-        f1 = F1Score(num_classes = 2, average="macro")
-        self.model.eval()
-        for (target_features, target_labels) in self.test_dataloader:
-            target_features = target_features[0].to(self.device)
-            target_labels = target_labels[0].to(self.device)
-
-            target_class_output, target_domain_output = self.model(target_features, alpha)
-            
-            target_class_predictions = torch.argmax(target_class_output, dim=1)
-
-            predictions.append(target_class_predictions.cpu())
-            targets.append(target_labels.cpu())
-            #f1_score = f1(preds, target_labels)
-
-            correct += torch.sum(target_class_predictions == target_labels).item()
-
-        avg_test_acc = correct / len(self.test_dataloader.dataset)
-
-        outputs = torch.cat(predictions)
-        targets = torch.cat(targets)
-        f1score = f1(outputs, targets)
-
-        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
-        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
-
-        if epoch == self.epochs:
-            # add hparams
-            self.writer.add_hparams(
-                {
-                    "lr": self.lr,
-
-                },
-
-                {
-                    "hparam/Accuracy/Test": avg_test_acc,
-                    "F1_score/Test": f1score.item()
-                },
-                run_name = self.exp_name
-            )
 
     def create_optimizer(self) -> None:
         pass
@@ -240,10 +183,10 @@ class experiment_MME(experiment_base):
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
         self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
-        self.steps = self.current_experiment.get("steps", 50000)
         self.multiplication = self.current_experiment.get("multiplication", 50000)
         self.lamda = self.current_experiment.get("lamda", 0.1)
         self.eta = self.current_experiment.get("eta", 1.0)
+
     def create_model(self):
         
         if self.feature_extractor.lower() == "bert_cls":
@@ -279,23 +222,8 @@ class experiment_MME(experiment_base):
             source_labels.append(labels)
             
         # fetch labelled target dataset
-        labelled_target_dataset_features, labelled_target_dataset_labels = self.fetch_dataset(self.target_labelled, labelled = True, target = True)
-
-        # split labelled target dataset into train and test
-        indices = np.arange(len(labelled_target_dataset_features))
-        random_indices = np.random.permutation(indices)
-    
-        labelled_target_train_size = int(self.train_split * len(labelled_target_dataset_features))
-        train_indices = random_indices[:labelled_target_train_size]
-        test_indices = random_indices[labelled_target_train_size:]
+        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
         
-        labelled_target_features_train = labelled_target_dataset_features[train_indices]
-        labelled_target_features_test = labelled_target_dataset_features[test_indices]
-
-        labelled_target_labels_train = labelled_target_dataset_labels[train_indices]
-        labelled_target_labels_test = labelled_target_dataset_labels[test_indices]
-        
-
         # concatenate datasets
         combined_source_features = torch.cat(source_features)
         combined_source_labels = torch.cat(source_labels)
@@ -314,10 +242,6 @@ class experiment_MME(experiment_base):
 
         sampler = BatchSampler(RandomSampler(labelled_target_dataset_train), batch_size=min(self.batch_size, len(labelled_target_dataset_train)), drop_last=True)
         self.labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=self.num_workers)            
-
-        del labelled_target_dataset_features
-        del labelled_target_dataset_labels
-        gc.collect()
 
         # fetch unlabelled target dataset and create dataloader
         unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
@@ -359,8 +283,4 @@ class experiment_MME(experiment_base):
         self.train()
         
         # perform test
-        if self.test_after_each_epoch == False:
-            self.test()
-
-        # plot
-        # self.plot()
+        self.test()
