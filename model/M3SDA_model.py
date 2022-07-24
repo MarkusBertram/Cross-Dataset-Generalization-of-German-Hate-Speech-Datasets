@@ -10,6 +10,7 @@ import gc
 import sys
 import torch.nn.functional as F
 from torch.autograd import Function
+import numpy as np
 
 class ReverseLayerF(Function):
 
@@ -36,8 +37,7 @@ class M3SDA_model(nn.Module):
         # Domain Classifiers
         self.task_classifiers = nn.ModuleList([nn.ModuleList([task_classifier_module, task_classifier_module]) for _ in range(self.num_src_domains)])
 
-        # Gradient reversal layer.
-        #self.grls = [ReverseLayerF() for _ in range(self.num_src_domains)]
+        self.weights = np.empty(self.num_src_domains)
 
     def forward(self, input_data, index = None, feature_extractor_input = False, output_only_features = False, reverse = False, alpha=1):
         """
@@ -68,10 +68,18 @@ class M3SDA_model(nn.Module):
         bert_output = self.bert(input_ids=input[:,0], attention_mask=input[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
         feature_extractor_output = self.feature_extractor(bert_output)
 
-        logprobs = []
+        prediction_list = []
+        
         # Classification probability.
         for i in range(self.num_src_domains):
             pred1 = self.task_classifiers[i][0](feature_extractor_output)
             pred2 = self.task_classifiers[i][1](feature_extractor_output)
-            logprobs.append((pred1, pred2))
-        return logprobs
+
+            avg_pred = torch.mean(torch.cat((pred1, pred2), 1), 1)
+            prediction_list.append(avg_pred)
+
+        final_pred = torch.zeros(2,1)
+        for i in range(self.num_src_domains):
+            final_pred += self.weights[i] * prediction_list[i]
+
+        return final_pred
