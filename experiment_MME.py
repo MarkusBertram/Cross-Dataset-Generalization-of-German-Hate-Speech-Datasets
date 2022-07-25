@@ -60,13 +60,10 @@ class experiment_MME(experiment_base):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.current_experiment = exp_settings
-        
-        if self.device == "cuda":
-            torch.backends.cudnn.benchmark = True
 
         
 
-    # ovlossides train
+    # overrides train
     def train(self):
         """train [main training function of the project]
         [extended_summary]
@@ -178,7 +175,7 @@ class experiment_MME(experiment_base):
     def create_criterion(self) -> None:
         self.criterion = nn.CrossEntropyLoss().to(self.device)
 
-    # ovlossides load_settings
+    # overrides load_settings
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
@@ -259,7 +256,7 @@ class experiment_MME(experiment_base):
         del labelled_target_dataset_test
         gc.collect()
 
-    # ovlossides perform_experiment
+    # overrides perform_experiment
     def perform_experiment(self):
         # load basic settings
         self.load_basic_settings()

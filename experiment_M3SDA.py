@@ -83,25 +83,12 @@ class experiment_M3SDA(experiment_base):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.current_experiment = exp_settings
-        
-        if self.device == "cuda":
-            torch.backends.cudnn.benchmark = True
 
         
 
-    # ovlossides train
+    # overrides train
     def train(self):
         """train [main training function of the project]
-        [extended_summary]
-        Args:
-            train_loader ([torch.Dataloader]): [dataloader with the training data]
-            optimizer ([torch.optim]): [optimizer for the network]
-            criterion ([Loss function]): [Pytorch loss function]
-            device ([str]): [device to train on cpu/cuda]
-            epochs (int, optional): [epochs to run]. Defaults to 5.
-            **kwargs (verbose and validation dataloader)
-        Returns:
-            [tupel(trained network, train_loss )]:
         """
 
         N = len(self.source_dataloader_list)
@@ -117,9 +104,6 @@ class experiment_M3SDA(experiment_base):
                 source_loss[i][str(j)] = {}
                 source_loss[i][str(j)]['loss'] = []
                 source_loss[i][str(j)]['ac'] = []
-
-        #mcd_loss_plot = []
-        #dis_loss_plot = []
         
         min_ = len(self.unlabelled_target_dataloader)
 
@@ -163,9 +147,6 @@ class experiment_M3SDA(experiment_base):
                     loss2 = self.loss_extractor(pred2, labels)
 
                     loss_cls += loss1 + loss2
-
-                    # record[index]['1'] += loss1.item()
-                    # record[index]['2'] += loss2.item()
                 
                 if self.verbose:
                     if batch_index % 10 == 0:
@@ -236,8 +217,6 @@ class experiment_M3SDA(experiment_base):
                 self.extractor_optimizer.zero_grad()
 
                 unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
-
-                #tar_feature = self.model(unlabelled_target_features, only_features = True)
                     
                 loss = 0
                 d_loss = 0
@@ -265,8 +244,6 @@ class experiment_M3SDA(experiment_base):
                         
                         pred_2_c1, pred_2_c2 = self.model(unlabelled_target_features, index = index_2+index)
                         
-                        #pred_2_c1 = source_clf[source_domain[index_2+index]]['c1'](tar_feature)
-                        #pred_2_c2 = source_clf[source_domain[index_2+index]]['c2'](tar_feature)
                         combine2 = (F.softmax(pred_2_c1, dim=1) + F.softmax(pred_2_c2, dim=1))/2
 
                         d_loss += self.loss_l1(combine1, combine2) * 0.1
@@ -330,77 +307,11 @@ class experiment_M3SDA(experiment_base):
                     if batch_index % 10 == 0:
                         print('Discrepency Loss : [%.4f]' % (all_dis))
 
-            # ###
-            # for j in range(N):
-            #     for i in range(1, 3):
-            #         source_loss[j][str(i)]['loss'].append(record[j][str(i)]/min_/self.batch_size)
-            #         source_loss[j][str(i)]['ac'].append(source_ac[j]['c'+str(i)]/min_/self.batch_size)
-            # dis_loss_plot.append(dis_loss/min_/self.batch_size)
-            # mcd_loss_plot.append(mcd_loss/min_/self.batch_size)
-
-            # ###
-
-        # set weights = highest source accuracy
-
+        # set weights to highest source accuracy
         for i in range(N):
             c1_acc = source_ac[i]['c1']/source_ac[i]['count']
             c2_acc = source_ac[i]['c2']/source_ac[i]['count']
             self.model.weights[i] = max(c1_acc, c2_acc)
-            
-
-    # @torch.no_grad()
-    # def test(self):
-        
-    #     self.model.feature_extractor.eval()
-    #     N = len(self.source_dataloader_list)
-
-    #     for i in range(N):
-    #         self.model.task_classifiers[i][0].eval()
-    #         self.model.task_classifiers[i][1].eval()
-
-    #     source_ac = {}
-    #     eval_loss = {}    
-
-    #     for i in range(N):
-    #         source_ac[i] = defaultdict(int)
-    #         eval_loss[i] = defaultdict(int)
-
-    #     final_ac = 0
-    #     with torch.no_grad():
-    #         for index, batch in enumerate(self.test_dataloader):
-    #             features = batch[0][0].to(self.device)
-    #             labels = batch[1][0].to(self.device)
-
-    #             feature = self.model(features, output_only_features = True)
-
-    #             final_pred = 1
-
-    #             for index_s in range(N):
-    #                 pred1, pred2 = self.model(feature, index = index_s, feature_extractor_input = True)
-
-    #                 eval_loss[index_s]["c1"] += self.loss_extractor(pred1, labels)
-    #                 eval_loss[index_s]["c2"] += self.loss_extractor(pred2, labels)
-
-    #                 if isinstance(final_pred, int):
-    #                         final_pred =(F.softmax(pred1, dim=1) + F.softmax(pred2, dim=1))/2	
-    #                 else:
-    #                     final_pred +=( F.softmax(pred1, dim=1) + F.softmax(pred2, dim=1))/2	
-                    
-    #                 source_ac[index_s]['c1'] += np.sum(np.argmax(pred1.cpu().detach().numpy(), axis=1) == labels.cpu().detach().numpy())
-    #                 source_ac[index_s]['c2'] += np.sum(np.argmax(pred2.cpu().detach().numpy(), axis=1) == labels.cpu().detach().numpy())
-
-    #             final_ac += np.sum(np.argmax(final_pred.cpu().detach().numpy(), axis=1) == labels.cpu().detach().numpy())
-
-    #     sources = self.sources.extend([self.target_labelled])
-
-    #     for i in range(N):
-    #         print('Current Source : ', sources[i])
-    #         print('Accuray for c1 : [%.4f]' % (source_ac[i]['c1']/self.batch_size/len(self.test_dataloader)))
-    #         print('Accuray for c2 : [%.4f]' % (source_ac[i]['c2']/self.batch_size/len(self.test_dataloader)))
-    #         print('eval loss c1 : [%.4f]' % (eval_loss[i]['c1']))
-    #         print('eval loss c2 : [%.4f]' % (eval_loss[i]['c2']))
-    
-    #     print('Combine Ac : [%.4f]' % (final_ac/self.batch_size/len(self.test_dataloader)))
 
     def create_optimizer(self) -> None:
         self.extractor_optimizer = optim.Adadelta(self.model.feature_extractor.parameters(), lr=self.lr)
@@ -413,7 +324,7 @@ class experiment_M3SDA(experiment_base):
         self.loss_l1 = nn.L1Loss()
         self.loss_l2 = nn.MSELoss()
 
-    # ovlossides load_settings
+    # overrides load_settings
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")

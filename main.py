@@ -30,13 +30,23 @@ def run_experiments(config):
                 )
                 continue
 
-            # exp_name = exp_setting.get("exp_name", "standard_name")
-
-            # print(f"Performing training for: {exp_name}")
-
             exp_type = exp_setting["exp_type"]
-
-            if exp_type == "DANN":
+            if exp_type == "target_only":
+                from experiment_target_only import experiment_target_only
+                current_exp = experiment_target_only(
+                    basic_settings, exp_setting, writer
+                )
+            elif exp_type == "source_combined":
+                from experiment_source_combined import experiment_source_combined
+                current_exp = experiment_source_combined(
+                    basic_settings, exp_setting, writer
+                )
+            elif exp_type == "single_source":
+                from experiment_single_source import experiment_single_source
+                current_exp = experiment_single_source(
+                    basic_settings, exp_setting, writer
+                )
+            elif exp_type == "DANN":
                 from experiment_DANN import experiment_DANN
                 current_exp = experiment_DANN(
                     basic_settings, exp_setting, writer
@@ -67,89 +77,18 @@ def run_experiments(config):
                 current_exp = experiment_M3SDA(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
-            current_exp.perform_experiment()
-            # try:
-            #     current_exp.perform_experiment()
-            #     del current_exp
-            #     gc.collect()
+            try:
+                current_exp.perform_experiment()
+                del current_exp
+                gc.collect()
 
-            # except Exception as e:
-            #     name = exp_setting["exp_name"]
-            #     print("\n\n")
-            #     print("**********" * 12)
-            #     print(f"Experiment {name} failed with Exception {e}")
-            #     print("**********" * 12)
-            #     print("\n\n")
-            sys.exit(0)
-            #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            
-            # model = get_model(exp_setting)
-
-            # trainer = get_trainer(model, exp_setting)
-
-            # trainer.train()
-
-            # model.to(device)
-            # model.train()
-            ###### create dataloader
-
-            # if exp_type == "unsupervised "
-                # get unsupervised train dataloader(target_unlabeled, unlabelled_size, sources, validation_split, test_split)
-                # get unsupervised test dataloader(target_labelled, validation_split, test_split)
-                # do train unsupervised
-                # train_loader = get_unsupervised_dataloader()
-            # elif exp_type == "semi-supervised":
-                # get semi-supervised dataloader
-                # do semi-supervise
-                # train_loader = get_semi_supervised_dataloader()
-            # elif exp_type == "multi-source":
-                # get multi-source dataloader
-                # do multi-source
-                # train_loader = get_multi_source_dataloader()
-            # else:
-                # error: please specify "exp_type", either unsupervised, semi-supervised or multisource in experiment settings
-
-
-
-            ####### create optimizer
-            # self.optimizer = get_optimizer(...)
-            # self.optimizer = optim.SGD(
-        #     [
-        #         {"params": base_params},
-        #         {"params": gen_odin_params, "weight_decay": 0.0},
-        #     ],
-        #     weight_decay=self.weight_decay,
-        #     lr=self.lr,
-        #     momentum=self.momentum,
-        #     nesterov=self.nesterov,
-        # )
-
-            ###### create criterion
-            # criterion = get_criterion(...)
-
-
-            ######### train
-            # for epoch in range(1, epochs + 1):
-            #
-            #       for batch_idx, (data, target) in enumerate(train_loader):
-                        # 
-                        # optimizer.zero_grad(set_to_none=True)
-                        # task_output, domain_output = model(data).to(device)
-                        # model_output = model(data).to(device)
-                        # loss = criterion(model_output)
-
-                        # loss.backward()
-                        # optimizer.step()
-
-
-            # if config["model"] == "DIRT_T"
-                # if "VADA" == True:
-                    # do VADA
-
-            # ...
-
-            
-
+            except Exception as e:
+                name = exp_setting["exp_name"]
+                print("\n\n")
+                print("**********" * 12)
+                print(f"Experiment {name} failed with Exception {e}")
+                print("**********" * 12)
+                print("\n\n")          
 
 def main():
     parser = argparse.ArgumentParser(
@@ -165,36 +104,16 @@ def main():
         default=Path("settings/experiment_settings.json"),
     )
 
-    # parser.add_argument(
-    #     "-l",
-    #     "--log",
-    #     help="Log-instructions in json",
-    #     type=str,
-    #     default=Path("log_dir"),
-    # )
-
     args = parser.parse_args()
 
     config = args.config
-    #log_dir_parent = args.log
-    #log_dir = args.log
 
     with open(config, mode="r", encoding="utf-8") as config_f:
         config = json.load(config_f)
 
-    now = datetime.now()
-
-    #log_dir = Path(log_dir_parent / f"experiments_{now.strftime('%H%M%S-%Y%m%d')}")
-    #log_dir.mkdir(parents=True, exist_ok=True)
-
-    #run_experiments(log_dir, config)
     run_experiments(config)
 
 if __name__ == "__main__":
-    # try:
-    #     set_start_method('spawn')
-    # except RuntimeError:
-    #     pass
     
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     main()

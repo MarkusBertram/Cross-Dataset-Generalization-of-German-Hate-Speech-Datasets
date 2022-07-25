@@ -31,20 +31,37 @@
           {
             "exp_type": "MME",
             "exp_name": "MME_cls",
-            "oracle": "baseline",
             "feature_extractor": "bert_cls",
             "task_classifier": "tc1",
             "domain_classifier": "dc1",
             "alignment_component": "MME",
-            "model": "MME",
-            "lamda": 10,
-            "eta": 1.0
+            "model": "MME"
         
+          },
+          {
+            "exp_type": "target_only",
+            "exp_name": "target_only_cls",
+            "feature_extractor": "bert_cls",
+            "task_classifier": "tc1"
+        
+          },
+          {
+            "exp_type": "source_combined",
+            "exp_name": "source_combined_cls",
+            "feature_extractor": "bert_cls",
+            "task_classifier": "tc1"
+        
+          },
+          {
+            "exp_type": "single_source",
+            "exp_name": "germeval2018_cls",
+            "feature_extractor": "bert_cls",
+            "task_classifier": "tc1",
+            "source_name": "germeval2018"        
           },
           {
             "exp_type": "DIRT_T",
             "exp_name": "DIRT_T_cls",
-            "oracle": "baseline",
             "feature_extractor": "bert_cls",
             "task_classifier": "tc1",
             "domain_classifier": "dc1",
@@ -73,7 +90,6 @@
           {
             "exp_type": "M3SDA",
             "exp_name": "M3SDA_cls",
-            "oracle": "baseline",
             "feature_extractor": "bert_cls",
             "task_classifier": "tc1",
             "domain_classifier": "dc1",
@@ -87,7 +103,6 @@
           {
             "exp_type": "MDAN",
             "exp_name": "MDAN_cls",
-            "oracle": "baseline",
             "feature_extractor": "bert_cls",
             "task_classifier": "tc1",
             "domain_classifier": "dc1",
@@ -101,7 +116,6 @@
           {
             "exp_type": "LIRR",
             "exp_name": "LIRR_cls",
-            "oracle": "baseline",
             "feature_extractor": "bert_cls",
             "task_classifier": "tc1",
             "domain_classifier": "dc1",
@@ -115,7 +129,6 @@
           {
             "exp_type": "multi-source",
             "exp_name": "M3SDN_cls",
-            "oracle": "baseline",
             "feature_extractor": "bert_cls",
             "task_classifier": "base",
             "alignment_component": "DANN",
