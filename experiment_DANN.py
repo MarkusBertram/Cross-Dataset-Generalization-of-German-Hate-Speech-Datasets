@@ -65,9 +65,6 @@ class experiment_DANN(experiment_base):
             [tupel(trained network, train_loss )]:
         """
 
-        loss_class = torch.nn.NLLLoss().to(self.device)
-        loss_domain = torch.nn.NLLLoss().to(self.device)
-
         for name, param in self.model.named_parameters():
             if "bert" in name:
                 param.requires_grad = False
@@ -88,20 +85,15 @@ class experiment_DANN(experiment_base):
                 source_features = source_batch[0][0].to(self.device)
                 source_labels = source_batch[1][0].to(self.device)
                 
-                #self.model.zero_grad()
                 batch_size = len(source_labels)
 
-                class_label = torch.LongTensor(batch_size).to(self.device)
                 domain_label = torch.zeros(batch_size)
                 domain_label = domain_label.long().to(self.device)
 
-                class_label.resize_as_(source_labels).copy_(source_labels)
-                if epoch == 1 and i == 0:
-                    self.writer.add_graph(self.model, input_to_model=[source_features, torch.tensor(alpha)], verbose=False)
                 class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
                 
-                loss_s_label = loss_class(class_output, class_label)
-                loss_s_domain = loss_domain(domain_output, domain_label)
+                loss_s_label = self.loss_class(class_output, source_labels)
+                loss_s_domain = self.loss_domain(domain_output, domain_label)
 
                 # training model using target data
                 unlabelled_target_features = unlabelled_target_features[0].to(self.device)
@@ -112,32 +104,15 @@ class experiment_DANN(experiment_base):
                 domain_label = domain_label.long().to(self.device)
 
                 _, domain_output = self.model(input_data=unlabelled_target_features, alpha=alpha)
-                loss_t_domain = loss_domain(domain_output, domain_label)
+                loss_t_domain = self.loss_domain(domain_output, domain_label)
                 loss = loss_t_domain + loss_s_domain + loss_s_label
 
                 total_loss += loss.item()
                 
-
                 loss.backward()
                 self.optimizer.step()
 
             self.writer.add_scalar(f"total_loss/train/{self.exp_name}", total_loss, epoch)
-            # test after each epoch
-            if self.test_after_each_epoch == True:
-                self.test(epoch)
-
-        # add hparams
-        self.writer.add_hparams(
-            {
-                "lr": self.lr,
-
-            },
-
-            {
-                "hparam/total_loss/train": total_loss
-            },
-            run_name = self.exp_name
-        )
 
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
@@ -147,14 +122,15 @@ class experiment_DANN(experiment_base):
         )
 
     def create_criterion(self) -> None:
-        self.criterion = nn.CrossEntropyLoss()
+        self.loss_class = nn.CrossEntropyLoss().to(self.device)
+        self.loss_domain = nn.CrossEntropyLoss().to(self.device)
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
-        self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
-        self.domain_classifier = self.current_experiment.get("domain_classifier", "dc1")
+        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
+        self.domain_classifier = self.current_experiment.get("domain_classifier", "DANN_domain_classifier")
         
     def create_model(self):
         
@@ -172,16 +148,16 @@ class experiment_DANN(experiment_base):
             Please specify bert_cls or bert_cnn as key in experiment settings of the current experiment.")
         
 
-        if self.task_classifier.lower() == "tc1":
-            from model.task_classifiers import task_classifier1
-            task_classifier = task_classifier1()
+        if self.task_classifier.lower() == "dann_task_classifier":
+            from model.task_classifiers import DANN_task_classifier
+            task_classifier = DANN_task_classifier()
         else:
             raise ValueError("Can't find the task classifier name. \
             Please specify the task classifier class name as key in experiment settings of the current experiment.")
             
-        if self.domain_classifier.lower() == "dc1":
-            from model.domain_classifiers import domain_classifier1
-            domain_classifier = domain_classifier1()
+        if self.domain_classifier.lower() == "dann_domain_classifier":
+            from model.domain_classifiers import DANN_domain_classifier
+            domain_classifier = DANN_domain_classifier()
         else:
             raise ValueError("Can't find the domain classifier name. \
             Please specify the domain classifier class name as key in experiment settings of the current experiment.")
@@ -224,8 +200,9 @@ class experiment_DANN(experiment_base):
         #self.train_dataloader = DataLoader(concatenated_train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
         del concatenated_train_dataset
         del unlabelled_target_dataset_features
+        gc.collect()
+
         # create test dataloader
-        
         labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)
         sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=self.batch_size, drop_last=False)
         self.test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=self.num_workers)               

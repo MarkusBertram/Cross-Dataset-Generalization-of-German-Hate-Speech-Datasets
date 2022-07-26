@@ -188,7 +188,7 @@ class experiment_LIRR(experiment_base):
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
-        self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
+        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
         self.multiplication = self.current_experiment.get("multiplication", 50000)
         self.lamda = self.current_experiment.get("lamda", 0.1)
         self.eta = self.current_experiment.get("eta", 1.0)
@@ -209,10 +209,10 @@ class experiment_LIRR(experiment_base):
             Please specify bert_cls or bert_cnn as key in experiment settings of the current experiment.")
         
 
-        if self.task_classifier.lower() == "tc1":
-            from model.task_classifiers import task_classifier1
-            task_classifier_1 = task_classifier1()
-            task_classifier_2 = task_classifier1()
+        if self.task_classifier.lower() == "dann_task_classifier":
+            from model.task_classifiers import DANN_task_classifier
+            task_classifier_1 = DANN_task_classifier()
+            task_classifier_2 = DANN_task_classifier()
         else:
             raise ValueError("Can't find the task classifier name. \
             Please specify the task classifier class name as key in experiment settings of the current experiment.")

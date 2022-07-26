@@ -31,8 +31,8 @@
             "exp_type": "DANN",
             "exp_name": "DANN_cls",
             "feature_extractor": "bert_cls",
-            "task_classifier": "tc1",
-            "domain_classifier": "dc1",
+            "task_classifier": "DANN_task_classifier",
+            "domain_classifier": "DANN_domain_classifier",
             "l1":10,
             "alpha": 0.1
           },

@@ -12,16 +12,32 @@ class KLDivWithLogits(nn.Module):
         super(KLDivWithLogits, self).__init__()
 
         self.kl = nn.KLDivLoss(size_average=False, reduce=True)
-        self.logsoftmax = nn.LogSoftmax(dim = 1)
-        self.softmax = nn.Softmax(dim = 1)
 
 
     def forward(self, x, y):
 
-        log_p = self.logsoftmax(x)
-        q     = self.softmax(y)
+        log_p = torch.log(x)
+        q     = y
 
         return self.kl(log_p, q) / x.size()[0]
+
+class ConditionalEntropy(nn.Module):
+
+    """ estimates the conditional cross entropy of the input
+    $$
+    \frac{1}{n} \sum_i \sum_c p(y_i = c | x_i) \log p(y_i = c | x_i)
+    $$
+    By default, will assume that samples are across the first and class probabilities
+    across the second dimension.
+    """
+
+    def forward(self, input):
+        p     = input
+        log_p = torch.log(input)
+
+        H = - (p * log_p).sum(dim=1).mean(dim=0)
+
+        return H
 
 class VATLoss(nn.Module):
 
@@ -38,28 +54,32 @@ class VATLoss(nn.Module):
 
         self.loss_func_nll = KLDivWithLogits()
 
-    def forward(self, x, p, model, noise):
+    def forward(self, x, p, model):
+        # x: input features
+        # p: task classifier softmax probabilities of input features x
+
         # get random vector of size x
-        eps = (torch.randn(size=x.size())).type(x.type())
+        eps = torch.randn_like(x)
         # normalize random vector and multiply by e-6
         eps = 1e-6*F.normalize(eps)
-        
+
         eps.requires_grad = True
         # calculate output of x + random vector
-        eps_p = model(x + eps, noise = noise)[0]#self.model(x + eps)[1]
+        eps_p = model(x + eps)[0]
         # calculate KL divergence of output of x + random vector and output of x
         loss  = self.loss_func_nll(eps_p, p.detach())
+
         # calculate gradient of KL divergence
-        loss.backward(retain_graph = True)
-        eps_adv = eps.grad
-        
+        grad = torch.autograd.grad(loss, [eps], retain_graph=True)[0]
+        eps_adv = grad.detach()
+
         # normalize gradient
         eps_adv = F.normalize(eps_adv)#normalize_perturbation(eps_adv)
         # adversarial x is x + 1 * gradient
         x_adv = x + self.radius * eps_adv
         x_adv = x_adv.detach()
 
-        p_adv, _ = model.forward(x_adv,noise=True)
+        p_adv, _ = model.forward(x_adv)
         loss     = self.loss_func_nll(p_adv, p.detach())
 
         return loss
@@ -148,20 +168,3 @@ class VATLoss(nn.Module):
 
 #         return lds
 
-class ConditionalEntropy(nn.Module):
-
-    """ estimates the conditional cross entropy of the input
-    $$
-    \frac{1}{n} \sum_i \sum_c p(y_i = c | x_i) \log p(y_i = c | x_i)
-    $$
-    By default, will assume that samples are across the first and class probabilities
-    across the second dimension.
-    """
-
-    def forward(self, input):
-        p     = F.softmax(input, dim=1)
-        log_p = F.log_softmax(input, dim=1)
-
-        H = - (p * log_p).sum(dim=1).mean(dim=0)
-
-        return H

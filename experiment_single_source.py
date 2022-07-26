@@ -39,7 +39,6 @@ class experiment_single_source(experiment_base):
         self,
         basic_settings: Dict,
         exp_settings: Dict,
-        #log_path: str,
         writer: SummaryWriter,
 
     ):
@@ -91,22 +90,6 @@ class experiment_single_source(experiment_base):
                 self.optimizer.step()
 
             self.writer.add_scalar(f"total_loss/train/{self.exp_name}", total_loss, epoch)
-            # test after each epoch
-            if self.test_after_each_epoch == True:
-                self.test(epoch)
-
-        # add hparams
-        self.writer.add_hparams(
-            {
-                "lr": self.lr,
-
-            },
-
-            {
-                "hparam/total_loss/train": total_loss
-            },
-            run_name = self.exp_name
-        )
 
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
@@ -122,7 +105,7 @@ class experiment_single_source(experiment_base):
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
-        self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
+        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
         self.source_name = self.current_experiment.get("source_name", "germeval2018")
 
     def create_model(self):
@@ -140,9 +123,9 @@ class experiment_single_source(experiment_base):
             Please specify bert_cls or bert_cnn as key in experiment settings of the current experiment.")
         
 
-        if self.task_classifier.lower() == "tc1":
-            from model.task_classifiers import task_classifier1
-            task_classifier = task_classifier1()
+        if self.task_classifier.lower() == "dann_task_classifier":
+            from model.task_classifiers import DANN_task_classifier
+            task_classifier = DANN_task_classifier()
         else:
             raise ValueError("Can't find the task classifier name. \
             Please specify the task classifier class name as key in experiment settings of the current experiment.")

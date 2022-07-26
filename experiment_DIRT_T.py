@@ -114,9 +114,7 @@ class experiment_DIRT_T(experiment_base):
             self.model.train()
 
             for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
-               
-                noise = True
-                
+                               
                 #source_features = source_batch[0][0].to(self.device)
                 source_labels = source_batch[1][0].to(self.device)
 
@@ -132,38 +130,35 @@ class experiment_DIRT_T(experiment_base):
                     source_bert_output = source_bert_output[0][:,0,:]
                     target_bert_output = target_bert_output[0][:,0,:]
                 
-                if epoch == 1 and i == 0:
-                    self.writer.add_graph(self.model, input_to_model=[source_bert_output, torch.tensor(noise)], verbose=False)
-                
-                source_class_output, source_domain_output = self.model(input_features=source_bert_output, noise=noise)
-                target_class_output, target_domain_output = self.model(input_features=target_bert_output, noise=noise)
+                source_class_output, source_domain_output = self.model(input_features=source_bert_output)
+                target_class_output, target_domain_output = self.model(input_features=target_bert_output)
 
                 # Cross-Entropy Loss of Source Domain, Source Generalization Error
-                crossE_loss     = self.crossE(source_class_output, source_labels)
+                crossE_loss = self.crossE(source_class_output, source_labels)
 
                 # conditional entropy with respect to target distribution, enforces cluster assumption
                 conditionE_loss = self.conditionE(target_class_output)               
 
                 # Domain Discriminator, Divergence of Source and Target Domain
-                domain_loss     = .5*self.disc(source_domain_output,torch.zeros_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.ones_like(target_domain_output))
+                domain_loss = .5*(
+                self.disc(source_domain_output,torch.zeros_like(source_domain_output)) + 
+                self.disc(target_domain_output, torch.ones_like(target_domain_output))
+                )
                 
-                vat_src_loss    = self.src_vat(source_bert_output, source_class_output, self.model, noise)
-                vat_tgt_loss    = self.tgt_vat(target_bert_output, target_class_output, self.model, noise)
+                vat_src_loss = self.src_vat(source_bert_output, source_class_output, self.model)
+                vat_tgt_loss = self.tgt_vat(target_bert_output, target_class_output, self.model)
 
-                disc_loss = 0.5*self.disc(source_domain_output,torch.ones_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.zeros_like(target_domain_output))
+                disc_loss = 0.5 *(
+                self.disc(source_domain_output,torch.ones_like(source_domain_output)) + 
+                self.disc(target_domain_output, torch.zeros_like(target_domain_output))
+                )
 
                 loss = crossE_loss +self.lambda_d*domain_loss + self.lambda_d*disc_loss +  self.lambda_s*vat_src_loss + self.lambda_t*vat_tgt_loss + self.lambda_t*conditionE_loss
                 self.optimizer.zero_grad(set_to_none=True)
-                
-                #disc_loss = 0.5*self.disc(source_domain_output,torch.ones_like(source_domain_output)) + 0.5*self.disc(target_domain_output, torch.zeros_like(target_domain_output))
-                #self.optimizer2.zero_grad(set_to_none=True)
-                
+
                 loss.backward()
-                #disc_loss.backward()
 
                 self.optimizer.step()
-                #self.optimizer2.step()
-
 
         ############ DIRT_T Training
 
@@ -175,7 +170,7 @@ class experiment_DIRT_T(experiment_base):
         for param in teacher_params:
             param.requires_grad = False
 
-        self.optimizer   = optim.Adam(self.model.parameters(), lr=self.lr, betas=(self.beta1, 0.999))
+        self.optimizer   = optim.Adam(self.model.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
         self.optimizer2  = WeightEMA(teacher_params, student_params)#DelayedWeight(teacher_params, student_params)
         
         self.crossE      = nn.CrossEntropyLoss().to(self.device)
@@ -204,7 +199,6 @@ class experiment_DIRT_T(experiment_base):
 
                 self.optimizer.zero_grad(set_to_none=True)
                 self.optimizer2.zero_grad()
-                noise = True
 
                 unlabelled_target_features = unlabelled_target_features[0].to(self.device)
                 target_bert_output = self.bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
@@ -212,15 +206,16 @@ class experiment_DIRT_T(experiment_base):
                 if self.output_hidden_states == False:
                     target_bert_output = target_bert_output[0][:,0,:]
 
-                target_class_output, target_domain_output = self.model(input_features=target_bert_output, noise=noise)
-                teacher_target_class_output, teacher_target_domain_output = self.teacher(input_features=target_bert_output, noise=noise)
+                target_class_output, target_domain_output = self.model(input_features=target_bert_output)
+                teacher_target_class_output, teacher_target_domain_output = self.teacher(input_features=target_bert_output)
 
-                conditionE_loss = self.conditionE(target_class_output) # condition entropy
+                conditionE_loss = self.conditionE(target_class_output) # conditional entropy
                 dirt_loss       = self.dirt(target_class_output, teacher_target_class_output)
-                #vat_tgt_loss    = self.tgt_vat(unlabelled_target_features,target_class_output)
-                vat_tgt_loss    = self.tgt_vat(target_bert_output, target_class_output, self.model, noise)
 
-                loss = self.lambda_t*conditionE_loss + self.lambda_t*vat_tgt_loss + self.beta_t*dirt_loss 
+                vat_tgt_loss    = self.tgt_vat(target_bert_output, target_class_output, self.model)
+
+                loss = self.lambda_t*conditionE_loss + self.lambda_t*vat_tgt_loss + self.beta*dirt_loss 
+
                 loss.backward()
                 self.optimizer.step()
                 self.optimizer2.step()
@@ -228,33 +223,34 @@ class experiment_DIRT_T(experiment_base):
 
     def create_optimizer(self) -> None:
         params = list(self.model.feature_extractor.parameters()) + list(self.model.task_classifier.parameters()) + list(self.model.domain_classifier.parameters()) 
-        self.optimizer = optim.Adam(params, lr=self.lr, betas=(self.beta1, 0.999))
+        self.optimizer = optim.Adam(params, lr=self.lr, betas=(self.beta1, self.beta2))
 
         params = list(self.model.feature_extractor.parameters()) + list(self.model.domain_classifier.parameters())
-        self.optimizer2 = optim.Adam(params, lr = self.lr, betas=(self.beta1, 0.999))   
+        self.optimizer2 = optim.Adam(params, lr = self.lr, betas=(self.beta1, self.beta2))   
            
     def create_criterion(self) -> None:
         self.crossE      = nn.CrossEntropyLoss().to(self.device)
         self.conditionE  = ConditionalEntropy().to(self.device)
         self.src_vat     = VATLoss().to(self.device)
         self.tgt_vat     = VATLoss().to(self.device)
-        self.disc        = nn.BCEWithLogitsLoss().to(self.device)
+        self.disc        = nn.BCELoss().to(self.device)
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
-        self.task_classifier = self.current_experiment.get("task_classifier", "tc1")
-        self.domain_classifier = self.current_experiment.get("domain_classifier", "dc1")
-        self.beta1 = self.current_experiment.get("beta1", 0.01)
-        self.radius = self.current_experiment.get("radius", 0.01)
+        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
+        self.domain_classifier = self.current_experiment.get("domain_classifier", "DANN_domain_classifier")
+        self.beta = self.current_experiment.get("beta", 0.01)
+        self.beta1 = self.current_experiment.get("beta1", 0.5)
+        self.beta2 = self.current_experiment.get("beta1", 0.999)
+        self.radius = self.current_experiment.get("radius", 1)
         self.lambda_d = self.current_experiment.get("lambda_d", 0.01)
-        self.lambda_s = self.current_experiment.get("lambda_s", 0.01)
+        self.lambda_s = self.current_experiment.get("lambda_s", 1)
         self.lambda_t = self.current_experiment.get("lambda_t", 0.01)
-        self.xi = self.current_experiment.get("xi", 0.01)
-        self.eps = self.current_experiment.get("eps", 0.01)
-        self.ip = self.current_experiment.get("ip", 0.01)
-        self.beta_t = self.current_experiment.get("beta_t", 0.01)
+        #self.xi = self.current_experiment.get("xi", 0.01)
+        #self.eps = self.current_experiment.get("eps", 0.01)
+        #self.ip = self.current_experiment.get("ip", 0.01)
 
     def create_model(self):
         
@@ -272,16 +268,16 @@ class experiment_DIRT_T(experiment_base):
             Please specify bert_cls or bert_cnn as key in experiment settings of the current experiment.")
         
 
-        if self.task_classifier.lower() == "tc1":
-            from model.task_classifiers import task_classifier1
-            task_classifier = task_classifier1()
+        if self.task_classifier.lower() == "dann_task_classifier":
+            from model.task_classifiers import DANN_task_classifier
+            task_classifier = DANN_task_classifier()
         else:
             raise ValueError("Can't find the task classifier name. \
             Please specify the task classifier class name as key in experiment settings of the current experiment.")
             
-        if self.domain_classifier.lower() == "dc1":
-            from model.domain_classifiers import domain_classifier1
-            domain_classifier = domain_classifier1()
+        if self.domain_classifier.lower() == "dann_domain_classifier":
+            from model.domain_classifiers import DANN_domain_classifier
+            domain_classifier = DANN_domain_classifier()
         else:
             raise ValueError("Can't find the domain classifier name. \
             Please specify the domain classifier class name as key in experiment settings of the current experiment.")

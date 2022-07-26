@@ -4,33 +4,23 @@ from transformers import BertModel
 from torch.nn import CrossEntropyLoss
 import gc
 
-class domain_classifier1(nn.Module):
+class DANN_domain_classifier(nn.Module):
     def __init__(self):
         super().__init__()
         self.num_labels = 2
         
-
-        self.domain_classifier_linear1 = nn.Linear(768, 768)
-        self.domain_classifier_linear2 = nn.Linear(768, 768)
-        self.domain_classifier_linear3 = nn.Linear(768, 2)
-        self.domain_classifier_relu = nn.LeakyReLU()
-        self.domain_classifier_softmax = nn.Softmax(dim=1)
-        self.domain_classifier_dropout = nn.Dropout(0.1)
+        self.domain_classifier = nn.Sequential()
+        self.domain_classifier.add_module('d_fc1', nn.Linear(768, 100))
+        self.domain_classifier.add_module('d_bn1', nn.BatchNorm1d(100))
+        self.domain_classifier.add_module('d_relu1', nn.ReLU(True))
+        self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
+        self.domain_classifier.add_module('d_softmax', nn.Softmax(dim=1))
 
     def forward(
         self,
         feature_extractor_output
     ):
-        x = self.domain_classifier_linear1(feature_extractor_output)
-        x = self.domain_classifier_relu(x)
-        x = self.domain_classifier_dropout(x)
-
-        x = self.domain_classifier_linear2(feature_extractor_output)
-        x = self.domain_classifier_relu(x)
-        x = self.domain_classifier_dropout(x)
-
-        x = self.domain_classifier_linear3(feature_extractor_output)
-        x = self.domain_classifier_relu(x)
-        x = self.domain_classifier_dropout(x)
+        x = self.domain_classifier(feature_extractor_output)
+        
         return x
 
