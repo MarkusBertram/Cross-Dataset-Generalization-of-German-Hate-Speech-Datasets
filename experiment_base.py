@@ -76,7 +76,7 @@ class experiment_base(ABC):
 
             target_class_output = self.model.inference(target_features)
             
-            target_class_predictions = torch.argmax(target_class_output, dim=1)
+            target_class_predictions = torch.round(target_class_output)
 
             predictions.append(target_class_predictions.cpu())
             targets.append(target_labels.cpu())
