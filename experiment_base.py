@@ -59,7 +59,7 @@ class experiment_base(ABC):
 
     # ovlossides test
     @torch.no_grad()
-    def test(self, epoch):
+    def test(self):
         """test [computes loss of the test set]
         [extended_summary]
         Returns:
@@ -89,8 +89,8 @@ class experiment_base(ABC):
         targets = torch.cat(targets)
         f1score = f1(outputs, targets)
 
-        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
-        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
+        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc)
+        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item())
 
         # add hparams
         self.writer.add_hparams(
