@@ -72,15 +72,15 @@ class experiment_base(ABC):
         self.model.eval()
         for (target_features, target_labels) in self.test_dataloader:
             target_features = target_features[0].to(self.device)
-            target_labels = target_labels[0].to(self.device)
+            target_labels = target_labels[0].int().to(self.device)
 
             target_class_output = self.model.inference(target_features)
             
-            target_class_predictions = torch.round(target_class_output)
+            target_class_predictions = torch.round(torch.sigmoid(target_class_output)).int()
 
             predictions.append(target_class_predictions.cpu())
             targets.append(target_labels.cpu())
-
+            
             correct += torch.sum(target_class_predictions == target_labels).item()
 
         avg_test_acc = correct / len(self.test_dataloader.dataset)
