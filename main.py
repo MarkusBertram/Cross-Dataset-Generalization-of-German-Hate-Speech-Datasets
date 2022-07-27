@@ -78,7 +78,7 @@ def run_experiments(config):
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
             current_exp.perform_experiment()
-            sys.exit(0)
+
             # try:
             #     current_exp.perform_experiment()
             #     del current_exp
