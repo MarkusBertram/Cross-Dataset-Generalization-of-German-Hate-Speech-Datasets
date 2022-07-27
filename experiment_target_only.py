@@ -63,8 +63,6 @@ class experiment_target_only(experiment_base):
             [tupel(trained network, train_loss )]:
         """
 
-        loss_class = torch.nn.NLLLoss().to(self.device)
-
         for name, param in self.model.named_parameters():
             if "bert" in name:
                 param.requires_grad = False
@@ -82,18 +80,15 @@ class experiment_target_only(experiment_base):
                 target_labels = target_labels[0].to(self.device)
                 
                 class_output = self.model(input_data=target_features)
-                
-                loss = loss_class(class_output, target_labels)
+
+                loss = self.criterion(class_output, target_labels)
 
                 total_loss += loss.item()
-                
+
                 loss.backward()
                 self.optimizer.step()
 
             self.writer.add_scalar(f"total_loss/train/{self.exp_name}", total_loss, epoch)
-            # test after each epoch
-            if self.test_after_each_epoch == True:
-                self.test(epoch)
 
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
@@ -103,7 +98,7 @@ class experiment_target_only(experiment_base):
         )
 
     def create_criterion(self) -> None:
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
