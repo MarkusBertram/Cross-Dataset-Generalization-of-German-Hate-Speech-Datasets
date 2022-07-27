@@ -35,3 +35,4 @@ log_dir/*
 runs/Jul12_15-20-56_Lenovo_Legion/events.out.tfevents.1657632056.Lenovo_Legion.7716.0
 events.out.tfevents*
 test3.ipynb
+test4.ipynb

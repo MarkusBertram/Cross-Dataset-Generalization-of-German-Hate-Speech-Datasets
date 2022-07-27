@@ -66,42 +66,7 @@ class experiment_MME(experiment_base):
     # overrides train
     def train(self):
         """train [main training function of the project]
-        [extended_summary]
-        Args:
-            train_loader ([torch.Dataloader]): [dataloader with the training data]
-            optimizer ([torch.optim]): [optimizer for the network]
-            criterion ([Loss function]): [Pytorch loss function]
-            device ([str]): [device to train on cpu/cuda]
-            epochs (int, optional): [epochs to run]. Defaults to 5.
-            **kwargs (verbose and validation dataloader)
-        Returns:
-            [tupel(trained network, train_loss )]:
         """
-        # param_lr_g = []
-        # for param_group in self.optimizer_g.param_groups:
-        #     print(param_group)
-
-        params = [{
-            "params": self.model.feature_extractor.parameters(), "lr": self.lr
-        }]
-        optimizer_g = optim.SGD(
-            params,
-            momentum = self.momentum,
-            weight_decay=self.weight_decay,
-            nesterov = self.nesterov
-        )
-        params = [{
-            "params": self.model.task_classifier.parameters(), "lr": self.lr
-        }]
-
-        optimizer_f = optim.SGD(
-            params,
-            #self.model.task_classifier.parameters(),
-            #lr=self.lr,
-            momentum = self.momentum,
-            weight_decay=self.weight_decay,
-            nesterov = self.nesterov
-        )
 
         for name, param in self.model.named_parameters():
             if "bert" in name:
@@ -113,18 +78,10 @@ class experiment_MME(experiment_base):
         len_train_source = len(self.source_dataloader)
         len_train_target = len(self.labelled_target_dataloader)
         len_train_target_semi = len(self.unlabelled_target_dataloader)
-        best_acc = 0
-        counter = 0
 
         steps = self.epochs*len(self.source_dataloader)
 
-        # steps = self.epochs / ...?
         for step in range(steps):
-            optimizer_g = inv_lr_scheduler(optimizer_g, step,
-                                       init_lr=self.lr)
-            optimizer_f = inv_lr_scheduler(optimizer_f, step,
-                                        init_lr=self.lr)
-            lr = optimizer_f.param_groups[0]['lr']
 
             if step % len_train_target == 0:
                 data_iter_t = iter(self.labelled_target_dataloader)
@@ -143,8 +100,8 @@ class experiment_MME(experiment_base):
             labelled_target_labels = data_t[1][0].to(self.device)
             unlabelled_target_features = data_t_unl[0][0].to(self.device)
             
-            optimizer_g.zero_grad()
-            optimizer_f.zero_grad()
+            self.optimizer_g.zero_grad()
+            self.optimizer_f.zero_grad()
 
             data = torch.cat((source_features, labelled_target_features), 0)
             target = torch.cat((source_labels, labelled_target_labels), 0)
@@ -154,26 +111,46 @@ class experiment_MME(experiment_base):
             loss = self.criterion(output, target)
             loss.backward(retain_graph=True)
 
-            optimizer_g.step()
-            optimizer_f.step()
+            self.optimizer_g.step()
+            self.optimizer_f.step()
 
-            optimizer_g.zero_grad()
-            optimizer_f.zero_grad()
+            self.optimizer_g.zero_grad()
+            self.optimizer_f.zero_grad()
 
             out_t1 = self.model(unlabelled_target_features, reverse = True, eta = self.eta)
-            out_t1 = F.softmax(out_t1, dim = 1)
-            loss_t = self.lamda * torch.mean(torch.sum(out_t1 *
-                                              (torch.log(out_t1 + 1e-5)), 1))
+            # conditional entropy
+            # https://github.com/VisionLearningGroup/SSDA_MME/blob/81c3a9c321f24204db7223405662d4d16b22b17c/utils/loss.py#L36
+            loss_t = self.lamda * torch.mean(torch.sigmoid(out_t1)*F.logsigmoid(out_t1+1e-5))
+
             loss_t.backward()
-            optimizer_f.step()
-            optimizer_g.step()
+            self.optimizer_f.step()
+            self.optimizer_g.step()
 
 
     def create_optimizer(self) -> None:
-        pass
+        params = [{
+            "params": self.model.feature_extractor.parameters(), "lr": self.lr
+        }]
+        self.optimizer_g = optim.SGD(
+            params,
+            momentum = self.momentum,
+            weight_decay=self.weight_decay,
+            nesterov = self.nesterov
+        )
+        params = [{
+            "params": self.model.task_classifier.parameters(), "lr": self.lr
+        }]
+
+        self.optimizer_f = optim.SGD(
+            params,
+            momentum = self.momentum,
+            weight_decay=self.weight_decay,
+            nesterov = self.nesterov
+        )
+
 
     def create_criterion(self) -> None:
-        self.criterion = nn.CrossEntropyLoss().to(self.device)
+        self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
     # overrides load_settings
     def load_exp_settings(self) -> None:

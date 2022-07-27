@@ -45,7 +45,7 @@ class DANN_model(nn.Module):
         reverse_feature = ReverseLayerF.apply(feature_extractor_output, alpha)
 
         domain_output = self.domain_classifier(reverse_feature)
-
+    
         return class_output, domain_output
 
     # inference for testing

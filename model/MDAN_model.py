@@ -56,9 +56,9 @@ class MDAN_model(nn.Module):
         th_relu = self.feature_extractor(th_relu)
 
         # Task Classification probabilities on k source domains.
-        logprobs = []
+        probs = []
         for i in range(self.num_src_domains):
-            logprobs.append(self.task_classifier(sh_relu[i]))
+            probs.append(self.task_classifier(sh_relu[i]))
 
         # Domain classification accuracies.
         sdomains, tdomains = [], []
@@ -73,7 +73,7 @@ class MDAN_model(nn.Module):
             sdomains.append(self.domain_classifiers[i](sh_relu[i]))
             tdomains.append(self.domain_classifiers[i](th_relu_i))
 
-        return logprobs, sdomains, tdomains
+        return probs, sdomains, tdomains
 
     # inference for testing
     def inference(self, input_data):

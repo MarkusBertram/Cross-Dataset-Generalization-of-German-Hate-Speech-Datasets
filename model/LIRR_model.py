@@ -28,17 +28,13 @@ class ReverseLayerF(Function):
 class EnvPredictor(nn.Module):
     def __init__(self, in_features, bottleneck_dim=1024):
         super(EnvPredictor, self).__init__()
-        self.dropout1 = nn.Dropout(p=0.5)
-        self.dropout2 = nn.Dropout(p=0.5)
-        self.bottleneck = nn.Linear(in_features=in_features+1, out_features=bottleneck_dim, bias=True)
-        self.fc = nn.Linear(in_features=bottleneck_dim, out_features=2, bias=True)
-        
-        #self.apply(init_weights)
+        self.dropout1 = nn.Dropout(p=0.1)
+        self.dropout2 = nn.Dropout(p=0.1)
+        self.bottleneck = nn.Linear(in_features=in_features+1, out_features=bottleneck_dim)
+        self.fc = nn.Linear(in_features=bottleneck_dim, out_features=1)
+        self.flatten = nn.Flatten(start_dim = 0)
         self.num_class = 2
-        # self.env_embedding = {
-        #     'src':torch.zeros(batch_size, 1).cuda(), 
-        #     'tgt':torch.ones(batch_size, 1).cuda()
-        # }
+
 
     def forward(self, x, env, temp=1, cosine=False):
         env_embedding = {
@@ -54,8 +50,10 @@ class EnvPredictor(nn.Module):
     #       cosine classifer
             normed_x = nn.functional.normalize(drop_x, p=2, dim=1)
             logits = self.fc(normed_x) / temp
+            logits = self.flatten(logits)
         else:
             logits = self.fc(drop_x) / temp
+            logits = self.flatten(logits)
         return logits
 
 class LIRR_model(nn.Module):
@@ -87,9 +85,8 @@ class LIRR_model(nn.Module):
             ## bottleneck?
 
         domain_classifier_output = self.domain_classifier(feature_extractor_output)
-        class_output = self.domain_invariant_predictor(feature_extractor_output)
         
-        # class_output = self.task_classifier(feature_extractor_output)
+        class_output = self.domain_invariant_predictor(feature_extractor_output)
 
         return domain_dependant_output, domain_classifier_output, class_output
 

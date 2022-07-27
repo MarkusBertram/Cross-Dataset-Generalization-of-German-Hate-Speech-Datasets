@@ -105,6 +105,7 @@ class experiment_MDAN(experiment_base):
                 param.requires_grad = False
 
         for epoch in range(1, self.epochs + 1):
+            # https://github.com/hanzhaoml/MDAN/blob/4eaec5b0d49a3af446b3b52850f646dfed507a14/main_amazon.py#L123
             self.model.train()
 
             train_dataloader = multi_data_loader(self.source_dataloader_list, self.unlabelled_target_dataloader)
@@ -121,78 +122,27 @@ class experiment_MDAN(experiment_base):
                 
                 unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
                 
-                slabels = torch.ones(self.batch_size, requires_grad=False).type(torch.LongTensor).to(self.device)
-                tlabels = torch.zeros(self.batch_size, requires_grad=False).type(torch.LongTensor).to(self.device)
+                slabels = torch.ones(self.batch_size, requires_grad=False).type(torch.FloatTensor).to(self.device)
+                tlabels = torch.zeros(self.batch_size, requires_grad=False).type(torch.FloatTensor).to(self.device)
 
-                logprobs, sdomains, tdomains = self.model(source_feature_list, unlabelled_target_features)
+                probs, sdomains, tdomains = self.model(source_feature_list, unlabelled_target_features)
 
                 # Compute prediction accuracy on multiple training sources.
-                losses = torch.stack([F.nll_loss(logprobs[j], source_labels_list[j]) for j in range(len(self.source_dataloader_list))])
+                losses = torch.stack([self.bce_loss(probs[j], source_labels_list[j]) for j in range(len(self.source_dataloader_list))])
 
-                domain_losses = torch.stack([F.nll_loss(sdomains[j], slabels) +
-                                           F.nll_loss(tdomains[j], tlabels) for j in range(len(self.source_dataloader_list))])
+                domain_losses = torch.stack([self.bce_loss(sdomains[j], slabels) +
+                                           self.bce_loss(tdomains[j], tlabels) for j in range(len(self.source_dataloader_list))])
 
                 loss = torch.log(torch.sum(torch.exp(self.gamma * (losses + self.mu * domain_losses)))) / self.gamma
 
                 loss.backward()
                 self.optimizer.step()
 
-    # # ovlossides test
-    # @torch.no_grad()
-    # def test(self, epoch):
-    #     """test [computes loss of the test set]
-    #     [extended_summary]
-    #     Returns:
-    #         [type]: [description]
-    #     """
-    #     correct = 0
-    #     predictions = []
-    #     targets = []
-    #     f1 = F1Score(num_classes = 2, average="macro")
-    #     self.model.eval()
-    #     for (target_features, target_labels) in self.test_dataloader:
-    #         target_features = target_features[0].to(self.device)
-    #         target_labels = target_labels[0].to(self.device)
-
-    #         target_class_output = self.model.inference(target_features)
-            
-    #         target_class_predictions = torch.argmax(target_class_output, dim=1)
-
-    #         predictions.append(target_class_predictions.cpu())
-    #         targets.append(target_labels.cpu())
-    #         #f1_score = f1(preds, target_labels)
-
-    #         correct += torch.sum(target_class_predictions == target_labels).item()
-
-    #     avg_test_acc = correct / len(self.test_dataloader.dataset)
-
-    #     outputs = torch.cat(predictions)
-    #     targets = torch.cat(targets)
-    #     f1score = f1(outputs, targets)
-
-    #     self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc, epoch)
-    #     self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item(), epoch)
-
-    #     if epoch == self.epochs:
-    #         # add hparams
-    #         self.writer.add_hparams(
-    #             {
-    #                 "lr": self.lr,
-
-    #             },
-
-    #             {
-    #                 "hparam/Accuracy/Test": avg_test_acc,
-    #                 "F1_score/Test": f1score.item()
-    #             },
-    #             run_name = self.exp_name
-    #         )
-
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adadelta(self.model.parameters(), lr=self.lr)
 
     def create_criterion(self) -> None:
-        self.criterion = nn.CrossEntropyLoss()
+        self.bce_loss = nn.BCEWithLogitsLoss()
 
     # overrides load_settings
     def load_exp_settings(self) -> None:

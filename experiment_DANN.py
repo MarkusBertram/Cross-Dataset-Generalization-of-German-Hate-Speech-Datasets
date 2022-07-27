@@ -88,7 +88,7 @@ class experiment_DANN(experiment_base):
                 batch_size = len(source_labels)
 
                 domain_label = torch.zeros(batch_size)
-                domain_label = domain_label.long().to(self.device)
+                domain_label = domain_label.float().to(self.device)
 
                 class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
                 
@@ -101,14 +101,14 @@ class experiment_DANN(experiment_base):
                 batch_size = len(unlabelled_target_features)
 
                 domain_label = torch.ones(batch_size)
-                domain_label = domain_label.long().to(self.device)
+                domain_label = domain_label.float().to(self.device)
 
                 _, domain_output = self.model(input_data=unlabelled_target_features, alpha=alpha)
                 loss_t_domain = self.loss_domain(domain_output, domain_label)
                 loss = loss_t_domain + loss_s_domain + loss_s_label
 
                 total_loss += loss.item()
-                
+
                 loss.backward()
                 self.optimizer.step()
 
@@ -122,8 +122,8 @@ class experiment_DANN(experiment_base):
         )
 
     def create_criterion(self) -> None:
-        self.loss_class = nn.CrossEntropyLoss().to(self.device)
-        self.loss_domain = nn.CrossEntropyLoss().to(self.device)
+        self.loss_class = nn.BCEWithLogitsLoss().to(self.device)
+        self.loss_domain = nn.BCEWithLogitsLoss().to(self.device)
 
     # overrides load_settings
     def load_exp_settings(self) -> None:

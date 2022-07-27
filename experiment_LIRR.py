@@ -77,29 +77,7 @@ class experiment_LIRR(experiment_base):
         Returns:
             [tupel(trained network, train_loss )]:
         """
-
-        main_optimizer = optim.SGD(
-            [
-            {"params": self.model.feature_extractor.parameters(), "lr": self.lr},
-            {"params": self.model.domain_dependant_predictor.parameters(), "lr": self.lr},
-            {"params": self.model.domain_invariant_predictor.parameters(), "lr": self.lr}
-            ],
-            momentum = self.momentum,
-            weight_decay=self.weight_decay,
-            nesterov = self.nesterov
-        )
-
-        dis_optimizer = optim.SGD(
-            [
-            {"params": self.model.domain_classifier.parameters(), "lr": self.lr}
-            ],
-            #self.model.task_classifier.parameters(),
-            #lr=self.lr,
-            momentum = self.momentum,
-            weight_decay=self.weight_decay,
-            nesterov = self.nesterov
-        )
-
+        
         for name, param in self.model.named_parameters():
             if "bert" in name:
                 param.requires_grad = False
@@ -110,8 +88,6 @@ class experiment_LIRR(experiment_base):
         len_train_source = len(self.source_dataloader)
         len_train_target_l = len(self.labelled_target_dataloader)
         len_train_target_unl = len(self.unlabelled_target_dataloader)
-        best_acc = 0
-        counter = 0
 
         steps = self.epochs*len(self.source_dataloader)
         
@@ -146,44 +122,52 @@ class experiment_LIRR(experiment_base):
 
             # Env prediction loss
             loss_env = 0
-            loss_env += self.loss_cls(src_domain_dependant_output, source_labels)# / 2.
+            loss_env += self.loss_cls(src_domain_dependant_output, source_labels) / 2.
             loss_env += self.loss_cls(l_tgt_domain_dependant_output, labelled_target_labels) / 2.
 
             #DANN loss
             loss_transfer = 0
             # Source:
-            domain_label_size = src_domain_classifier_output.size(0)
-            domain_label_target = torch.from_numpy(np.array([[1]] * domain_label_size))
+            domain_label_target = torch.ones_like(src_domain_classifier_output).to(self.device)
             loss_transfer += self.loss_cls(src_domain_classifier_output, domain_label_target)
+
             # Target:
-            domain_label_size = ul_tgt_domain_classifier_output.size(0)
-            domain_label_target = torch.from_numpy(np.array([[1]] * domain_label_size))
+            domain_label_target = torch.zeros_like(ul_tgt_domain_classifier_output).to(self.device)
             loss_transfer += self.loss_cls(ul_tgt_domain_classifier_output, domain_label_target)
 
             total_loss = loss_transfer + loss_inv + torch.sqrt((loss_inv - loss_env) ** 2) * 0.1
 
-            main_optimizer.zero_grad()
-            dis_optimizer.zero_grad()
+            self.main_optimizer.zero_grad()
+            self.dis_optimizer.zero_grad()
             total_loss.backward()
-            main_optimizer.step()
-            dis_optimizer.step()
-            
-            # for name, optimizer in optimizers.items():
-            #     adjust_learning_rate(
-            #         optimizer, 
-            #         cur_iter=global_step, all_iter=entire_steps, 
-            #         args=args, 
-            #         alpha=0.0005, beta=2.25, 
-            #         param_lr=params_lr[name]
-            #     )
-
+            self.main_optimizer.step()
+            self.dis_optimizer.step()
 
     def create_optimizer(self) -> None:
-        pass
+        self.main_optimizer = optim.SGD(
+            [
+            {"params": self.model.feature_extractor.parameters(), "lr": self.lr},
+            {"params": self.model.domain_dependant_predictor.parameters(), "lr": self.lr},
+            {"params": self.model.domain_invariant_predictor.parameters(), "lr": self.lr}
+            ],
+            momentum = self.momentum,
+            weight_decay=self.weight_decay,
+            nesterov = self.nesterov
+        )
+
+        self.dis_optimizer = optim.SGD(
+            [
+            {"params": self.model.domain_classifier.parameters(), "lr": self.lr}
+            ],
+            momentum = self.momentum,
+            weight_decay=self.weight_decay,
+            nesterov = self.nesterov
+        )
+
 
     def create_criterion(self) -> None:
-        self.loss_cls = nn.BCELoss().to(self.device)
-
+        self.loss_cls = nn.BCEWithLogitsLoss().to(self.device)
+        
     # overrides load_settings
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
@@ -249,10 +233,6 @@ class experiment_LIRR(experiment_base):
 
         sampler = BatchSampler(RandomSampler(labelled_target_dataset_train), batch_size=min(self.batch_size, len(labelled_target_dataset_train)), drop_last=True)
         self.labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=self.num_workers)            
-
-        del labelled_target_dataset_features
-        del labelled_target_dataset_labels
-        gc.collect()
 
         # fetch unlabelled target dataset and create dataloader
         unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)

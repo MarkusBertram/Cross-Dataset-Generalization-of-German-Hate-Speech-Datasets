@@ -108,28 +108,22 @@ class experiment_M3SDA(experiment_base):
         min_ = len(self.unlabelled_target_dataloader)
 
         for epoch in range(1, self.epochs + 1):
+            # https://github.com/tsxce/Moment-Matching-for-Multi-Source-Domain-Adaptation-M3SDA/blob/9f70e69113fefca0a6da30c91ebcf94f0cae682f/train.py#L86
+            
             self.model.train()
 
             source_ac = {}
             for i in range(N):
                 source_ac[i] = defaultdict(int)
 
-            record = {}
-            for i in range(N):
-                record[i] = {}
-                for j in range(1, 3):
-                    record[i][str(j)] = 0
-            mcd_loss = 0
-            dis_loss = 0
-
             train_dataloader = multi_data_loader(self.source_dataloader_list, self.unlabelled_target_dataloader)
 
             for batch_index, (source_batches, unlabelled_target_batch) in enumerate(train_dataloader):
 
                 loss_cls = 0
-                src_len = len(source_batches)
                 
-                # train extractor and source classifier
+                ######### train extractor and source classifier, Step i.
+                # First term of equation (2)
                 for index, batch in enumerate(source_batches):
                     features = batch[0][0]
                     labels = batch[1][0]
@@ -139,22 +133,17 @@ class experiment_M3SDA(experiment_base):
 
                     pred1, pred2 = self.model(features, index)
 
-                    source_ac[index]['c1'] += torch.sum(torch.max(pred1, dim=1)[1] == labels).item()
-                    source_ac[index]['c2'] += torch.sum(torch.max(pred2, dim=1)[1] == labels).item()
+                    source_ac[index]['c1'] += torch.sum(torch.round(pred1) == labels).item()
+                    source_ac[index]['c2'] += torch.sum(torch.round(pred2) == labels).item()
                     source_ac[index]['count'] += len(labels)
 
                     loss1 = self.loss_extractor(pred1, labels)
                     loss2 = self.loss_extractor(pred2, labels)
 
                     loss_cls += loss1 + loss2
-                
-                if self.verbose:
-                    if batch_index % 10 == 0:
-                        for i in range(N):
-                                print('c1 : [%.8f]' % (source_ac[i]['c1']/(batch_index+1)/self.batch_size))
-                                print('c2 : [%.8f]' % (source_ac[i]['c2']/(batch_index+1)/self.batch_size))
                                 
-                
+                # Moment Distance Loss
+                # Second Term of equation (2)
                 m1_loss = 0
                 m2_loss = 0
 
@@ -192,14 +181,8 @@ class experiment_M3SDA(experiment_base):
                             m2_loss += m2_dist
 
                 loss_m =  (self.epochs-epoch)/self.epochs * (m1_loss/N + m2_loss/N/(N-1)*2) * 0.8
-                mcd_loss += loss_m.item()
 
                 loss = loss_cls + loss_m
-
-                if batch_index % 10 == 0:
-                    print('[%d]/[%d]' % (batch_index, min_))
-                    print('class loss : [%.5f]' % (loss_cls))
-                    print('msd loss : [%.5f]' % (loss_m))
                 
                 self.extractor_optimizer.zero_grad(set_to_none = True)
 
@@ -216,6 +199,8 @@ class experiment_M3SDA(experiment_base):
                     
                 self.extractor_optimizer.zero_grad()
 
+                ######### Step ii.
+
                 unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
                     
                 loss = 0
@@ -230,24 +215,24 @@ class experiment_M3SDA(experiment_base):
                     labels = labels.to(self.device)
 
                     src_pred1, src_pred2 = self.model(features, index=index)
-
+                    # First term of equation (3)
                     c_loss += self.loss_extractor(src_pred1, labels) + self.loss_extractor(src_pred2, labels)
 
 
                     tgt_pred1, tgt_pred2 = self.model(unlabelled_target_features, index=index)
-
-                    combine1 = (F.softmax(tgt_pred1, dim=1) + F.softmax(tgt_pred2, dim=1))/2
-
+                    
+                    combine1 = (torch.sigmoid(tgt_pred1) + torch.sigmoid(tgt_pred2))/2
+                    # Second term of equation (3)
                     d_loss += self.loss_l1(tgt_pred1, tgt_pred2)
 
                     for index_2, o_batch in enumerate(source_batches[index+1:]):
                         
                         pred_2_c1, pred_2_c2 = self.model(unlabelled_target_features, index = index_2+index)
                         
-                        combine2 = (F.softmax(pred_2_c1, dim=1) + F.softmax(pred_2_c2, dim=1))/2
+                        combine2 = (torch.sigmoid(pred_2_c1) + torch.sigmoid(pred_2_c2))/2
 
                         d_loss += self.loss_l1(combine1, combine2) * 0.1
-
+                # Equation (3)
                 loss = c_loss - d_loss 
                 
                 loss.backward()
@@ -262,6 +247,8 @@ class experiment_M3SDA(experiment_base):
                 for i in range(N):
                     self.predictor_optimizers[i].zero_grad()
                 
+                ########## Step iii.
+
                 all_dis = 0
 
                 for i in range(3):
@@ -272,19 +259,17 @@ class experiment_M3SDA(experiment_base):
                         
                         pred_c1, pred_c2 = self.model(tar_feature, index = index, feature_extractor_input = True)
                         
-                        combine1 = (F.softmax(pred_c1, dim=1) + F.softmax(pred_c2, dim=1))/2
-
+                        combine1 = (torch.sigmoid(pred_c1) + torch.sigmoid(pred_c2))/2
+                        # Equation (4)
                         discrepency_loss += self.loss_l1(pred_c1, pred_c2)
 
                         for index2, _ in enumerate(source_batches[index+1:]):
                             
                             pred_2_c1, pred_2_c2 = self.model(tar_feature, index = index2+index, feature_extractor_input = True)
 
-                            combine2 = (F.softmax(pred_2_c1, dim=1) + F.softmax(pred_2_c2, dim=1))/2
+                            combine2 = (torch.sigmoid(pred_2_c1) + torch.sigmoid(pred_2_c2))/2
 
                             discrepency_loss += self.loss_l1(combine1, combine2) * 0.1
-                        #discrepency_loss += torch.mean(torch.sum(abs(F.softmax(pred_c1, dim=1) - F.softmax(pred_c2, dim=1)), dim=1))
-                        #discrepency_loss += loss_l1(F.softmax(pred_c1, dim=1), F.softmax(pred_c2, dim=1)) 
 
                     all_dis += discrepency_loss.item()
 
@@ -300,13 +285,7 @@ class experiment_M3SDA(experiment_base):
                     
                     for i in range(N):
                         self.predictor_optimizers[i].zero_grad(set_to_none = True)
-
-                dis_loss += all_dis
-
-                if self.verbose:
-                    if batch_index % 10 == 0:
-                        print('Discrepency Loss : [%.4f]' % (all_dis))
-
+                        
         # set weights to highest source accuracy
         for i in range(N):
             c1_acc = source_ac[i]['c1']/source_ac[i]['count']
@@ -320,7 +299,7 @@ class experiment_M3SDA(experiment_base):
             self.predictor_optimizers.append(optim.Adam(list(self.model.task_classifiers[i][0].parameters()) + list(self.model.task_classifiers[i][1].parameters()), lr = self.lr))
 
     def create_criterion(self) -> None:
-        self.loss_extractor = nn.CrossEntropyLoss()
+        self.loss_extractor = nn.BCEWithLogitsLoss()
         self.loss_l1 = nn.L1Loss()
         self.loss_l2 = nn.MSELoss()
 

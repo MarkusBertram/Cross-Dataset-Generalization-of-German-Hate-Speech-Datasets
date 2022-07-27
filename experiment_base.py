@@ -163,7 +163,7 @@ class experiment_base(ABC):
             # map neutral to 0 and abusive to 1
             label_df = dset_df["label"].map(label2id)
             labels_array = np.array(label_df.values.tolist())
-            labels_tensor = torch.from_numpy(labels_array)
+            labels_tensor = torch.from_numpy(labels_array).float()
         else:
             labels_tensor = None
 

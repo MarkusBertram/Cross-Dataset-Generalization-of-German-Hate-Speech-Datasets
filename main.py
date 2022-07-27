@@ -77,18 +77,20 @@ def run_experiments(config):
                 current_exp = experiment_M3SDA(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
-            try:
-                current_exp.perform_experiment()
-                del current_exp
-                gc.collect()
+            current_exp.perform_experiment()
+            sys.exit(0)
+            # try:
+            #     current_exp.perform_experiment()
+            #     del current_exp
+            #     gc.collect()
 
-            except Exception as e:
-                name = exp_setting["exp_name"]
-                print("\n\n")
-                print("**********" * 12)
-                print(f"Experiment {name} failed with Exception {e}")
-                print("**********" * 12)
-                print("\n\n")          
+            # except Exception as e:
+            #     name = exp_setting["exp_name"]
+            #     print("\n\n")
+            #     print("**********" * 12)
+            #     print(f"Experiment {name} failed with Exception {e}")
+            #     print("**********" * 12)
+            #     print("\n\n")          
 
 def main():
     parser = argparse.ArgumentParser(
