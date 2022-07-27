@@ -11,7 +11,7 @@ class DANN_domain_classifier(nn.Module):
         
         self.domain_classifier = nn.Sequential()
         self.domain_classifier.add_module('d_fc1', nn.Linear(768, 100))
-        self.domain_classifier.add_module('d_bn1', nn.BatchNorm1d(100))
+        #self.domain_classifier.add_module('d_bn1', nn.BatchNorm1d(100))
         self.domain_classifier.add_module('d_relu1', nn.ReLU(True))
         self.domain_classifier.add_module('d_fc2', nn.Linear(100, 1))
         self.domain_classifier.add_module('d_flatten', nn.Flatten(start_dim = 0))
