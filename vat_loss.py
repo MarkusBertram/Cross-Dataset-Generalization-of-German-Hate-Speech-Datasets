@@ -16,8 +16,8 @@ class KLDivWithLogits(nn.Module):
 
     def forward(self, x, y):
 
-        log_p = torch.log(x)
-        q     = y
+        log_p = F.logsigmoid(x)
+        q     = torch.sigmoid(y)
 
         return self.kl(log_p, q) / x.size()[0]
 
@@ -32,10 +32,10 @@ class ConditionalEntropy(nn.Module):
     """
 
     def forward(self, input):
-        p     = input
-        log_p = torch.log(input)
+        p     = torch.sigmoid(input)
+        log_p = F.logsigmoid(input)
 
-        H = - (p * log_p).sum(dim=1).mean(dim=0)
+        H = - torch.mean(p * log_p)
 
         return H
 

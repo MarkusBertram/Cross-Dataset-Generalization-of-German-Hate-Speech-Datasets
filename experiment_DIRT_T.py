@@ -173,7 +173,7 @@ class experiment_DIRT_T(experiment_base):
         self.optimizer   = optim.Adam(self.model.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
         self.optimizer2  = WeightEMA(teacher_params, student_params)#DelayedWeight(teacher_params, student_params)
         
-        self.crossE      = nn.CrossEntropyLoss().to(self.device)
+        self.crossE      = nn.BCEWithLogitsLoss().to(self.device)
         self.conditionE  = ConditionalEntropy().to(self.device)
         self.tgt_vat     = VATLoss().to(self.device)#VATLoss(self.model, radius=self.radius).to(self.device)
         self.dirt        = KLDivWithLogits() #F.kl_div().to(self.device)#KLDivWithLogits()    
@@ -229,11 +229,11 @@ class experiment_DIRT_T(experiment_base):
         self.optimizer2 = optim.Adam(params, lr = self.lr, betas=(self.beta1, self.beta2))   
            
     def create_criterion(self) -> None:
-        self.crossE      = nn.CrossEntropyLoss().to(self.device)
+        self.crossE      = nn.BCEWithLogitsLoss().to(self.device)
         self.conditionE  = ConditionalEntropy().to(self.device)
         self.src_vat     = VATLoss().to(self.device)
         self.tgt_vat     = VATLoss().to(self.device)
-        self.disc        = nn.BCELoss().to(self.device)
+        self.disc        = nn.BCEWithLogitsLoss().to(self.device)
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
