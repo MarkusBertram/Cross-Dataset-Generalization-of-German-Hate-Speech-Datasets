@@ -28,30 +28,7 @@
         "verbose": true
         },
         "exp_settings": [
-          {
-            "exp_type": "LIRR",
-            "exp_name": "LIRR_cls",
-            "feature_extractor": "bert_cls",
-            "task_classifier": "DANN_task_classifier",
-            "domain_classifier": "DANN_domain_classifier",
-            "alignment_component": "LIRR",
-            "model": "LIRR",
-            "lamda": 10,
-            "eta": 1.0
-          },
-          {
-            "exp_type": "MDAN",
-            "exp_name": "MDAN_cls",
-            "feature_extractor": "bert_cls",
-            "task_classifier": "DANN_task_classifier",
-            "domain_classifier": "DANN_domain_classifier",
-            "alignment_component": "MDAN",
-            "model": "MDAN",
-            "lamda": 10,
-            "eta": 1.0,
-            "gamma": 10,
-            "mu": 1e-2
-          },
+          
   
             {
               "exp_type": "M3SDA",
