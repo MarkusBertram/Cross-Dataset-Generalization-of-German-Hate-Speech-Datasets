@@ -96,6 +96,6 @@ class LIRR_model(nn.Module):
         
         feature_extractor_output = self.feature_extractor(bert_output)
 
-        class_output = self.task_classifier(feature_extractor_output)
+        class_output = self.domain_invariant_predictor(feature_extractor_output)
 
         return class_output
