@@ -17,13 +17,13 @@ class BERT_cls(nn.Module):
         self.feature_extractor_linear3 = nn.Linear(768, 768)
         self.feature_extractor_relu = nn.LeakyReLU()
         # self.feature_extractor_softmax = nn.Softmax(dim=1)
-        self.feature_extractor_dropout = nn.Dropout(0.1)
+        #self.feature_extractor_dropout = nn.Dropout(0.1)
        
     def forward(self, bert_output):
 
         cls_token = bert_output[0][:,0,:]
-        x = self.feature_extractor_dropout(cls_token)
-        x = self.feature_extractor_linear1(x) 
+        #x = self.feature_extractor_dropout(cls_token)
+        x = self.feature_extractor_linear1(cls_token) 
         x = self.feature_extractor_relu(x)
         x = self.feature_extractor_dropout(x)
         x = self.feature_extractor_linear2(x)
@@ -45,12 +45,12 @@ class BERT_cls_token_input(nn.Module):
         self.feature_extractor_linear3 = nn.Linear(768, 768)
         self.feature_extractor_relu = nn.LeakyReLU()
         # self.feature_extractor_softmax = nn.Softmax(dim=1)
-        self.feature_extractor_dropout = nn.Dropout(0.1)
+        #self.feature_extractor_dropout = nn.Dropout(0.1)
        
     def forward(self, cls_token):
 
-        x = self.feature_extractor_dropout(cls_token)
-        x = self.feature_extractor_linear1(x) 
+        #x = self.feature_extractor_dropout(cls_token)
+        x = self.feature_extractor_linear1(cls_token) 
         x = self.feature_extractor_relu(x)
         x = self.feature_extractor_dropout(x)
         x = self.feature_extractor_linear2(x)
