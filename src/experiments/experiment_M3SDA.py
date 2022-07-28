@@ -6,7 +6,6 @@ import os
 import json
 from xml.etree.ElementPath import prepare_descendant
 import numpy as np
-from responses import target
 from src.model.M3SDA_model import M3SDA_model     
 from src.utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
