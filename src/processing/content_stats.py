@@ -37,7 +37,7 @@ def nth_repl(s, sub, repl, n):
     return s
 
 def plot_tsne_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,separators,file_suffix,components=20, language="english"):
-    path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(label_text).replace(" ","_") + file_suffix
+    path_fig = "./framework_results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(label_text).replace(" ","_") + file_suffix
     #colors
     palette = "colorblind"
     colors = sns.color_palette(palette, len(label_text))

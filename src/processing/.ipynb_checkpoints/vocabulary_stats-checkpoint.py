@@ -177,7 +177,7 @@ def getInterClassSimilarityMultiple(datasets,dataset_names,embedding_path,filter
     
     
 def plot_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,labels_count,axis_labels,dataset_names,palette = "colorblind"):
-    path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(dataset_names).replace(" ","_")
+    path_fig = "./framework_results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(dataset_names).replace(" ","_")
     colors = sns.color_palette(palette, len(labels_count))
     sns.set_palette(palette, len(labels_count))
     
@@ -259,7 +259,7 @@ def plot_similarity_scores(similarity_scores):
 
 def plotIntraDatasetSimilarityMultiple(title,subtitles,datasets,rows=2,cols=1,sync_scaling=False,cmap = "Blues",width=12,height=6):
     # path for storing image
-    path_fig = "./results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(subtitles).replace(" ","_")
+    path_fig = "./framework_results/"+strftime("%Y%m%d", gmtime())+ "-" + "-".join(subtitles).replace(" ","_")
     
     fig2 = plt.figure(constrained_layout=True,figsize=(width, height))
     fig2.suptitle(title,y=1.05,fontsize=16)

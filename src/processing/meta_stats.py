@@ -71,7 +71,7 @@ def plotTimeDistSingle(timestamps,title):
     
 def plotTimeDistMultiple(timestamps_list,labels,title,width=8,height=6):
     quantile = 0.05
-    path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(labels).replace(" ","_")
+    path_fig = "./framework_results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(labels).replace(" ","_")
     fig, axs = plt.subplots(len(timestamps_list),figsize=(width,height))
     fig.suptitle(title)
     fig.subplots_adjust(hspace=0.4)
@@ -229,7 +229,7 @@ def plotUserDistSingle(data,title,n=10):
     plt.show()
     
 def plotUserDistMultiple(data,title,subtitles,n=10,rows=2,cols=1,palette = "colorblind",width=12,height=6):
-    path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(subtitles).replace(" ","_")
+    path_fig = "./framework_results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(subtitles).replace(" ","_")
     fig2 = plt.figure(constrained_layout=True,figsize=(width, height))
     fig2.suptitle(title,y=1.05,fontsize=16)
     spec2 = gridspec.GridSpec(ncols=cols, nrows=rows, figure=fig2)
@@ -282,7 +282,7 @@ def plotUserDistMultiple(data,title,subtitles,n=10,rows=2,cols=1,palette = "colo
 
                
 def plotClassesMultiple(title,subtitles,data_full,data_available,rows=2,cols=1,sync_scaling=False,palette = "Blues",width=12,height=6):
-    path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(subtitles).replace(" ","_")
+    path_fig = "./framework_results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(subtitles).replace(" ","_")
     fig2 = plt.figure(constrained_layout=True,figsize=(width, height))
     fig2.suptitle(title,y=1.05,fontsize=16)
     spec2 = gridspec.GridSpec(ncols=cols, nrows=rows, figure=fig2)

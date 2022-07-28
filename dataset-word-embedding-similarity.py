@@ -65,7 +65,7 @@ def encode_labels(y_labels):
 
 def plot_embedding_annotate(tsne_embedded, axis_labels,dataset_names,palette = "colorblind"):
     now = datetime.now()
-    results_dir = "./results/"+"word_embeddings_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+    results_dir = "./framework_results/"+"word_embeddings_"+now.strftime("%Y%m%d-%H%M%S")+"/"
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     # path for storing image

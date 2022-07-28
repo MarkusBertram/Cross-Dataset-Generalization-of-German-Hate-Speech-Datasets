@@ -218,12 +218,12 @@ if __name__ == "__main__":
     cluword_labels = get_cluword_labels(cluword_path, components)
     
     
-    results_dir = "./results/"+"topic_model_all_classes_"+now.strftime("%Y-%m-%d_%H-%M-%S")+"/"
+    results_dir = "./framework_results/"+"topic_model_all_classes_"+now.strftime("%Y-%m-%d_%H-%M-%S")+"/"
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     # path for storing image
     path_fig = results_dir
-    #path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(label_text).replace(" ","_") + file_suffix
+    #path_fig = "./framework_results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(label_text).replace(" ","_") + file_suffix
     #colors
     palette = "colorblind"
     colors = sns.color_palette(palette, len(label_text))

@@ -153,7 +153,7 @@ if __name__ == "__main__":
     tokenizer = nlp.tokenizer
 
     now = datetime.now()
-    results_dir = "./results/"+"lsi_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+    results_dir = "./framework_results/"+"lsi_"+now.strftime("%Y%m%d-%H%M%S")+"/"
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     # path for storing image

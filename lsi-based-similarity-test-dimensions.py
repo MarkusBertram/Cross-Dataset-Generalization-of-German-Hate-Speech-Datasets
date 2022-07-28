@@ -147,7 +147,7 @@ if __name__ == "__main__":
     tokenizer = nlp.tokenizer
     for dim in dimensions:
         now = datetime.now()
-        results_dir = "./results/"+f"{dim}_lsi_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+        results_dir = "./framework_results/"+f"{dim}_lsi_"+now.strftime("%Y%m%d-%H%M%S")+"/"
         if os.path.exists(results_dir) == False:
             os.makedirs(results_dir)
         # path for storing image

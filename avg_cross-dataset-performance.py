@@ -379,7 +379,7 @@ if __name__ == '__main__':
             multiple_results.append(single_result)
         evaluation_results.append(multiple_results)
     now = datetime.now()
-    results_dir = "./results/"+"avg-cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+    results_dir = "./framework_results/"+"avg-cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     print("Macro F1")

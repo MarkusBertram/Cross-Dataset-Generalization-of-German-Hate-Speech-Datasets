@@ -185,7 +185,7 @@ def getInterClassSimilarityMultiple(datasets,dataset_names,embedding_path,filter
     
     
 def plot_embedding_annotate(tsne_embedded, labels, label_text, annotation_text,labels_count,axis_labels,dataset_names,palette = "colorblind"):
-    path_fig = "./results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(dataset_names).replace(" ","_")
+    path_fig = "./framework_results/"+strftime("%y%m%d", gmtime())+ "-" + "-".join(dataset_names).replace(" ","_")
     colors = sns.color_palette(palette, len(labels_count))
     sns.set_palette(palette, len(labels_count))
     

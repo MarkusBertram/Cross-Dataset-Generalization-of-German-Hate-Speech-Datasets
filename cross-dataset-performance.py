@@ -391,7 +391,7 @@ if __name__ == '__main__':
         single_result = pickle.load(open(file, "rb"))
         evaluation_results.append(single_result)
     now = datetime.now()
-    results_dir = "./results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
+    results_dir = "./framework_results/"+"cross-dataset_performance_"+now.strftime("%Y%m%d-%H%M%S")+"/"
     if os.path.exists(results_dir) == False:
         os.makedirs(results_dir)
     print("Macro F1")
