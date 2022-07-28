@@ -15,7 +15,7 @@ import re
 import unicodedata
 import yaml
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments, AdamW
-from utils.utils import fetch_import_module
+from src.utils.utils import fetch_import_module
 from pipelines import utils_pipeline
 from time import gmtime, strftime
 from tqdm import tqdm

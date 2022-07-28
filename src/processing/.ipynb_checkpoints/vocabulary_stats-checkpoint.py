@@ -21,7 +21,7 @@ from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 from sklearn.manifold import TSNE
 from utils import embedding_utils, dataset_sampling
-from utils.utils import print_data_example, preprocess_text, get_tweet_timestamp, separate_text_by_classes
+from src.utils.utils import print_data_example, preprocess_text, get_tweet_timestamp, separate_text_by_classes
 from adjustText import adjust_text
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import CountVectorizer

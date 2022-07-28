@@ -6,8 +6,8 @@ import os
 import json
 from xml.etree.ElementPath import prepare_descendant
 import numpy as np
-from model.labelled_only_model import labelled_only_model
-from utils.utils import (fetch_import_module, get_tweet_timestamp,
+from src.model.labelled_only_model import labelled_only_model
+from src.utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
                          separate_text_by_classes)
 
@@ -31,10 +31,10 @@ from torch.utils.data.dataset import ConcatDataset
 #from .helpers.measures import accuracy, auroc, f1
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
-from experiment_base import experiment_base
-from utils.exp_utils import CustomConcatDataset
+from src.experiments.experiment_base import experiment_base
+from src.utils.exp_utils import CustomConcatDataset
 
-class experiment_target_only(experiment_base):
+class experiment_source_combined(experiment_base):
     def __init__(
         self,
         basic_settings: Dict,
@@ -43,7 +43,7 @@ class experiment_target_only(experiment_base):
         writer: SummaryWriter,
 
     ):
-        super(experiment_target_only, self).__init__(basic_settings, exp_settings, writer)#, log_path, writer)
+        super(experiment_source_combined, self).__init__(basic_settings, exp_settings, writer)#, log_path, writer)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.current_experiment = exp_settings
@@ -80,11 +80,11 @@ class experiment_target_only(experiment_base):
                 target_labels = target_labels[0].to(self.device)
                 
                 class_output = self.model(input_data=target_features)
-
+                
                 loss = self.criterion(class_output, target_labels)
 
                 total_loss += loss.item()
-
+                
                 loss.backward()
                 self.optimizer.step()
 
@@ -98,7 +98,7 @@ class experiment_target_only(experiment_base):
         )
 
     def create_criterion(self) -> None:
-        self.criterion = nn.BCEWithLogitsLoss().to(self.device)
+        self.criterion = nn.BCEWithLogitsLoss()
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
@@ -109,11 +109,11 @@ class experiment_target_only(experiment_base):
     def create_model(self):
         
         if self.feature_extractor.lower() == "bert_cls":
-            from model.feature_extractors import BERT_cls
+            from src.model.feature_extractors import BERT_cls
             feature_extractor = BERT_cls()
             output_hidden_states = False
         elif self.feature_extractor.lower() == "bert_cnn":
-            from model.feature_extractors import BERT_cnn
+            from src.model.feature_extractors import BERT_cnn
             feature_extractor = BERT_cnn()
             output_hidden_states = True
         else:
@@ -122,7 +122,7 @@ class experiment_target_only(experiment_base):
         
 
         if self.task_classifier.lower() == "dann_task_classifier":
-            from model.task_classifiers import DANN_task_classifier
+            from src.model.task_classifiers import DANN_task_classifier
             task_classifier = DANN_task_classifier()
         else:
             raise ValueError("Can't find the task classifier name. \
@@ -131,15 +131,33 @@ class experiment_target_only(experiment_base):
         self.model = labelled_only_model(feature_extractor, task_classifier, output_hidden_states).to(self.device)
 
     def create_dataloader(self):
-                
+        # fetch source datasets
+        source_features = []
+        source_labels = []
+        for source_name in self.sources:
+            features, labels = self.fetch_dataset(source_name, labelled = True, target = False)
+            source_features.append(features)
+            source_labels.append(labels)
+
         # fetch labelled target dataset
         labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
         
-        labelled_target_dataset_train = TensorDataset(labelled_target_features_train, labelled_target_labels_train)
+        source_features.append(labelled_target_features_train)
+        source_labels.append(labelled_target_labels_train)
+
+        combined_source_features = torch.cat(source_features)
+        combined_source_labels = torch.cat(source_labels)
+        
+        # concatenate datasets
+        source_combined_dataset = TensorDataset(combined_source_features, combined_source_labels)
+        
+        del source_features
+        del source_labels
+        gc.collect()
 
         # create train dataloader
-        sampler = BatchSampler(RandomSampler(labelled_target_dataset_train), batch_size=self.batch_size, drop_last=False)
-        self.train_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=self.num_workers)            
+        sampler = BatchSampler(RandomSampler(source_combined_dataset), batch_size=self.batch_size, drop_last=False)
+        self.train_dataloader = DataLoader(dataset=source_combined_dataset, sampler = sampler, num_workers=self.num_workers)            
 
         # create test dataloader
         labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)

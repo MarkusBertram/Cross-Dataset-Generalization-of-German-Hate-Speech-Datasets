@@ -11,7 +11,7 @@ from gensim import corpora, models, similarities
 from datetime import datetime
 from spacy.tokenizer import Tokenizer
 from spacy.lang.de import German
-from utils.utils import fetch_import_module
+from src.utils.utils import fetch_import_module
 from nltk.corpus import stopwords
 import nltk
 import sys

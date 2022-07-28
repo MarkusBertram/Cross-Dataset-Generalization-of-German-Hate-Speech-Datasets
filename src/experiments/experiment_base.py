@@ -10,7 +10,7 @@ import sys
 import numpy as np
 from torchmetrics import F1Score
 
-from utils.utils import (fetch_import_module, get_tweet_timestamp,
+from src.utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
                          separate_text_by_classes)
 import pandas as pd

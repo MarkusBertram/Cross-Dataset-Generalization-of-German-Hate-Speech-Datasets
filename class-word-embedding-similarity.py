@@ -39,7 +39,7 @@ import processing.vocabulary_stats as vs
 from utils import dataset_sampling, embedding_utils
 from torch.utils.data import Dataset
 from sklearn import preprocessing
-from utils.utils import (fetch_import_module, get_tweet_timestamp,
+from src.utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
                          separate_text_by_classes)
 

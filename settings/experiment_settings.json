@@ -13,7 +13,7 @@
         "stratify_unlabelled": true,
         "equal_labelled_size": false,
         "epochs": 2,
-        "batch_size": 8,
+        "batch_size": 2,
         "weight_decay": 0,
         "lr": 2e-5,
         "momentum": 0,

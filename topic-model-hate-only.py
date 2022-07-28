@@ -42,7 +42,7 @@ from utils import dataset_sampling, embedding_utils
 #from torch.utils.datasets import Dataset
 from processing.preprocessing_multilingual import preprocess_text
 from sklearn import preprocessing
-from utils.utils import fetch_import_module
+from src.utils.utils import fetch_import_module
 from nltk.corpus import stopwords  
 from nltk.tokenize import word_tokenize  
 from nltk.tokenize import wordpunct_tokenize

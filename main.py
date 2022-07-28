@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime
 from torch.multiprocessing import Pool, Process, set_start_method
 import torch
-#from model.get_model_alt import get_model
+#from src.model.get_model_alt import get_model
 from torch.utils.tensorboard import SummaryWriter
 import gc
 
@@ -32,48 +32,48 @@ def run_experiments(config):
 
             exp_type = exp_setting["exp_type"]
             if exp_type == "target_only":
-                from experiment_target_only import experiment_target_only
+                from src.experiments.experiment_target_only import experiment_target_only
                 current_exp = experiment_target_only(
                     basic_settings, exp_setting, writer
                 )
             elif exp_type == "source_combined":
-                from experiment_source_combined import experiment_source_combined
+                from src.experiments.experiment_source_combined import experiment_source_combined
                 current_exp = experiment_source_combined(
                     basic_settings, exp_setting, writer
                 )
             elif exp_type == "single_source":
-                from experiment_single_source import experiment_single_source
+                from src.experiments.experiment_single_source import experiment_single_source
                 current_exp = experiment_single_source(
                     basic_settings, exp_setting, writer
                 )
             elif exp_type == "DANN":
-                from experiment_DANN import experiment_DANN
+                from src.experiments.experiment_DANN import experiment_DANN
                 current_exp = experiment_DANN(
                     basic_settings, exp_setting, writer
                 )
 
             elif exp_type == "DIRT_T":
-                from experiment_DIRT_T import experiment_DIRT_T
+                from src.experiments.experiment_DIRT_T import experiment_DIRT_T
                 current_exp = experiment_DIRT_T(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
             elif exp_type == "MME":
-                from experiment_MME import experiment_MME
+                from src.experiments.experiment_MME import experiment_MME
                 current_exp = experiment_MME(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
             elif exp_type == "LIRR":
-                from experiment_LIRR import experiment_LIRR
+                from src.experiments.experiment_LIRR import experiment_LIRR
                 current_exp = experiment_LIRR(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
             elif exp_type == "MDAN":
-                from experiment_MDAN import experiment_MDAN
+                from src.experiments.experiment_MDAN import experiment_MDAN
                 current_exp = experiment_MDAN(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
             elif exp_type == "M3SDA":
-                from experiment_M3SDA import experiment_M3SDA
+                from src.experiments.experiment_M3SDA import experiment_M3SDA
                 current_exp = experiment_M3SDA(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )

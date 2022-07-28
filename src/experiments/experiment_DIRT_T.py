@@ -7,8 +7,8 @@ import json
 from torch import autograd
 from xml.etree.ElementPath import prepare_descendant
 import numpy as np
-from model.DIRT_T_model import DIRT_T_model   
-from utils.utils import (fetch_import_module, get_tweet_timestamp,
+from src.model.DIRT_T_model import DIRT_T_model   
+from src.utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
                          separate_text_by_classes)
 
@@ -32,9 +32,9 @@ import gc
 from torch.utils.data.dataset import ConcatDataset
 #from .helpers.measures import accuracy, auroc, f1
 from torch.utils.data import Dataset, DataLoader, TensorDataset
-from vat_loss import *
-from experiment_base import experiment_base
-from utils.exp_utils import CustomConcatDataset
+from src.vat_loss import *
+from src.experiments.experiment_base import experiment_base
+from src.utils.exp_utils import CustomConcatDataset
 import torch.nn.functional as F
 from transformers import BertModel
 
@@ -255,12 +255,12 @@ class experiment_DIRT_T(experiment_base):
     def create_model(self):
         
         if self.feature_extractor.lower() == "bert_cls":
-            from model.feature_extractors import BERT_cls_token_input
+            from src.model.feature_extractors import BERT_cls_token_input
             #import .model.feature_extractors
             feature_extractor = BERT_cls_token_input()
             self.output_hidden_states = False
         elif self.feature_extractor.lower() == "bert_cnn":
-            from model.feature_extractors import BERT_cnn
+            from src.model.feature_extractors import BERT_cnn
             feature_extractor = BERT_cnn()
             self.output_hidden_states = True
         else:
@@ -269,14 +269,14 @@ class experiment_DIRT_T(experiment_base):
         
 
         if self.task_classifier.lower() == "dann_task_classifier":
-            from model.task_classifiers import DANN_task_classifier
+            from src.model.task_classifiers import DANN_task_classifier
             task_classifier = DANN_task_classifier()
         else:
             raise ValueError("Can't find the task classifier name. \
             Please specify the task classifier class name as key in experiment settings of the current experiment.")
             
         if self.domain_classifier.lower() == "dann_domain_classifier":
-            from model.domain_classifiers import DANN_domain_classifier
+            from src.model.domain_classifiers import DANN_domain_classifier
             domain_classifier = DANN_domain_classifier()
         else:
             raise ValueError("Can't find the domain classifier name. \
