@@ -215,7 +215,7 @@ class experiment_DIRT_T(experiment_base):
                 vat_tgt_loss    = self.tgt_vat(target_bert_output, target_class_output, self.model)
 
                 loss = self.lambda_t*conditionE_loss + self.lambda_t*vat_tgt_loss + self.beta*dirt_loss 
-
+                
                 loss.backward()
                 self.optimizer.step()
                 self.optimizer2.step()
@@ -255,9 +255,9 @@ class experiment_DIRT_T(experiment_base):
     def create_model(self):
         
         if self.feature_extractor.lower() == "bert_cls":
-            from src.model.feature_extractors import BERT_cls_token_input
+            from src.model.feature_extractors import BERT_cls
             #import .model.feature_extractors
-            feature_extractor = BERT_cls_token_input()
+            feature_extractor = BERT_cls()
             self.output_hidden_states = False
         elif self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
