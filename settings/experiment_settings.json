@@ -13,7 +13,7 @@
         "stratify_unlabelled": true,
         "equal_labelled_size": false,
         "epochs": 2,
-        "batch_size": 2,
+        "batch_size": 8,
         "weight_decay": 0,
         "lr": 2e-5,
         "momentum": 0,
@@ -28,105 +28,46 @@
         "verbose": true
         },
         "exp_settings": [
-          
           {
-            "exp_type": "DIRT_T",
-            "exp_name": "DIRT_T_cls",
+            "exp_type": "LIRR",
+            "exp_name": "LIRR_cls",
             "feature_extractor": "bert_cls",
             "task_classifier": "DANN_task_classifier",
             "domain_classifier": "DANN_domain_classifier",
-            "alignment_component": "DIRT_T",
-            "model": "DIRT_T",
-            "l1":10,
-            "beta1":0.01,
-            "radius": 0.01,
-            "xi": 10,
-            "eps": 1.0,
-            "ip": 1,
-            "beta_t": 0.01,
-            "lambda_d": 0.01,
-            "lambda_s": 0.01,
-            "lambda_t": 0.01
-        },
-        
-        {
-          "exp_type": "MME",
-          "exp_name": "MME_cls",
-          "feature_extractor": "bert_cls",
-          "task_classifier": "DANN_task_classifier",
-          "domain_classifier": "DANN_domain_classifier",
-          "alignment_component": "MME",
-          "model": "MME"
-      
-        },
-        {
-          "exp_type": "LIRR",
-          "exp_name": "LIRR_cls",
-          "feature_extractor": "bert_cls",
-          "task_classifier": "DANN_task_classifier",
-          "domain_classifier": "DANN_domain_classifier",
-          "alignment_component": "LIRR",
-          "model": "LIRR",
-          "lamda": 10,
-          "eta": 1.0
-        },
-        {
-          "exp_type": "MDAN",
-          "exp_name": "MDAN_cls",
-          "feature_extractor": "bert_cls",
-          "task_classifier": "DANN_task_classifier",
-          "domain_classifier": "DANN_domain_classifier",
-          "alignment_component": "MDAN",
-          "model": "MDAN",
-          "lamda": 10,
-          "eta": 1.0,
-          "gamma": 10,
-          "mu": 1e-2
-        },
-
+            "alignment_component": "LIRR",
+            "model": "LIRR",
+            "lamda": 10,
+            "eta": 1.0
+          },
           {
-            "exp_type": "M3SDA",
-            "exp_name": "M3SDA_cls",
+            "exp_type": "MDAN",
+            "exp_name": "MDAN_cls",
             "feature_extractor": "bert_cls",
             "task_classifier": "DANN_task_classifier",
             "domain_classifier": "DANN_domain_classifier",
-            "alignment_component": "M3SDA",
-            "model": "M3SDA",
+            "alignment_component": "MDAN",
+            "model": "MDAN",
             "lamda": 10,
             "eta": 1.0,
             "gamma": 10,
             "mu": 1e-2
           },
-          {
-            "exp_type": "target_only",
-            "exp_name": "target_only_cls",
-            "feature_extractor": "bert_cls",
-            "task_classifier": "DANN_task_classifier"
-        
-          },
-          {
-            "exp_type": "source_combined",
-            "exp_name": "source_combined_cls",
-            "feature_extractor": "bert_cls",
-            "task_classifier": "DANN_task_classifier"
-        
-          },
-          {
-            "exp_type": "single_source",
-            "exp_name": "germeval2018_cls",
-            "feature_extractor": "bert_cls",
-            "task_classifier": "DANN_task_classifier",
-            "source_name": "germeval2018"        
-          },
-          {
-            "exp_type": "DANN",
-            "exp_name": "DANN_cls",
-            "feature_extractor": "bert_cls",
-            "task_classifier": "DANN_task_classifier",
-            "domain_classifier": "DANN_domain_classifier",
-            "l1":10,
-            "alpha": 0.1
-          }
+  
+            {
+              "exp_type": "M3SDA",
+              "exp_name": "M3SDA_cls",
+              "feature_extractor": "bert_cls",
+              "task_classifier": "DANN_task_classifier",
+              "domain_classifier": "DANN_domain_classifier",
+              "alignment_component": "M3SDA",
+              "model": "M3SDA",
+              "lamda": 10,
+              "eta": 1.0,
+              "gamma": 10,
+              "mu": 1e-2
+            }
+          
+          
           
         ]
       }
