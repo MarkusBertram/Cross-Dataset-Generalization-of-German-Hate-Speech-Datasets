@@ -168,6 +168,7 @@ class experiment_DANN(experiment_base):
         # fetch source datasets
         source_features = []
         source_labels = []
+
         for source_name in self.sources:
             features, labels = self.fetch_dataset(source_name, labelled = True, target = False)
             source_features.append(features)

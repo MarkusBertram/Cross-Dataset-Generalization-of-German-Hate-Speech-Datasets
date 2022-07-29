@@ -14,16 +14,16 @@ from torch.autograd import Function
 class ReverseLayerF(Function):
 
     @staticmethod
-    def forward(ctx, x, alpha):
-        ctx.alpha = alpha
+    def forward(self, x):
 
         return x.view_as(x)
 
     @staticmethod
-    def backward(ctx, grad_output):
-        output = grad_output.neg() * ctx.alpha
+    def backward(self, grad_output):
+        grad_input = grad_output.clone()
+        grad_input = -grad_input
 
-        return output, None
+        return grad_input
 
 class MDAN_model(nn.Module):
     def __init__(self, feature_extractor_module, task_classifier_module, domain_classifier_module, output_hidden_states, num_src_domains):
@@ -39,41 +39,45 @@ class MDAN_model(nn.Module):
         # Gradient reversal layer.
         #self.grls = [ReverseLayerF() for _ in range(self.num_src_domains)]
 
-    def forward(self, src_input_data, tgt_input_data, alpha=1):
+    def forward(self, src_input_data, tgt_input_data):
         """
-        :param sinputs:     A list of k inputs from k source domains.
+        :param sinputs:     A list of k inputs from k source domains. [k, batch_size, 2, 512]
         :param tinputs:     Input from the target domain.
         :return:
         """
-        sh_relu, th_relu = src_input_data, tgt_input_data
-
         # Source Feature Extractor Outputs:
-        for i in range(self.num_src_domains):
-            sh_relu[i] = self.bert(input_ids=sh_relu[i][:,0], attention_mask=sh_relu[i][:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
-            sh_relu[i] = self.feature_extractor(sh_relu[i])
+        source_features = []
+        for src_dset_batch in src_input_data:
+            source_bert_output = self.bert(input_ids=src_dset_batch[:,0], attention_mask=src_dset_batch[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
+            source_feature_output = self.feature_extractor(source_bert_output)
+            source_features.append(source_feature_output)
+
+        source_feature_outputs = torch.stack(source_features)
+        
         # Target Feature Extractor Outputs:
-        th_relu = self.bert(input_ids=th_relu[:,0], attention_mask=th_relu[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
-        th_relu = self.feature_extractor(th_relu)
+        target_features = self.bert(input_ids=tgt_input_data[:,0], attention_mask=tgt_input_data[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
+        target_features = self.feature_extractor(target_features)
 
         # Task Classification probabilities on k source domains.
-        probs = []
-        for i in range(self.num_src_domains):
-            probs.append(self.task_classifier(sh_relu[i]))
+        class_probabilities = torch.stack([self.task_classifier(source_feature) for source_feature in source_feature_outputs])
 
-        # Domain classification accuracies.
-        sdomains, tdomains = [], []
+        # # Domain classification accuracies.
+        # sdomains, tdomains = [], []
+        
+        # for i in range(self.num_src_domains):
+        #     #sh_relu[i] = self.grls[i].apply(sh_relu[i], alpha)
+        #     #th_relu_i = self.grls[i].apply(th_relu, alpha)
 
-        for i in range(self.num_src_domains):
-            #sh_relu[i] = self.grls[i].apply(sh_relu[i], alpha)
-            #th_relu_i = self.grls[i].apply(th_relu, alpha)
+        #     reverse_src_feature = ReverseLayerF.apply(source_feature_outputs[i], alpha)
+        #     reverse_target_feature = ReverseLayerF.apply(target_features, alpha)
 
-            sh_relu[i] = ReverseLayerF.apply(sh_relu[i], alpha)
-            th_relu_i = ReverseLayerF.apply(th_relu, alpha)
-
-            sdomains.append(self.domain_classifiers[i](sh_relu[i]))
-            tdomains.append(self.domain_classifiers[i](th_relu_i))
-
-        return probs, sdomains, tdomains
+        #     sdomains.append(self.domain_classifiers[i](sh_relu[i]))
+        #     tdomains.append(self.domain_classifiers[i](th_relu_i))
+        
+        sdomains = torch.stack([self.domain_classifiers[i](ReverseLayerF.apply(source_feature_outputs[i])) for i in range(self.num_src_domains)])
+        tdomains = torch.stack([self.domain_classifiers[i](ReverseLayerF.apply(target_features)) for i in range(self.num_src_domains)])
+        
+        return class_probabilities, sdomains, tdomains
 
     # inference for testing
     def inference(self, input_data):

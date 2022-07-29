@@ -113,33 +113,30 @@ class experiment_MDAN(experiment_base):
             for i, (source_batches, unlabelled_target_batch) in enumerate(train_dataloader):
                 self.optimizer.zero_grad()
 
-                source_feature_list = []
-                source_labels_list = []
-
-                for i in range(len(self.source_dataloader_list)):
-                    source_feature_list.append(source_batches[i][0][0].to(self.device))
-                    source_labels_list.append(source_batches[i][1][0].to(self.device))
+                source_features = torch.stack([batch[0][0] for batch in source_batches]).to(self.device)
+                source_labels = torch.stack([batch[1][0] for batch in source_batches]).to(self.device)
                 
                 unlabelled_target_features = unlabelled_target_batch[0][0].to(self.device)
                 
-                slabels = torch.ones(self.batch_size, requires_grad=False).type(torch.FloatTensor).to(self.device)
-                tlabels = torch.zeros(self.batch_size, requires_grad=False).type(torch.FloatTensor).to(self.device)
+                slabels = torch.ones(self.batch_size).type(torch.FloatTensor).to(self.device)
+                tlabels = torch.zeros(self.batch_size).type(torch.FloatTensor).to(self.device)
 
-                probs, sdomains, tdomains = self.model(source_feature_list, unlabelled_target_features)
+                class_probabilities, source_domain_probabilities, target_domain_probabilities = self.model(source_features, unlabelled_target_features)
 
                 # Compute prediction accuracy on multiple training sources.
-                losses = torch.stack([self.bce_loss(probs[j], source_labels_list[j]) for j in range(len(self.source_dataloader_list))])
+                losses = torch.stack([self.bce_loss(class_probabilities[j], source_labels[j]) for j in range(len(self.source_dataloader_list))])
 
-                domain_losses = torch.stack([self.bce_loss(sdomains[j], slabels) +
-                                           self.bce_loss(tdomains[j], tlabels) for j in range(len(self.source_dataloader_list))])
+                # Compute domain discrepency loss on the training sources and the unlabelled target batch
+                domain_losses = torch.stack([self.bce_loss(source_domain_probabilities[j], slabels) + self.bce_loss(target_domain_probabilities[j], tlabels) for j in range(len(self.source_dataloader_list))])
 
+                # Soft version loss (6)
                 loss = torch.log(torch.sum(torch.exp(self.gamma * (losses + self.mu * domain_losses)))) / self.gamma
 
                 loss.backward()
                 self.optimizer.step()
-
+                
     def create_optimizer(self) -> None:
-        self.optimizer = optim.Adadelta(self.model.parameters(), lr=self.lr)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
     def create_criterion(self) -> None:
         self.bce_loss = nn.BCEWithLogitsLoss()

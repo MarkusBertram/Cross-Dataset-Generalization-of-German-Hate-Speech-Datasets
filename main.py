@@ -8,7 +8,8 @@ import torch
 #from src.model.get_model_alt import get_model
 from torch.utils.tensorboard import SummaryWriter
 import gc
-
+import random
+import numpy as np
 import sys
 def run_experiments(config):
     #log_file = Path(log_dir / "results.csv")
@@ -17,7 +18,11 @@ def run_experiments(config):
         writer = SummaryWriter()
 
         basic_settings = experiment["basic_settings"]
-        
+        if "seed" in basic_settings:
+            torch.manual_seed(basic_settings["seed"])
+            random.seed(basic_settings["seed"])
+            np.random.seed(basic_settings["seed"])
+
         for exp_setting in experiment["exp_settings"]:
 
             if exp_setting.get("perform_experiment", True):

@@ -7,6 +7,7 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, Auto
 import re
 import unicodedata
 import sys
+import itertools
 import numpy as np
 from torchmetrics import F1Score
 
@@ -131,9 +132,8 @@ class experiment_base(ABC):
     
     def preprocess(self, batch):
         batch = cleanTweets(batch)
-        #batch["text"] = [cleanTweets(b) for b in batch["text"]]
-        #batch = [cleanTweets(b) for b in batch]
-        return pd.Series(self.tokenizer(batch, padding="max_length", truncation=True, max_length=512, return_token_type_ids = False))
+
+        return pd.Series(self.tokenizer(batch, truncation=True, max_length=self.truncation_length, padding = "max_length",  return_token_type_ids = False))
     
     def fetch_dataset(self, dataset_name, labelled = True, target = False):
 
@@ -154,8 +154,8 @@ class experiment_base(ABC):
            self.abusive_ratio = dset_df["label"].value_counts(normalize = True)["abusive"]
         
         # tokenize each row in dataframe
-        #tokens_df = dset_df.apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
         tokens_df = dset_df.apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
+
         tokens_array = np.array(tokens_df[["input_ids", "attention_mask"]].values.tolist())
         tokens_tensor = torch.from_numpy(tokens_array)
 
@@ -186,6 +186,7 @@ class experiment_base(ABC):
             "ihs_labelled",
             "covid_2021"
         ])
+        self.truncation_length = self.basic_settings.get("truncation_length", 512)
         self.num_workers = self.basic_settings.get("num_workers", 8)
         # training settings
         self.freeze_BERT_weights = self.basic_settings.get("freeze_BERT_weights", True)

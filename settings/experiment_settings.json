@@ -17,6 +17,7 @@
         "weight_decay": 0,
         "lr": 2e-5,
         "momentum": 0,
+        "truncation_length" : 128,
         "lr_scheduler": true,
         "validation_split": 0.1,
         "train_split": 0.05,
@@ -28,7 +29,28 @@
         "verbose": true
         },
         "exp_settings": [
-          
+          {
+            "exp_type": "DANN",
+            "exp_name": "DANN_cls",
+            "feature_extractor": "bert_cls",
+            "task_classifier": "DANN_task_classifier",
+            "domain_classifier": "DANN_domain_classifier",
+            "l1":10,
+            "alpha": 0.1
+          },
+          {
+            "exp_type": "MDAN",
+            "exp_name": "MDAN_cls",
+            "feature_extractor": "bert_cls",
+            "task_classifier": "DANN_task_classifier",
+            "domain_classifier": "DANN_domain_classifier",
+            "alignment_component": "MDAN",
+            "model": "MDAN",
+            "lamda": 10,
+            "eta": 1.0,
+            "gamma": 10,
+            "mu": 1e-2
+          },
   
             {
               "exp_type": "M3SDA",
