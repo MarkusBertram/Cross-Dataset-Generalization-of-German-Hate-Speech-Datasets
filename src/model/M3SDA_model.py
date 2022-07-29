@@ -74,12 +74,10 @@ class M3SDA_model(nn.Module):
         for i in range(self.num_src_domains):
             pred1 = self.task_classifiers[i][0](feature_extractor_output)
             pred2 = self.task_classifiers[i][1](feature_extractor_output)
-
             avg_pred = (pred1 + pred2) / 2.0
             prediction_list.append(avg_pred)
 
-        final_pred = torch.tensor([0])
+        final_pred = torch.zeros_like(prediction_list[0])
         for i in range(self.num_src_domains):
             final_pred += self.weights[i] * prediction_list[i]
-
         return final_pred
