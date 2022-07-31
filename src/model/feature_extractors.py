@@ -41,7 +41,7 @@ class BERT_cnn(nn.Module):
         super(BERT_cnn, self).__init__()
         self.num_labels = 2
         # truncation length
-        self.feature_extractor_conv = nn.Conv2d(in_channels=13, out_channels=13, kernel_size=(3, 768), padding=True)
+        self.feature_extractor_conv = nn.Conv2d(in_channels=13, out_channels=13, kernel_size=(3, 768), padding = (1,0))
         self.feature_extractor_relu = nn.ReLU()
         self.feature_extractor_pool = nn.MaxPool2d(kernel_size=3, stride=1)
         self.feature_extractor_dropout = nn.Dropout(0.1)
