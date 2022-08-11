@@ -4,7 +4,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import CountVectorizer
 
-from tools.cluwords.alfa_algorithms import AlfaKnn
+from src.tools.cluwords.alfa_algorithms import AlfaKnn
 
 
 class Cluwords:

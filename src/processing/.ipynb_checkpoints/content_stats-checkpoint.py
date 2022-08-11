@@ -6,13 +6,13 @@ import re
 import seaborn as sns
 import matplotlib.pyplot as plt
 import arabic_reshaper
-import processing.preprocessing_multilingual as preprocessing_multilingual
+import src.processing.preprocessing_multilingual as preprocessing_multilingual
 
 from bidi.algorithm import get_display
 from collections import defaultdict
-from processing import cluwords_evaluation
-from utils import embedding_utils, dataset_sampling
-from tools.cluwords import cluwords_launcher
+from src.processing import cluwords_evaluation
+from src.utils import embedding_utils, dataset_sampling
+from src.tools.cluwords import cluwords_launcher
 from time import gmtime, strftime
 from adjustText import adjust_text
 from sklearn.manifold import TSNE

@@ -1,6 +1,6 @@
 import re
 import nltk
-import processing.emoji as emoji
+import src.processing.emoji as emoji
 import sys
 nltk.download('punkt')
 

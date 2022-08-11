@@ -1,7 +1,7 @@
 import re
 import nltk
-import processing.emoji as emoji
-import processing.preprocessing_arabic as preprocessing_arabic
+import src.processing.emoji as emoji
+import src.processing.preprocessing_arabic as preprocessing_arabic
 
 from nltk.corpus import stopwords  
 from nltk.tokenize import word_tokenize  

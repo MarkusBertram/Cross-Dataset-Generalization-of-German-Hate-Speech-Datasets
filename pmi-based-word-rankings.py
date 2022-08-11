@@ -31,15 +31,15 @@ from sklearn.metrics import SCORERS
 from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoConfig
 from decimal import *
 import torch
-import processing.basic_stats
-import processing.emoji as emoji
-import processing.preprocessing_multilingual as preprocessing_multilingual
-import processing.user_stats
+import src.processing.basic_stats
+import src.processing.emoji as emoji
+import src.processing.preprocessing_multilingual as preprocessing_multilingual
+import src.processing.user_stats
 from torch.utils.data import Dataset, TensorDataset
-import processing.vocabulary_stats as vs
-from utils import dataset_sampling, embedding_utils
+import src.processing.vocabulary_stats as vs
+from src.utils import dataset_sampling, embedding_utils
 from torch.utils.data import Dataset
-from processing.preprocessing_multilingual import preprocess_text
+from src.processing.preprocessing_multilingual import preprocess_text
 from sklearn import preprocessing
 from src.utils.utils import fetch_import_module
 from nltk.tokenize import word_tokenize  
@@ -95,7 +95,6 @@ def getPmisPerClass(X_vec,Y,words):
                 pmis_per_class[label][words[i]] = pmi
 
 
-            #oddsratio, p_value = fisher_exact()
     return pmis_per_class
 
 if __name__ == "__main__":
@@ -149,7 +148,6 @@ if __name__ == "__main__":
                 if i >= n:
                     break
                 if word not in stop_words:
-                    print(sorted_dict[word])
                     column.append(word)
                     i+=1
 

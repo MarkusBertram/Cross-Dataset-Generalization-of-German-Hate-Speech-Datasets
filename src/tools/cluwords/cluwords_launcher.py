@@ -1,4 +1,4 @@
-from tools.cluwords.script_functions import create_embedding_models, generate_topics
+from src.tools.cluwords.script_functions import create_embedding_models, generate_topics
 import os
 
 """
@@ -7,7 +7,7 @@ It needs to be predefined to include your local CluWords setup, see below
 Afterwards CluWords can be run easily from within notebooks by calling generate_cluwords()
 """
 
-MAIN_PATH='tools/cluwords'
+MAIN_PATH='src/tools/cluwords'
 EMBEDDING_RESULTS = 'multi_embedding'
 PATH_TO_SAVE_RESULTS = '{}/cluwords/{}/results'.format(MAIN_PATH, EMBEDDING_RESULTS)
 PATH_TO_SAVE_MODEL = '{}/cluwords/{}/datasets/gn_w2v_models'.format(MAIN_PATH, EMBEDDING_RESULTS)

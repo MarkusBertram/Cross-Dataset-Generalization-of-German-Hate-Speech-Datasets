@@ -7,8 +7,8 @@ from datetime import datetime
 from math import log
 from time import gmtime, strftime
 import sys
-from processing import cluwords_evaluation
-from tools.cluwords import cluwords_launcher
+from src.processing import cluwords_evaluation
+from src.tools.cluwords import cluwords_launcher
 from pprint import pprint
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -32,15 +32,15 @@ from sklearn.manifold import TSNE
 from sklearn.metrics import SCORERS
 from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoConfig
 import torch
-import processing.basic_stats
-import processing.emoji as emoji
-import processing.preprocessing_multilingual as preprocessing_multilingual
-import processing.user_stats
+import src.processing.basic_stats
+import src.processing.emoji as emoji
+import src.processing.preprocessing_multilingual as preprocessing_multilingual
+import src.processing.user_stats
 #from torch.utils.datasets import Dataset, TensorDataset
-import processing.vocabulary_stats as vs
-from utils import dataset_sampling, embedding_utils
+import src.processing.vocabulary_stats as vs
+from src.utils import dataset_sampling, embedding_utils
 #from torch.utils.datasets import Dataset
-from processing.preprocessing_multilingual import preprocess_text
+from src.processing.preprocessing_multilingual import preprocess_text
 from sklearn import preprocessing
 from src.utils.utils import fetch_import_module
 from nltk.corpus import stopwords  

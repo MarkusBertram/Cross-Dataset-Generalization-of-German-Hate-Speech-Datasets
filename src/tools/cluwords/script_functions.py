@@ -5,9 +5,9 @@ from pyjarowinkler import distance
 import timeit
 from scipy.sparse import csr_matrix
 from sklearn.decomposition import NMF
-from tools.cluwords.cluwords import Cluwords, CluwordsTFIDF
-from tools.cluwords.metrics import Evaluation
-from tools.cluwords.embedding import CreateEmbeddingModels
+from src.tools.cluwords.cluwords import Cluwords, CluwordsTFIDF
+from src.tools.cluwords.metrics import Evaluation
+from src.tools.cluwords.embedding import CreateEmbeddingModels
 from sklearn.neighbors import NearestNeighbors
 from sklearn.feature_extraction.text import CountVectorizer
 

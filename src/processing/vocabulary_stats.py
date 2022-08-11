@@ -1,8 +1,8 @@
 from sklearn.metrics import SCORERS
 from transformers import AutoTokenizer, AutoModelForMaskedLM
-import processing.vocabulary_stats as vs
-import processing.basic_stats
-import processing.user_stats
+import src.processing.vocabulary_stats as vs
+import src.processing.basic_stats
+import src.processing.user_stats
 import nltk
 import pickle
 import numpy as np
@@ -13,15 +13,15 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import warnings
-import processing.emoji as emoji
-import processing.preprocessing_multilingual as preprocessing_multilingual
+import src.processing.emoji as emoji
+import src.processing.preprocessing_multilingual as preprocessing_multilingual
 
 from gensim import corpora, models, similarities
 from gensim.test.utils import datapath, get_tmpfile
 from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 from sklearn.manifold import TSNE
-from utils import embedding_utils, dataset_sampling
+from src.utils import embedding_utils, dataset_sampling
 from src.utils.utils import print_data_example, preprocess_text, get_tweet_timestamp, separate_text_by_classes
 from adjustText import adjust_text
 from sklearn.decomposition import PCA
