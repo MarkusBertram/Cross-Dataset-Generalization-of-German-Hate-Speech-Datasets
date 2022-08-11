@@ -160,6 +160,9 @@ class experiment_DIRT_T(experiment_base):
 
                 self.optimizer.step()
 
+        # check test performance after VADA
+        self.test()
+
         ############ DIRT_T Training
 
         self.teacher = copy.deepcopy(self.model)
