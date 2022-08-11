@@ -5,6 +5,7 @@ import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments, AdamW, get_scheduler
 import re
+from datetime import datetime
 import unicodedata
 import sys
 import itertools
@@ -90,8 +91,10 @@ class experiment_base(ABC):
         targets = torch.cat(targets)
         f1score = f1(outputs, targets)
 
-        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}", avg_test_acc)
-        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}", f1score.item())
+        now = datetime.now()
+
+        self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}/{now}", avg_test_acc)
+        self.writer.add_scalar(f"F1_score/Test/{self.exp_name}/{now}", f1score.item())
 
         # add hparams
         self.writer.add_hparams(
