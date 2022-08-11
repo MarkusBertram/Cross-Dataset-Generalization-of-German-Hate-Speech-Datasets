@@ -173,8 +173,8 @@ class experiment_DIRT_T(experiment_base):
         for param in teacher_params:
             param.requires_grad = False
 
-        self.optimizer   = optim.Adam(self.model.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
-        self.optimizer2  = WeightEMA(teacher_params, student_params)#DelayedWeight(teacher_params, student_params)
+        #self.optimizer   = optim.Adam(self.model.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
+        #self.optimizer2  = WeightEMA(teacher_params, student_params)#DelayedWeight(teacher_params, student_params)
         
         self.crossE      = nn.BCEWithLogitsLoss().to(self.device)
         self.conditionE  = ConditionalEntropy().to(self.device)
@@ -194,14 +194,11 @@ class experiment_DIRT_T(experiment_base):
 
         for epoch in range(1, self.epochs + 1):
             self.model.train()
-            total_loss = 0
-
-            len_dataloader = len(self.train_dataloader)
 
             for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
 
                 self.optimizer.zero_grad(set_to_none=True)
-                self.optimizer2.zero_grad()
+                #self.optimizer2.zero_grad()
 
                 unlabelled_target_features = unlabelled_target_features[0].to(self.device)
                 target_bert_output = self.bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
@@ -221,7 +218,16 @@ class experiment_DIRT_T(experiment_base):
                 
                 loss.backward()
                 self.optimizer.step()
-                self.optimizer2.step()
+                #self.optimizer2.step()
+
+            # polyak averaging
+            # https://discuss.pytorch.org/t/copying-weights-from-one-net-to-another/1492/17
+            for target_param, param in zip(self.teacher.parameters(), self.model.parameters()):
+                print(target_param)
+                print(param)
+                print(0.998*param.data + target_param.data*(1.0 - 0.998))
+                target_param.data.copy_(0.998*param.data + target_param.data*(1.0 - 0.998))
+
 
 
     def create_optimizer(self) -> None:
@@ -229,7 +235,7 @@ class experiment_DIRT_T(experiment_base):
         self.optimizer = optim.Adam(params, lr=self.lr, betas=(self.beta1, self.beta2))
 
         params = list(self.model.feature_extractor.parameters()) + list(self.model.domain_classifier.parameters())
-        self.optimizer2 = optim.Adam(params, lr = self.lr, betas=(self.beta1, self.beta2))   
+        #self.optimizer2 = optim.Adam(params, lr = self.lr, betas=(self.beta1, self.beta2))   
            
     def create_criterion(self) -> None:
         self.crossE      = nn.BCEWithLogitsLoss().to(self.device)
