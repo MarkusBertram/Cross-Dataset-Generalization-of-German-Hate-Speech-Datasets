@@ -186,10 +186,10 @@ class experiment_MDAN(experiment_base):
         # fetch source datasets
         source_datasets = []
         for source_name in self.sources:
-            features, labels = self.fetch_dataset(source_name, labelled = True, target = False)
-            source_datasets.append(TensorDataset(features, labels))
+            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            source_datasets.append(TensorDataset(train_features, train_labels))
         
-        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
+        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
 
         # add labelled target train dataset to source domains
         source_datasets.append(TensorDataset(labelled_target_features_train, labelled_target_labels_train))

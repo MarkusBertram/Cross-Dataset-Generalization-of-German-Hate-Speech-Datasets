@@ -47,7 +47,7 @@ class BERT_cnn(nn.Module):
         self.feature_extractor_dropout = nn.Dropout(0.1)
         self.feature_extractor_fc = nn.Linear(442, 3)
         self.feature_extractor_flat = nn.Flatten()
-        self.feature_extractor_softmax = nn.LogSoftmax(dim=1)
+        #self.feature_extractor_softmax = nn.LogSoftmax(dim=1)
        
     def forward(self, bert_output, input_is_bert = True):
         if input_is_bert:
@@ -56,7 +56,7 @@ class BERT_cnn(nn.Module):
             x = bert_output
         
         x = self.feature_extractor_dropout(x)
-        print(x.size())
+
         x = self.feature_extractor_conv(x)
         x = self.feature_extractor_relu(x)
         x = self.feature_extractor_dropout(x)
@@ -66,5 +66,5 @@ class BERT_cnn(nn.Module):
         x = self.feature_extractor_flat(x)
         x = self.feature_extractor_dropout(x)
         x = self.feature_extractor_fc(x)
-        return self.feature_extractor_softmax(x)
+        return #self.feature_extractor_softmax(x)
 

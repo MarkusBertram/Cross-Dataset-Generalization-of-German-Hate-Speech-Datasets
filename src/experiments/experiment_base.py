@@ -8,7 +8,9 @@ import re
 from datetime import datetime
 import unicodedata
 import sys
+from sklearn.model_selection import train_test_split
 import itertools
+from numpy.random import default_rng
 import numpy as np
 from torchmetrics import F1Score
 
@@ -119,26 +121,19 @@ class experiment_base(ABC):
         # fetch labelled target dataset and split labelled target dataset into train and test
         labelled_target_dataset_features, labelled_target_dataset_labels = self.fetch_dataset(self.target_labelled, labelled = True, target = True)
 
-        indices = np.arange(len(labelled_target_dataset_features))
-        random_indices = np.random.permutation(indices)
-        labelled_target_train_size = int(self.train_split * len(labelled_target_dataset_features))
-        train_indices = random_indices[:labelled_target_train_size]
-        test_indices = random_indices[labelled_target_train_size:]
+        labelled_target_features_train, labelled_target_features_test, labelled_target_labels_train, labelled_target_labels_test =  train_test_split(labelled_target_dataset_features, labelled_target_dataset_labels, test_size = (1-self.train_split), random_state = self.seed, stratify = labelled_target_dataset_labels)
+
+        # further split train set into train and val
+        labelled_target_features_train, labelled_target_features_val, labelled_target_labels_train, labelled_target_labels_val = train_test_split(labelled_target_features_train, labelled_target_labels_train, test_size = self.validation_split, random_state = self.seed, stratify = labelled_target_labels_train)
         
-        labelled_target_features_train = labelled_target_dataset_features[train_indices]
-        labelled_target_features_test = labelled_target_dataset_features[test_indices]
-
-        labelled_target_labels_train = labelled_target_dataset_labels[train_indices]
-        labelled_target_labels_test = labelled_target_dataset_labels[test_indices]
-
-        return labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test
+        return torch.from_numpy(labelled_target_features_train), torch.from_numpy(labelled_target_labels_train).float(), torch.from_numpy(labelled_target_features_val), torch.from_numpy(labelled_target_labels_val).float(), torch.from_numpy(labelled_target_features_test), torch.from_numpy(labelled_target_labels_test).float()
     
     def preprocess(self, batch):
         batch = cleanTweets(batch)
 
         return pd.Series(self.tokenizer(batch, truncation=True, max_length=self.truncation_length, padding = "max_length",  return_token_type_ids = False))
     
-    def fetch_dataset(self, dataset_name, labelled = True, target = False):
+    def fetch_dataset(self, dataset_name, labelled = True, target = False, return_val = False):
 
         ###### fetch datasets
         label2id = {"neutral": 0, "abusive":1}
@@ -160,18 +155,33 @@ class experiment_base(ABC):
         tokens_df = dset_df.apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
 
         tokens_array = np.array(tokens_df[["input_ids", "attention_mask"]].values.tolist())
-        tokens_tensor = torch.from_numpy(tokens_array)
+        
+        if return_val:
 
-        if labelled == True:
             # map neutral to 0 and abusive to 1
             label_df = dset_df["label"].map(label2id)
             labels_array = np.array(label_df.values.tolist())
-            labels_tensor = torch.from_numpy(labels_array).float()
+
+            train_tokens_array, val_tokens_array, train_labels_array, val_labels_array = train_test_split(tokens_array, labels_array, test_size = self.validation_split, random_state = self.seed, stratify = labels_array)
+            
+            train_tokens_tensor =  torch.from_numpy(train_tokens_array)
+            val_tokens_tensor =  torch.from_numpy(val_tokens_array)
+            train_labels_tensor =  torch.from_numpy(train_labels_array).float()
+            val_labels_tensor =  torch.from_numpy(val_labels_array).float()
+            
+            return train_tokens_tensor, val_tokens_tensor, train_labels_tensor, val_labels_tensor
+            
         else:
-            labels_tensor = None
 
-        return tokens_tensor, labels_tensor
+            if labelled == True:
+                # map neutral to 0 and abusive to 1
+                label_df = dset_df["label"].map(label2id)
+                labels_array = np.array(label_df.values.tolist())
+                #labels_tensor = torch.from_numpy(labels_array).float()
+            else:
+                labels_array = None
 
+            return tokens_array, labels_array
 
     def load_basic_settings(self):
         # data settings
@@ -179,7 +189,7 @@ class experiment_base(ABC):
         self.target_labelled = self.basic_settings.get("target_labelled", "telegram_gold")
         self.target_unlabelled = self.basic_settings.get("target_unlabelled", "telegram_unlabeled")
         self.unlabelled_size = self.basic_settings.get("unlabelled_size", 200000)
-        self.validation_split = self.basic_settings.get("validation_split", 0)
+        self.validation_split = self.basic_settings.get("validation_split", 0.1)
         self.train_split = self.basic_settings.get("train_split", 0.05)
         self.sources = self.basic_settings.get("sources", [
             "germeval2018", 
@@ -210,7 +220,7 @@ class experiment_base(ABC):
         )
         self.test_after_each_epoch = self.basic_settings.get("test_after_each_epoch", False)
         self.verbose = self.basic_settings.get("verbose", False)
-
+        self.seed = self.basic_settings.get("seed", 123)
         # self.criterion = self.basic_settings.get("criterion", "crossentropy")
         #self.metric = self.basic_settings.get("metric", "accuracy")
         

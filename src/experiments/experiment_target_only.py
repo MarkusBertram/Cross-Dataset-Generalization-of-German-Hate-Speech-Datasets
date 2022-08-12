@@ -133,7 +133,7 @@ class experiment_target_only(experiment_base):
     def create_dataloader(self):
                 
         # fetch labelled target dataset
-        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
+        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
         
         labelled_target_dataset_train = TensorDataset(labelled_target_features_train, labelled_target_labels_train)
 

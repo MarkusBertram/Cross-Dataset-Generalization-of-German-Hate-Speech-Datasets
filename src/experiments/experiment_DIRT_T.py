@@ -102,10 +102,10 @@ class experiment_DIRT_T(experiment_base):
         Returns:
             [tupel(trained network, train_loss )]:
         """
-        
-        for name, param in self.model.named_parameters():
-            if "bert" in name:
-                param.requires_grad = False
+        with torch.no_grad():
+            for name, param in self.model.named_parameters():
+                if "bert" in name:
+                    param.requires_grad = False
 
 
         ############# VADA Training
@@ -160,17 +160,12 @@ class experiment_DIRT_T(experiment_base):
 
                 self.optimizer.step()
 
-        # check test performance after VADA
-        self.test()
-
         ############ DIRT_T Training
 
         self.teacher = copy.deepcopy(self.model)
         
-        student_params   = list(self.model.parameters())
-        teacher_params   = list(self.teacher.parameters())
 
-        for param in teacher_params:
+        for param in self.teacher.parameters():
             param.requires_grad = False
 
         #self.optimizer   = optim.Adam(self.model.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
@@ -181,16 +176,15 @@ class experiment_DIRT_T(experiment_base):
         self.tgt_vat     = VATLoss().to(self.device)#VATLoss(self.model, radius=self.radius).to(self.device)
         self.dirt        = KLDivWithLogits() #F.kl_div().to(self.device)#KLDivWithLogits()    
 
-        self.model.train(True)
   #     self.teacher.eval()
-
-        for name, param in self.model.named_parameters():
-            if "bert" in name:
-                param.requires_grad = False
-
-        for name, param in self.teacher.named_parameters():
-            if "bert" in name:
-                param.requires_grad = False
+        with torch.no_grad():
+            for name, param in self.model.named_parameters():
+                if "bert" in name:
+                    param.requires_grad = False
+        with torch.no_grad():
+            for name, param in self.teacher.named_parameters():
+                if "bert" in name:
+                    param.requires_grad = False
 
         for epoch in range(1, self.epochs + 1):
             self.model.train()
@@ -223,9 +217,6 @@ class experiment_DIRT_T(experiment_base):
             # polyak averaging
             # https://discuss.pytorch.org/t/copying-weights-from-one-net-to-another/1492/17
             for target_param, param in zip(self.teacher.parameters(), self.model.parameters()):
-                print(target_param)
-                print(param)
-                print(0.998*param.data + target_param.data*(1.0 - 0.998))
                 target_param.data.copy_(0.998*param.data + target_param.data*(1.0 - 0.998))
 
 
@@ -298,12 +289,12 @@ class experiment_DIRT_T(experiment_base):
         source_features = []
         source_labels = []
         for source_name in self.sources:
-            features, labels = self.fetch_dataset(source_name, labelled = True, target = False)
-            source_features.append(features)
-            source_labels.append(labels)
+            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            source_features.append(train_features)
+            source_labels.append(train_labels)
             
         # fetch labelled target dataset
-        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
+        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
         
         source_features.append(labelled_target_features_train)
         source_labels.append(labelled_target_labels_train)

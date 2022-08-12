@@ -170,12 +170,13 @@ class experiment_DANN(experiment_base):
         source_labels = []
 
         for source_name in self.sources:
-            features, labels = self.fetch_dataset(source_name, labelled = True, target = False)
-            source_features.append(features)
-            source_labels.append(labels)
+            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            # discard validation features and labels
+            source_features.append(train_features)
+            source_labels.append(train_labels)
         
         # fetch labelled target dataset
-        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
+        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
         
         source_features.append(labelled_target_features_train)
         source_labels.append(labelled_target_labels_train)
