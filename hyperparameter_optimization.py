@@ -1,4 +1,5 @@
 from functools import partial
+from sre_parse import Tokenizer
 import numpy as np
 import os
 import torch
@@ -23,9 +24,11 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 from torch.utils.data.sampler import BatchSampler, RandomSampler
 from src.model import *
 from ray.tune.schedulers import AsyncHyperBandScheduler
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 def preprocess(batch):
     batch = cleanTweets(batch)
+    truncation_length = 512
 
     return pd.Series(tokenizer(batch, truncation=True, max_length=truncation_length, padding = "max_length",  return_token_type_ids = False))
 
@@ -58,7 +61,7 @@ def fetch_dataset(dataset_name, labelled = True, target = False, return_val = Fa
         label_df = dset_df["label"].map(label2id)
         labels_array = np.array(label_df.values.tolist())
 
-        train_tokens_array, val_tokens_array, train_labels_array, val_labels_array = train_test_split(tokens_array, labels_array, test_size = self.validation_split, random_state = self.seed, stratify = labels_array)
+        train_tokens_array, val_tokens_array, train_labels_array, val_labels_array = train_test_split(tokens_array, labels_array, test_size = validation_split, random_state = seed, stratify = labels_array)
         
         train_tokens_tensor =  torch.from_numpy(train_tokens_array)
         val_tokens_tensor =  torch.from_numpy(val_tokens_array)
@@ -101,7 +104,7 @@ def get_data_loaders(dset_type):
                 val_labels.append(val_labels)
             
             # fetch labelled target dataset
-            labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
+            labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = get_target_dataset()
             
             source_features.append(labelled_target_features_val)
             source_labels.append(labelled_target_labels_val)
@@ -124,7 +127,7 @@ def get_data_loaders(dset_type):
 
             sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=batch_size, drop_last=False)
             train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=num_workers)            
-            #self.train_dataloader = DataLoader(concatenated_train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+            #train_dataloader = DataLoader(concatenated_train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
             del concatenated_train_dataset
             del unlabelled_target_dataset_features
             gc.collect()
@@ -133,8 +136,8 @@ def get_data_loaders(dset_type):
             combined_val_features = torch.cat(val_features)
             combined_val_labels = torch.cat(val_labels)
             labelled_target_dataset_test = TensorDataset(combined_val_features, combined_val_labels)
-            sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=self.batch_size, drop_last=False)
-            test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=self.num_workers)               
+            sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=batch_size, drop_last=False)
+            test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=num_workers)               
             del labelled_target_dataset_test
             gc.collect()
 
@@ -149,8 +152,8 @@ def get_data_loaders(dset_type):
             val_features = []
             val_labels = []
 
-            for source_name in self.sources:
-                train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            for source_name in sources:
+                train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False, return_val = True)
                 source_features.append(train_features)
                 source_labels.append(train_labels)
 
@@ -159,7 +162,7 @@ def get_data_loaders(dset_type):
 
                 
             # fetch labelled target dataset
-            labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
+            labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = get_target_dataset()
             
             # concatenate datasets
             combined_source_features = torch.cat(source_features)
@@ -167,8 +170,8 @@ def get_data_loaders(dset_type):
             
             # create source dataloader
             source_dataset = TensorDataset(combined_source_features, combined_source_labels)
-            sampler = BatchSampler(RandomSampler(source_dataset), batch_size=self.batch_size, drop_last=True)
-            source_dataloader = DataLoader(dataset=source_dataset, sampler = sampler, num_workers=self.num_workers)            
+            sampler = BatchSampler(RandomSampler(source_dataset), batch_size=batch_size, drop_last=True)
+            source_dataloader = DataLoader(dataset=source_dataset, sampler = sampler, num_workers=num_workers)            
             
             del source_features
             del source_labels
@@ -177,14 +180,14 @@ def get_data_loaders(dset_type):
             # create labelled target dataloader
             labelled_target_dataset_train = TensorDataset(labelled_target_features_val, labelled_target_labels_val)
 
-            sampler = BatchSampler(RandomSampler(labelled_target_dataset_train), batch_size=min(self.batch_size, len(labelled_target_dataset_train)), drop_last=True)
-            labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=self.num_workers)            
+            sampler = BatchSampler(RandomSampler(labelled_target_dataset_train), batch_size=min(batch_size, len(labelled_target_dataset_train)), drop_last=True)
+            labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=num_workers)            
 
             # fetch unlabelled target dataset and create dataloader
-            unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+            unlabelled_target_dataset_features, _ = fetch_dataset(target_unlabelled, labelled = False, target = True)
             unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features)
-            sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=2 * self.batch_size, drop_last=True)
-            unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=self.num_workers)            
+            sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=2 * batch_size, drop_last=True)
+            unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=num_workers)            
             
             del unlabelled_target_dataset_features
 
@@ -192,8 +195,8 @@ def get_data_loaders(dset_type):
             combined_val_features = torch.cat(val_features)
             combined_val_labels = torch.cat(val_labels)
             labelled_target_dataset_test = TensorDataset(combined_val_features, combined_val_labels)
-            sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=self.batch_size, drop_last=False)
-            test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=self.num_workers)               
+            sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=batch_size, drop_last=False)
+            test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=num_workers)               
             del labelled_target_dataset_test
             gc.collect()
 
@@ -206,14 +209,14 @@ def get_data_loaders(dset_type):
             val_features = []
             val_labels = []
 
-            for source_name in self.sources:
-                train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            for source_name in sources:
+                train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False, return_val = True)
                 source_datasets.append(TensorDataset(train_features, train_labels))
 
                 val_features.append(val_features)
                 val_labels.append(val_labels)
             
-            labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
+            labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = get_target_dataset()
 
             # add labelled target train dataset to source domains
             source_datasets.append(TensorDataset(labelled_target_features_val, labelled_target_labels_val))
@@ -221,20 +224,20 @@ def get_data_loaders(dset_type):
             gc.collect()
 
             # create source dataloaders
-            self.source_dataloader_list = []
+            source_dataloader_list = []
             for source_dataset in source_datasets:
-                sampler = BatchSampler(RandomSampler(source_dataset), batch_size=self.batch_size, drop_last=True)
-                dataloader = DataLoader(dataset=source_dataset, sampler = sampler, num_workers=self.num_workers)            
-                self.source_dataloader_list.append(dataloader)
+                sampler = BatchSampler(RandomSampler(source_dataset), batch_size=batch_size, drop_last=True)
+                dataloader = DataLoader(dataset=source_dataset, sampler = sampler, num_workers=num_workers)            
+                source_dataloader_list.append(dataloader)
 
             # create unlabelled target dataloader
-            unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+            unlabelled_target_dataset_features, _ = fetch_dataset(target_unlabelled, labelled = False, target = True)
 
             # fetch unlabelled target dataset and create dataloader
-            unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+            unlabelled_target_dataset_features, _ = fetch_dataset(target_unlabelled, labelled = False, target = True)
             unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features)
-            sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=self.batch_size, drop_last=True)
-            unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=self.num_workers)            
+            sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=batch_size, drop_last=True)
+            unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=num_workers)            
             
             del unlabelled_target_dataset_features
 
@@ -242,8 +245,8 @@ def get_data_loaders(dset_type):
             combined_val_features = torch.cat(val_features)
             combined_val_labels = torch.cat(val_labels)
             labelled_target_dataset_test = TensorDataset(combined_val_features, combined_val_labels)
-            sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=self.batch_size, drop_last=False)
-            test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=self.num_workers)               
+            sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=batch_size, drop_last=False)
+            test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=num_workers)               
             del labelled_target_dataset_test
             gc.collect()
 
@@ -270,17 +273,17 @@ def create_model(model_type):
         Please specify the domain classifier class name as key in experiment settings of the current experiment.")
 
     if model_type.lower() == "dann":
-        model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device)  
+        model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device)  
     elif model_type.lower() == "dirt-t":
-        model = DIRT_T_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device)
+        model = DIRT_T_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device)
     elif model_type.lower() == "mme":
-        model = mme_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device)      
+        model = mme_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device)      
     elif model_type.lower() == "lirr":
-        model = lirr_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device) 
+        model = lirr_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device) 
     elif model_type.lower() == "mdan":
-        model = mdan_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device) 
+        model = mdan_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device) 
     elif model_type.lower() == "m3sda":
-        model = m3sda_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device) 
+        model = m3sda_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device) 
     
     return model
 
@@ -290,6 +293,9 @@ def train_dann(config, checkpoint_dir=None):
     dset_type = "unsupervised"
     model_type = "dann"
     
+    epochs = 10
+    global Tokenizer
+    tokenizer = AutoTokenizer.from_pretrained('deepset/gbert-base')
     #net = Net(config["l1"], config["l2"])
     model = create_model(model_type)
 
@@ -307,37 +313,64 @@ def train_dann(config, checkpoint_dir=None):
     train_loader, test_loader = get_data_loaders(dset_type)
     criterion = nn.BCEWithLogitsLoss()
 
-    for epoch in range(10):  # loop over the dataset multiple times
-        for i, data in enumerate(train_loader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+    len_dataloader = len(train_loader)
 
+    for epoch in range(epochs):  # loop over the dataset multiple times
+        for i, data in enumerate(train_loader, 0):
             # zero the parameter gradients
             optimizer.zero_grad()
 
-            # forward + backward + optimize
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            # get the inputs; data is a list of [inputs, labels]
+            source_batch, unlabelled_target_features = data
+
+            p = float(i + epoch * len_dataloader) / epochs / len_dataloader
+            alpha = 2. / (1. + np.exp(-10 * p)) - 1
+
+            # training model using source data
+            source_features = source_batch[0][0].to(device)
+            source_labels = source_batch[1][0].to(device)
+
+            batch_size = len(source_labels)
+
+            domain_label = torch.zeros(batch_size)
+            domain_label = domain_label.float().to(device)
+
+            class_output, domain_output = model(input_data=source_features, alpha=alpha)
+
+            loss_s_label = criterion(class_output, source_labels)
+            loss_s_domain = criterion(domain_output, domain_label)
+
+            # training model using target data
+            unlabelled_target_features = unlabelled_target_features[0].to(device)
+
+            batch_size = len(unlabelled_target_features)
+
+            domain_label = torch.ones(batch_size)
+            domain_label = domain_label.float().to(device)
+
+            _, domain_output = model(input_data=unlabelled_target_features, alpha=alpha)
+            loss_t_domain = criterion(domain_output, domain_label)
+            loss = loss_t_domain + loss_s_domain + loss_s_label
+
             loss.backward()
             optimizer.step()
 
         # Validation loss
         val_loss = 0.0
         val_steps = 0
-        total = 0
-        correct = 0
+        #total = 0
+        #correct = 0
         for i, data in enumerate(test_loader, 0):
             with torch.no_grad():
                 inputs, labels = data
-                inputs, labels = inputs.to(device), labels.to(device)
+                inputs, labels = inputs[0].to(device), labels[0].to(device)
 
-                outputs = model(inputs)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                outputs = model.inference(inputs)
+                predicted = torch.round(torch.sigmoid(outputs)).int()
+                #total += labels.size(0)
+                #correct += (predicted == labels).sum().item()
 
-                loss = criterion(outputs, labels)
+                loss = criterion(predicted, labels)
                 val_loss += loss.cpu().numpy()
                 val_steps += 1
 
@@ -349,83 +382,55 @@ def train_dann(config, checkpoint_dir=None):
             torch.save(
                 (model.state_dict(), optimizer.state_dict()), path)
 
-        tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
+        #tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
+        tune.report(loss=(val_loss / val_steps))
     print("Finished Training")
-
-    
-
-def test_accuracy(net, device="cpu"):
-    trainset, testset = load_data()
-
-    testloader = torch.utils.data.DataLoader(
-        testset, batch_size=4, shuffle=False, num_workers=2)
-
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            images, labels = images.to(device), labels.to(device)
-            outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-
-    return correct / total
-
 
 if __name__ == "__main__":
     seed = 123
     # global seed
-    import argparse
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--model",
-        type=str,
-        default=None,
-        required=True,
-        help="The model to perform hyperoptimization for. E.g. 'dann', 'dirt-t', 'mme' etc.",
-        )
-
-    # You can change the number of GPUs per trial here:
-    #main(num_samples=10, max_num_epochs=10, gpus_per_trial=0)
-    args, _ = parser.parse_known_args()
-
+    model_type = "dann"
     # for early stopping
-    sched = AsyncHyperBandScheduler()
+    sched = ASHAScheduler(
+    time_attr='training_iteration',
+    metric='episode_reward_mean',
+    mode='max',
+    max_t=100,
+    grace_period=10,
+    reduction_factor=3,
+    brackets=1)
 
-    if args.model == "dann":
+    if model_type == "dann":
         function_to_run = train_dann
         config_dict = {
             "lr": tune.loguniform(1e-4, 1e-2),
             "momentum": tune.uniform(0.1, 0.9),
         }
-    elif args.model == "dirt-t":
+    elif model_type == "dirt-t":
         function_to_run = train_dirt_t
         config_dict = {
             "lr": tune.loguniform(1e-4, 1e-2),
             "momentum": tune.uniform(0.1, 0.9),
         }
-    elif args.model == "mme":
+    elif model_type == "mme":
         function_to_run = train_mme
         config_dict = {
             "lr": tune.loguniform(1e-4, 1e-2),
             "momentum": tune.uniform(0.1, 0.9),
         }
-    elif args.model == "lirr":
+    elif model_type == "lirr":
         function_to_run = train_lirr
         config_dict = {
             "lr": tune.loguniform(1e-4, 1e-2),
             "momentum": tune.uniform(0.1, 0.9),
         }
-    elif args.model == "mdan":
+    elif model_type == "mdan":
         function_to_run = train_mdan
         config_dict = {
             "lr": tune.loguniform(1e-4, 1e-2),
             "momentum": tune.uniform(0.1, 0.9),
         }
-    elif args.model == "m3sda":
+    elif model_type == "m3sda":
         function_to_run = train_m3sda
         config_dict = {
             "lr": tune.loguniform(1e-4, 1e-2),
@@ -434,19 +439,15 @@ if __name__ == "__main__":
 
     result = tune.run(
         function_to_run,
-        metric="mean_accuracy",
-        mode="max",
-        name="exp",
+        metric="loss",
+        mode="min",
+        name=model_type,
         scheduler=sched,
-        stop={
-            "mean_accuracy": 0.98,
-            "training_iteration": 5 if args.smoke_test else 100
-        },
         resources_per_trial={
             "cpu": 2,
             "gpu": int(args.cuda)  # set this for GPUs
         },
-        num_samples=1 if args.smoke_test else 50,
+        num_samples=10,
         config=config_dict)
 
     print("Best config is:", result.best_config)
