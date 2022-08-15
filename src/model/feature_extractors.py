@@ -1,40 +1,9 @@
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments, AdamW
-
 import torch
 from torch import nn
 from transformers import BertModel
 from torch.nn import CrossEntropyLoss
 import gc
-
-class BERT_cls(nn.Module):
-    def __init__(self):
-        super(BERT_cls, self).__init__()
-        self.num_labels = 2
-
-        self.feature_extractor_linear1 = nn.Linear(768, 768)
-        self.feature_extractor_linear2 = nn.Linear(768, 768)
-        self.feature_extractor_linear3 = nn.Linear(768, 768)
-        self.feature_extractor_relu = nn.LeakyReLU()
-        self.feature_extractor_dropout = nn.Dropout(0.1)
-       
-    def forward(self, bert_output, input_is_bert = True):
-        if input_is_bert == True:
-            cls_token = bert_output[0][:,0,:]
-        else:
-            cls_token = bert_output
-
-        #x = self.feature_extractor_dropout(cls_token)
-        x = self.feature_extractor_linear1(cls_token) 
-        x = self.feature_extractor_relu(x)
-        x = self.feature_extractor_dropout(x)
-        x = self.feature_extractor_linear2(x)
-        x = self.feature_extractor_relu(x)
-        x = self.feature_extractor_dropout(x)
-        x = self.feature_extractor_linear3(x)
-        x = self.feature_extractor_relu(x)
-        x = self.feature_extractor_dropout(x)
-        return x
-
 
 class BERT_cnn(nn.Module):
     def __init__(self, truncation_length):

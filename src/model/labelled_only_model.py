@@ -1,4 +1,4 @@
-#from feature_extractors import BERT_cnn, bert_cls
+#from feature_extractors import BERT_cnn, bert_cnn
 from pyrsistent import s
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig, BatchEncoding, Trainer, TrainingArguments, AdamW
 #from functions import ReverseLayerF

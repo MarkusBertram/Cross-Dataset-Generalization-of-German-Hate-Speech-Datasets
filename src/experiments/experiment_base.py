@@ -140,11 +140,9 @@ class experiment_base(ABC):
         # import dataset pipeline
         dset_module = fetch_import_module(dataset_name)
         # execute get_data_binary in pipeline
-        if labelled == True and target == False:
+        if labelled == True:
             dset_list_of_dicts = dset_module.get_data_binary()
-        elif labelled == True and target == True:
-            dset_list_of_dicts = dset_module.get_data_binary()
-        elif labelled == False and target == True:
+        elif labelled == False:
             dset_list_of_dicts = dset_module.get_data_binary(self.unlabelled_size, stratify = self.stratify_unlabelled, abusive_ratio = self.abusive_ratio)
         # convert list to dataframe
         dset_df = pd.DataFrame(dset_list_of_dicts)
@@ -157,7 +155,6 @@ class experiment_base(ABC):
         tokens_array = np.array(tokens_df[["input_ids", "attention_mask"]].values.tolist())
         
         if return_val:
-
             # map neutral to 0 and abusive to 1
             label_df = dset_df["label"].map(label2id)
             labels_array = np.array(label_df.values.tolist())
@@ -188,7 +185,7 @@ class experiment_base(ABC):
         # self.labelled_size = self.basic_settings.get("labelled_size", 3000)
         self.target_labelled = self.basic_settings.get("target_labelled", "telegram_gold")
         self.target_unlabelled = self.basic_settings.get("target_unlabelled", "telegram_unlabeled")
-        self.unlabelled_size = self.basic_settings.get("unlabelled_size", 200000)
+        #self.unlabelled_size = self.basic_settings.get("unlabelled_size", 200000)
         self.validation_split = self.basic_settings.get("validation_split", 0.1)
         self.train_split = self.basic_settings.get("train_split", 0.05)
         self.sources = self.basic_settings.get("sources", [

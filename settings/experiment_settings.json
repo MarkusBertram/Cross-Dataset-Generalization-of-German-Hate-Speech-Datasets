@@ -32,7 +32,7 @@
           {
             "exp_type": "DANN",
             "exp_name": "DANN_cls",
-            "feature_extractor": "bert_cls",
+            "feature_extractor": "bert_cnn",
             "task_classifier": "DANN_task_classifier",
             "domain_classifier": "DANN_domain_classifier",
             "l1":10,
@@ -42,7 +42,7 @@
           {
             "exp_type": "DIRT_T",
             "exp_name": "DIRT_T_cls",
-            "feature_extractor": "bert_cls",
+            "feature_extractor": "bert_cnn",
             "task_classifier": "DANN_task_classifier",
             "domain_classifier": "DANN_domain_classifier",
             "alignment_component": "DIRT_T",

@@ -128,16 +128,16 @@ class experiment_DANN(experiment_base):
     # overrides load_settings
     def load_exp_settings(self) -> None:
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
-        self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cls")
+        self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cnn")
         self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
         self.domain_classifier = self.current_experiment.get("domain_classifier", "DANN_domain_classifier")
         
     def create_model(self):
         
-        if self.feature_extractor.lower() == "bert_cls":
-            from src.model.feature_extractors import BERT_cls
+        if self.feature_extractor.lower() == "bert_cnn":
+            from src.model.feature_extractors import BERT_cnn
             #import .model.feature_extractors
-            feature_extractor = BERT_cls()
+            feature_extractor = BERT_cnn()
             output_hidden_states = False
         elif self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
@@ -145,7 +145,7 @@ class experiment_DANN(experiment_base):
             output_hidden_states = True
         else:
             raise ValueError("Can't find the feature extractor name. \
-            Please specify bert_cls or bert_cnn as key in experiment settings of the current experiment.")
+            Please specify bert_cnn or bert_cnn as key in experiment settings of the current experiment.")
         
 
         if self.task_classifier.lower() == "dann_task_classifier":
@@ -192,6 +192,7 @@ class experiment_DANN(experiment_base):
         gc.collect()
 
         # fetch unlabelled target dataset
+        self.unlabelled_size = len(source_dataset)
         unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
         
         # combine source dataset and unlabelled target dataset into one dataset

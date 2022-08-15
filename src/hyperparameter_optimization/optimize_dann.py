@@ -1,4 +1,5 @@
 from functools import partial
+from pydoc import source_synopsis
 from sre_parse import Tokenizer
 import numpy as np
 import os
@@ -27,24 +28,37 @@ from ray.tune.schedulers import AsyncHyperBandScheduler
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from src.model.DANN_model import DANN_model
 
-def preprocess(batch):
+def get_target_dataset(target_labelled, train_split, validation_split, seed, truncation_length):
+
+    # fetch labelled target dataset and split labelled target dataset into train and test
+    labelled_target_dataset_features, labelled_target_dataset_labels, abusive_ratio = fetch_dataset(
+        target_labelled,
+        labelled = True, 
+        target = True,
+        truncation_length=truncation_length)
+
+    labelled_target_features_train, _, labelled_target_labels_train, _ =  train_test_split(labelled_target_dataset_features, labelled_target_dataset_labels, test_size = (1-train_split), random_state = seed, stratify = labelled_target_dataset_labels)
+
+    # further split train set into train and val
+    _, labelled_target_features_val, _, labelled_target_labels_val = train_test_split(labelled_target_features_train, labelled_target_labels_train, test_size = validation_split, random_state = seed, stratify = labelled_target_labels_train)
+    
+    return _, _, torch.from_numpy(labelled_target_features_val), torch.from_numpy(labelled_target_labels_val).float(), _, _, abusive_ratio
+
+def preprocess(batch, tokenizer, truncation_length):
     batch = cleanTweets(batch)
-    truncation_length = 512
 
     return pd.Series(tokenizer(batch, truncation=True, max_length=truncation_length, padding = "max_length",  return_token_type_ids = False))
 
-def fetch_dataset(dataset_name, labelled = True, target = False, return_val = False):
+def fetch_dataset(dataset_name, labelled = True, target = False, return_val = False, validation_split = None, seed = None, unlabelled_size = None, stratify_unlabelled = True, abusive_ratio = None, truncation_length = None):
 
     ###### fetch datasets
     label2id = {"neutral": 0, "abusive":1}
     # import dataset pipeline
     dset_module = fetch_import_module(dataset_name)
     # execute get_data_binary in pipeline
-    if labelled == True and target == False:
+    if labelled == True:
         dset_list_of_dicts = dset_module.get_data_binary()
-    elif labelled == True and target == True:
-        dset_list_of_dicts = dset_module.get_data_binary()
-    elif labelled == False and target == True:
+    elif labelled == False:
         dset_list_of_dicts = dset_module.get_data_binary(unlabelled_size, stratify = stratify_unlabelled, abusive_ratio = abusive_ratio)
     # convert list to dataframe
     dset_df = pd.DataFrame(dset_list_of_dicts)
@@ -52,12 +66,12 @@ def fetch_dataset(dataset_name, labelled = True, target = False, return_val = Fa
         abusive_ratio = dset_df["label"].value_counts(normalize = True)["abusive"]
     
     # tokenize each row in dataframe
-    tokens_df = dset_df.apply(lambda row: preprocess(row.text), axis='columns', result_type='expand')
+    tokenizer = AutoTokenizer.from_pretrained('deepset/gbert-base')
+    tokens_df = dset_df.apply(lambda row: preprocess(row.text, tokenizer, truncation_length), axis='columns', result_type='expand')
 
     tokens_array = np.array(tokens_df[["input_ids", "attention_mask"]].values.tolist())
     
     if return_val:
-
         # map neutral to 0 and abusive to 1
         label_df = dset_df["label"].map(label2id)
         labels_array = np.array(label_df.values.tolist())
@@ -81,30 +95,54 @@ def fetch_dataset(dataset_name, labelled = True, target = False, return_val = Fa
         else:
             labels_array = None
 
-        return tokens_array, labels_array
+        if abusive_ratio is not None:
+            return tokens_array, labels_array, abusive_ratio
+        else:
+            return tokens_array, labels_array, abusive_ratio
 
-def get_data_loaders(dset_type):
+def get_data_loaders(sources, 
+        target_labelled,
+        target_unlabelled,
+        train_split,
+        validation_split,
+        batch_size,
+        num_workers,
+        stratify_unlabelled,
+        seed,
+        truncation_length):
+
     # https://docs.ray.io/en/releases-1.11.0/tune/tutorials/tune-pytorch-cifar.html
     with FileLock(os.path.expanduser("~/.data.lock")):
-            
         # fetch source datasets
         source_features = []
         source_labels = []
 
-        val_features = []
-        val_labels = []
+        val_features_list = []
+        val_labels_list = []
 
         for source_name in sources:
-            train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            train_features, val_features, train_labels, val_labels = fetch_dataset(
+                source_name,
+                labelled = True,
+                target = False,
+                return_val = True,
+                validation_split = validation_split,
+                seed = seed,
+                truncation_length=truncation_length)
 
             source_features.append(train_features)
             source_labels.append(train_labels)
 
-            val_features.append(val_features)
-            val_labels.append(val_labels)
+            val_features_list.append(val_features)
+            val_labels_list.append(val_labels)
         
-        # fetch labelled target dataset
-        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = get_target_dataset()
+        # fetch labelled target train dataset
+        _, _, labelled_target_features_val, labelled_target_labels_val, _, _, abusive_ratio = get_target_dataset(
+            target_labelled,
+            train_split,
+            validation_split,
+            seed,
+            truncation_length=truncation_length)
         
         source_features.append(labelled_target_features_val)
         source_labels.append(labelled_target_labels_val)
@@ -120,11 +158,17 @@ def get_data_loaders(dset_type):
         gc.collect()
 
         # fetch unlabelled target dataset
-        unlabelled_target_dataset_features, _ = fetch_dataset(target_unlabelled, labelled = False, target = True)
+        unlabelled_size = len(source_dataset)
+        unlabelled_target_dataset_features, _, _ = fetch_dataset(
+            target_unlabelled,
+            labelled = False,
+            target = True,
+            unlabelled_size = unlabelled_size,
+            stratify_unlabelled = stratify_unlabelled,
+            abusive_ratio = abusive_ratio)
         
         # combine source dataset and unlabelled target dataset into one dataset
         concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
-
         sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=batch_size, drop_last=False)
         train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=num_workers)            
         #train_dataloader = DataLoader(concatenated_train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -133,8 +177,9 @@ def get_data_loaders(dset_type):
         gc.collect()
 
         # create test dataloader
-        combined_val_features = torch.cat(val_features)
-        combined_val_labels = torch.cat(val_labels)
+        # use validation set as test set
+        combined_val_features = torch.cat(val_features_list)
+        combined_val_labels = torch.cat(val_labels_list)
         labelled_target_dataset_test = TensorDataset(combined_val_features, combined_val_labels)
         sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=batch_size, drop_last=False)
         test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=num_workers)               
@@ -143,25 +188,16 @@ def get_data_loaders(dset_type):
 
         return train_dataloader, test_dataloader
 
-def create_model(device):
-        
+def create_model(device, truncation_length):
     from src.model.feature_extractors import BERT_cnn
-    feature_extractor = BERT_cnn()
+    feature_extractor = BERT_cnn(truncation_length)
     output_hidden_states = True
     
-    if task_classifier.lower() == "dann_task_classifier":
-        from src.model.task_classifiers import DANN_task_classifier
-        task_classifier = DANN_task_classifier()
-    else:
-        raise ValueError("Can't find the task classifier name. \
-        Please specify the task classifier class name as key in experiment settings of the current experiment.")
-        
-    if domain_classifier.lower() == "dann_domain_classifier":
-        from src.model.domain_classifiers import DANN_domain_classifier
-        domain_classifier = DANN_domain_classifier()
-    else:
-        raise ValueError("Can't find the domain classifier name. \
-        Please specify the domain classifier class name as key in experiment settings of the current experiment.")
+    from src.model.task_classifiers import DANN_task_classifier
+    task_classifier = DANN_task_classifier()
+     
+    from src.model.domain_classifiers import DANN_domain_classifier
+    domain_classifier = DANN_domain_classifier()
 
     model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device)  
     
@@ -220,8 +256,6 @@ def test(model, test_loader):
     # Validation loss
     val_loss = 0.0
     val_steps = 0
-    #total = 0
-    #correct = 0
     with torch.no_grad():
         for i, data in enumerate(test_loader, 0):
             inputs, labels = data
@@ -229,8 +263,6 @@ def test(model, test_loader):
 
             outputs = model.inference(inputs)
             predicted = torch.round(torch.sigmoid(outputs)).int()
-            #total += labels.size(0)
-            #correct += (predicted == labels).sum().item()
 
             loss = criterion(predicted, labels)
             val_loss += loss.cpu().numpy()
@@ -240,18 +272,15 @@ def test(model, test_loader):
 
 def train_dann(config, checkpoint_dir=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dset_type = "unsupervised"
     
-    epochs = 10
-    global Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained('deepset/gbert-base')
-    #net = Net(config["l1"], config["l2"])
-    model = create_model(device)
+    epochs = config["epochs"]
+    
+    model = create_model(device, config["truncation_length"])
 
     model.to(device)
-
+    
     optimizer = optim.Adam(
-        model.parameters(), lr=config["lr"], momentum=config["momentum"])
+        model.parameters(), lr=config["lr"].sample())
 
     if checkpoint_dir:
         model_state, optimizer_state = torch.load(
@@ -259,7 +288,18 @@ def train_dann(config, checkpoint_dir=None):
         model.load_state_dict(model_state)
         optimizer.load_state_dict(optimizer_state)
 
-    train_loader, test_loader = get_data_loaders(dset_type)
+    train_loader, test_loader = get_data_loaders(
+        sources = config["sources"],
+        target_labelled = config["target_labelled"],
+        target_unlabelled = config["target_unlabelled"],
+        train_split = config["train_split"], 
+        validation_split = config["validation_split"], 
+        batch_size = config["batch_size"], 
+        num_workers = config["num_workers"],
+        stratify_unlabelled = config["stratify_unlabelled"],
+        seed = config["seed"],
+        truncation_length = config["truncation_length"]
+    )
     
     for epoch in range(epochs):  # loop over the dataset multiple times
         train(model, optimizer, train_loader, epoch, epochs)
@@ -278,24 +318,31 @@ def train_dann(config, checkpoint_dir=None):
     print("Finished Training")
 
 if __name__ == "__main__":
-    seed = 123
-    # global seed
-    model_type = "dann"
-    # for early stopping
     sched = ASHAScheduler()
 
-    function_to_run = train_dann
-
     config_dict = {
+        "seed": 123,
         "lr": tune.loguniform(1e-4, 1e-2),
-        "momentum": tune.uniform(0.1, 0.9),
+        "target_labelled": "telegram_gold",
+        "target_unlabelled": "telegram_unlabeled",
+        "sources": [
+                "germeval2018", 
+                "germeval2019"
+            ],
+        "train_split": 0.05,
+        "validation_split": 0.1,
+        "batch_size": 8,
+        "num_workers": 2,
+        "epochs": 10,
+        "stratify_unlabelled": True,
+        "truncation_length": 512
     }
 
     result = tune.run(
-        function_to_run,
+        train_dann,
         metric="loss",
         mode="min",
-        name=model_type,
+        name="dann",
         scheduler=sched,
         resources_per_trial={
             "cpu": 2,
