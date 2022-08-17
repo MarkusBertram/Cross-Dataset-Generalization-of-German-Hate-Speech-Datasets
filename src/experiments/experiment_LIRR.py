@@ -182,11 +182,11 @@ class experiment_LIRR(experiment_base):
         if self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
             #import .model.feature_extractors
-            feature_extractor = BERT_cnn()
+            feature_extractor = BERT_cnn(self.truncation_length)
             output_hidden_states = False
         elif self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn()
+            feature_extractor = BERT_cnn(self.truncation_length)
             output_hidden_states = True
         else:
             raise ValueError("Can't find the feature extractor name. \
@@ -208,7 +208,7 @@ class experiment_LIRR(experiment_base):
         source_features = []
         source_labels = []
         for source_name in self.sources:
-            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False)
             source_features.append(train_features)
             source_labels.append(train_labels)
             
@@ -235,12 +235,12 @@ class experiment_LIRR(experiment_base):
         self.labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=self.num_workers)            
 
         # fetch unlabelled target dataset and create dataloader
-        unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
-        unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features)
+        unlabelled_target_dataset_features_train, unlabelled_target_dataset_features_val, _, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+        unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features_train)
         sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=self.batch_size, drop_last=True)
         self.unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=self.num_workers)            
         
-        del unlabelled_target_dataset_features
+        
 
         # create test dataloader
         labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)

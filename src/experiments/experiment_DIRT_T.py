@@ -257,11 +257,11 @@ class experiment_DIRT_T(experiment_base):
         if self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
             #import .model.feature_extractors
-            feature_extractor = BERT_cnn()
+            feature_extractor = BERT_cnn(self.truncation_length)
             self.output_hidden_states = False
         elif self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn()
+            feature_extractor = BERT_cnn(self.truncation_length)
             self.output_hidden_states = True
         else:
             raise ValueError("Can't find the feature extractor name. \
@@ -289,7 +289,7 @@ class experiment_DIRT_T(experiment_base):
         source_features = []
         source_labels = []
         for source_name in self.sources:
-            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False)
             source_features.append(train_features)
             source_labels.append(train_labels)
             
@@ -310,16 +310,16 @@ class experiment_DIRT_T(experiment_base):
         gc.collect()
 
         # fetch unlabelled target dataset
-        unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+        unlabelled_target_dataset_features_train, unlabelled_target_dataset_features_val, _, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
         
         # combine source dataset and unlabelled target dataset into one dataset
-        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
+        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features_train)
         
         sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=self.batch_size, drop_last=False)
         self.train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=self.num_workers)            
         #self.train_dataloader = DataLoader(concatenated_train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
         del concatenated_train_dataset
-        del unlabelled_target_dataset_features
+        
         # create test dataloader
         
         labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)

@@ -32,7 +32,7 @@ def preprocess(batch):
 
     return pd.Series(tokenizer(batch, truncation=True, max_length=truncation_length, padding = "max_length",  return_token_type_ids = False))
 
-def fetch_dataset(dataset_name, labelled = True, target = False, return_val = False):
+def fetch_dataset(dataset_name, labelled = True, target = False):
 
     ###### fetch datasets
     label2id = {"neutral": 0, "abusive":1}
@@ -95,7 +95,7 @@ def get_data_loaders(dset_type):
             val_labels = []
 
             for source_name in sources:
-                train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+                train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False)
 
                 source_features.append(train_features)
                 source_labels.append(train_labels)
@@ -129,7 +129,7 @@ def get_data_loaders(dset_type):
             train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=num_workers)            
             #train_dataloader = DataLoader(concatenated_train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
             del concatenated_train_dataset
-            del unlabelled_target_dataset_features
+            
             gc.collect()
 
             # create test dataloader
@@ -153,7 +153,7 @@ def get_data_loaders(dset_type):
             val_labels = []
 
             for source_name in sources:
-                train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+                train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False)
                 source_features.append(train_features)
                 source_labels.append(train_labels)
 
@@ -189,7 +189,7 @@ def get_data_loaders(dset_type):
             sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=2 * batch_size, drop_last=True)
             unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=num_workers)            
             
-            del unlabelled_target_dataset_features
+            
 
             # create test dataloader
             combined_val_features = torch.cat(val_features)
@@ -210,7 +210,7 @@ def get_data_loaders(dset_type):
             val_labels = []
 
             for source_name in sources:
-                train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+                train_features, val_features, train_labels, val_labels = fetch_dataset(source_name, labelled = True, target = False)
                 source_datasets.append(TensorDataset(train_features, train_labels))
 
                 val_features.append(val_features)
@@ -239,7 +239,7 @@ def get_data_loaders(dset_type):
             sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=batch_size, drop_last=True)
             unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=num_workers)            
             
-            del unlabelled_target_dataset_features
+            
 
             # create test dataloader
             combined_val_features = torch.cat(val_features)
@@ -255,7 +255,7 @@ def get_data_loaders(dset_type):
 def create_model(model_type):
         
     from src.model.feature_extractors import BERT_cnn
-    feature_extractor = BERT_cnn()
+    feature_extractor = BERT_cnn(self.truncation_length)
     output_hidden_states = True
     
     if task_classifier.lower() == "dann_task_classifier":

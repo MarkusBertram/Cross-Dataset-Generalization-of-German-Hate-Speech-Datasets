@@ -110,11 +110,11 @@ class experiment_target_only(experiment_base):
         
         if self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn()
+            feature_extractor = BERT_cnn(self.truncation_length)
             output_hidden_states = False
         elif self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn()
+            feature_extractor = BERT_cnn(self.truncation_length)
             output_hidden_states = True
         else:
             raise ValueError("Can't find the feature extractor name. \

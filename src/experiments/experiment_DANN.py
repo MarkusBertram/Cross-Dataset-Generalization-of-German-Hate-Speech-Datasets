@@ -134,33 +134,16 @@ class experiment_DANN(experiment_base):
         
     def create_model(self):
         
-        if self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            #import .model.feature_extractors
-            feature_extractor = BERT_cnn()
-            output_hidden_states = False
-        elif self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn()
-            output_hidden_states = True
-        else:
-            raise ValueError("Can't find the feature extractor name. \
-            Please specify bert_cnn or bert_cnn as key in experiment settings of the current experiment.")
+        from src.model.feature_extractors import BERT_cnn
+        #import .model.feature_extractors
+        feature_extractor = BERT_cnn(self.truncation_length)
+        output_hidden_states = True
         
-
-        if self.task_classifier.lower() == "dann_task_classifier":
-            from src.model.task_classifiers import DANN_task_classifier
-            task_classifier = DANN_task_classifier()
-        else:
-            raise ValueError("Can't find the task classifier name. \
-            Please specify the task classifier class name as key in experiment settings of the current experiment.")
+        from src.model.task_classifiers import DANN_task_classifier
+        task_classifier = DANN_task_classifier()
             
-        if self.domain_classifier.lower() == "dann_domain_classifier":
-            from src.model.domain_classifiers import DANN_domain_classifier
-            domain_classifier = DANN_domain_classifier()
-        else:
-            raise ValueError("Can't find the domain classifier name. \
-            Please specify the domain classifier class name as key in experiment settings of the current experiment.")
+        from src.model.domain_classifiers import DANN_domain_classifier
+        domain_classifier = DANN_domain_classifier()
 
         self.model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(self.device)
 
@@ -169,8 +152,10 @@ class experiment_DANN(experiment_base):
         source_features = []
         source_labels = []
 
+        self.unlabelled_size = 0
         for source_name in self.sources:
-            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False, return_val = True)
+            train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False)
+            self.unlabelled_size += len(train_features) + len(val_features)
             # discard validation features and labels
             source_features.append(train_features)
             source_labels.append(train_labels)
@@ -192,17 +177,17 @@ class experiment_DANN(experiment_base):
         gc.collect()
 
         # fetch unlabelled target dataset
-        self.unlabelled_size = len(source_dataset)
-        unlabelled_target_dataset_features, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+        
+        unlabelled_target_dataset_features_train, unlabelled_target_dataset_features_val, _, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
         
         # combine source dataset and unlabelled target dataset into one dataset
-        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
+        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features_train)
 
         sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=self.batch_size, drop_last=False)
         self.train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=self.num_workers)            
         #self.train_dataloader = DataLoader(concatenated_train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
         del concatenated_train_dataset
-        del unlabelled_target_dataset_features
+        
         gc.collect()
 
         # create test dataloader

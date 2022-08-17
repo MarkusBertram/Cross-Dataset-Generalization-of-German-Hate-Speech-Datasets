@@ -22,10 +22,10 @@ class BERT_cnn(nn.Module):
         x = self.feature_extractor_dropout(x)
 
         x = self.feature_extractor_conv(x)
+        x = x.squeeze()
         x = self.feature_extractor_relu(x)
         x = self.feature_extractor_dropout(x)
         x = self.feature_extractor_pool(x)
-        
         x = self.feature_extractor_dropout(x)
         x = self.feature_extractor_flat(x)
         x = self.feature_extractor_dropout(x)

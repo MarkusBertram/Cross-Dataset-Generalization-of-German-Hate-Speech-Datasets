@@ -110,11 +110,11 @@ class experiment_single_source(experiment_base):
         
         if self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn()
+            feature_extractor = BERT_cnn(self.truncation_length)
             output_hidden_states = False
         elif self.feature_extractor.lower() == "bert_cnn":
             from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn()
+            feature_extractor = BERT_cnn(self.truncation_length)
             output_hidden_states = True
         else:
             raise ValueError("Can't find the feature extractor name. \
@@ -135,7 +135,7 @@ class experiment_single_source(experiment_base):
         source_features = []
         source_labels = []
 
-        train_features, val_features, train_labels, val_labels = self.fetch_dataset(self.source_name, labelled = True, target = False, return_val = True)
+        train_features, val_features, train_labels, val_labels = self.fetch_dataset(self.source_name, labelled = True, target = False)
         source_features.append(train_features)
         source_labels.append(train_labels)
 

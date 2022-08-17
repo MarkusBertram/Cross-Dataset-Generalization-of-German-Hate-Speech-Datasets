@@ -17,10 +17,10 @@
         "weight_decay": 0,
         "lr": 2e-5,
         "momentum": 0,
-        "truncation_length" : 128,
+        "truncation_length" : 512,
         "lr_scheduler": true,
         "validation_split": 0.1,
-        "train_split": 0.05,
+        "target_train_split": 0.05,
         "num_workers": 2,
         "seed": 42,
         "test_after_each_epoch": true,
@@ -31,7 +31,7 @@
         "exp_settings": [
           {
             "exp_type": "DANN",
-            "exp_name": "DANN_cls",
+            "exp_name": "DANN_cnn",
             "feature_extractor": "bert_cnn",
             "task_classifier": "DANN_task_classifier",
             "domain_classifier": "DANN_domain_classifier",

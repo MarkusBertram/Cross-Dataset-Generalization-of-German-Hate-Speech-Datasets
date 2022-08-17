@@ -104,7 +104,7 @@ class experiment_base(ABC):
                 "lr": self.lr,
                 "epochs": self.epochs,
                 "batchsize": self.batch_size,
-                "train_split": self.train_split,
+                "target_train_split": self.target_train_split,
                 "stratify_unlabelled": self.stratify_unlabelled
 
             },
@@ -119,21 +119,21 @@ class experiment_base(ABC):
     def get_target_dataset(self):
 
         # fetch labelled target dataset and split labelled target dataset into train and test
-        labelled_target_dataset_features, labelled_target_dataset_labels = self.fetch_dataset(self.target_labelled, labelled = True, target = True)
+        labelled_target_dataset_features_train, labelled_target_dataset_features_test, labelled_target_dataset_labels_train, labelled_target_dataset_labels_test  = self.fetch_dataset(self.target_labelled, labelled = True, target = True)
 
-        labelled_target_features_train, labelled_target_features_test, labelled_target_labels_train, labelled_target_labels_test =  train_test_split(labelled_target_dataset_features, labelled_target_dataset_labels, test_size = (1-self.train_split), random_state = self.seed, stratify = labelled_target_dataset_labels)
+        #labelled_target_features_train, labelled_target_features_test, labelled_target_labels_train, labelled_target_labels_test =  train_test_split(labelled_target_dataset_features_train, labelled_target_dataset_labels_train, test_size = (1-self.target_train_split), random_state = self.seed, stratify = labelled_target_dataset_labels_train)
 
         # further split train set into train and val
-        labelled_target_features_train, labelled_target_features_val, labelled_target_labels_train, labelled_target_labels_val = train_test_split(labelled_target_features_train, labelled_target_labels_train, test_size = self.validation_split, random_state = self.seed, stratify = labelled_target_labels_train)
+        labelled_target_features_train, labelled_target_features_val, labelled_target_labels_train, labelled_target_labels_val = train_test_split(labelled_target_dataset_features_train, labelled_target_dataset_labels_train, test_size = self.validation_split, random_state = self.seed, stratify = labelled_target_dataset_labels_train)
         
-        return torch.from_numpy(labelled_target_features_train), torch.from_numpy(labelled_target_labels_train).float(), torch.from_numpy(labelled_target_features_val), torch.from_numpy(labelled_target_labels_val).float(), torch.from_numpy(labelled_target_features_test), torch.from_numpy(labelled_target_labels_test).float()
+        return labelled_target_features_train, labelled_target_labels_train.float(), labelled_target_features_val, labelled_target_labels_val.float(), labelled_target_dataset_features_test, labelled_target_dataset_labels_test.float()
     
     def preprocess(self, batch):
         batch = cleanTweets(batch)
 
         return pd.Series(self.tokenizer(batch, truncation=True, max_length=self.truncation_length, padding = "max_length",  return_token_type_ids = False))
     
-    def fetch_dataset(self, dataset_name, labelled = True, target = False, return_val = False):
+    def fetch_dataset(self, dataset_name, labelled = True, target = False):
 
         ###### fetch datasets
         label2id = {"neutral": 0, "abusive":1}
@@ -154,8 +154,8 @@ class experiment_base(ABC):
 
         tokens_array = np.array(tokens_df[["input_ids", "attention_mask"]].values.tolist())
         
-        if return_val:
-            # map neutral to 0 and abusive to 1
+        if labelled == True and target == False:
+            #map neutral to 0 and abusive to 1
             label_df = dset_df["label"].map(label2id)
             labels_array = np.array(label_df.values.tolist())
 
@@ -165,20 +165,27 @@ class experiment_base(ABC):
             val_tokens_tensor =  torch.from_numpy(val_tokens_array)
             train_labels_tensor =  torch.from_numpy(train_labels_array).float()
             val_labels_tensor =  torch.from_numpy(val_labels_array).float()
+        elif labelled == True and target == True:
+            #map neutral to 0 and abusive to 1
+            label_df = dset_df["label"].map(label2id)
+            labels_array = np.array(label_df.values.tolist())
+
+            train_tokens_array, test_tokens_array, train_labels_array, test_labels_array = train_test_split(tokens_array, labels_array, test_size = (1-self.target_train_split), random_state = self.seed, stratify = labels_array)
             
-            return train_tokens_tensor, val_tokens_tensor, train_labels_tensor, val_labels_tensor
-            
+            train_tokens_tensor =  torch.from_numpy(train_tokens_array)
+            test_tokens_tensor =  torch.from_numpy(test_tokens_array)
+            train_labels_tensor =  torch.from_numpy(train_labels_array).float()
+            test_labels_tensor =  torch.from_numpy(test_labels_array).float()
+            return train_tokens_tensor, test_tokens_tensor, train_labels_tensor, test_labels_tensor
         else:
+            train_tokens_array, val_tokens_array = train_test_split(tokens_array, test_size = self.validation_split, random_state = self.seed)
+            
+            train_tokens_tensor =  torch.from_numpy(train_tokens_array)
+            val_tokens_tensor =  torch.from_numpy(val_tokens_array)
+            train_labels_tensor =  None
+            val_labels_tensor =  None
 
-            if labelled == True:
-                # map neutral to 0 and abusive to 1
-                label_df = dset_df["label"].map(label2id)
-                labels_array = np.array(label_df.values.tolist())
-                #labels_tensor = torch.from_numpy(labels_array).float()
-            else:
-                labels_array = None
-
-            return tokens_array, labels_array
+        return train_tokens_tensor, val_tokens_tensor, train_labels_tensor, val_labels_tensor
 
     def load_basic_settings(self):
         # data settings
@@ -187,7 +194,7 @@ class experiment_base(ABC):
         self.target_unlabelled = self.basic_settings.get("target_unlabelled", "telegram_unlabeled")
         #self.unlabelled_size = self.basic_settings.get("unlabelled_size", 200000)
         self.validation_split = self.basic_settings.get("validation_split", 0.1)
-        self.train_split = self.basic_settings.get("train_split", 0.05)
+        self.target_train_split = self.basic_settings.get("target_train_split", 0.05)
         self.sources = self.basic_settings.get("sources", [
             "germeval2018", 
             "germeval2019",
