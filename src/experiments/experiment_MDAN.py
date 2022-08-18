@@ -204,8 +204,8 @@ class experiment_MDAN(experiment_base):
             self.source_dataloader_list.append(dataloader)
 
         # fetch unlabelled target dataset and create dataloader
-        unlabelled_target_dataset_features_train, unlabelled_target_dataset_features_val, _, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
-        unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features_train)
+        unlabelled_target_dataset_features = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+        unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features)
         sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=self.batch_size, drop_last=True)
         self.unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=self.num_workers)            
         

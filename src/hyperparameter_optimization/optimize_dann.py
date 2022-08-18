@@ -28,6 +28,9 @@ from ray.tune.schedulers import AsyncHyperBandScheduler
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from src.model.DANN_model import DANN_model
 import sys
+from ray.tune.suggest.bohb import TuneBOHB
+from ray.tune.schedulers import HyperBandForBOHB
+
 def get_target_dataset(target_labelled, target_train_split, validation_split, seed, truncation_length):
 
     # fetch labelled target dataset and split labelled target dataset into train and test
@@ -35,6 +38,7 @@ def get_target_dataset(target_labelled, target_train_split, validation_split, se
         target_labelled,
         labelled = True, 
         target = True,
+        seed=seed,
         truncation_length=truncation_length,
         target_train_split=target_train_split
         )
@@ -98,13 +102,13 @@ def fetch_dataset(dataset_name, labelled = True, target = False, validation_spli
         test_labels_tensor =  torch.from_numpy(test_labels_array).float()
         return train_tokens_tensor, test_tokens_tensor, train_labels_tensor, test_labels_tensor, abusive_ratio
     else:
-        train_tokens_array, val_tokens_array = train_test_split(tokens_array, test_size = validation_split, random_state = seed)
+        #train_tokens_array, val_tokens_array = train_test_split(tokens_array, test_size = validation_split, random_state = seed)
         
-        train_tokens_tensor =  torch.from_numpy(train_tokens_array)
-        val_tokens_tensor =  torch.from_numpy(val_tokens_array)
-        train_labels_tensor =  None
-        val_labels_tensor =  None
-        return train_tokens_tensor, val_tokens_tensor, train_labels_tensor, val_labels_tensor
+        tokens_tensor =  torch.from_numpy(tokens_array)
+        #val_tokens_tensor =  torch.from_numpy(val_tokens_array)
+        #train_labels_tensor =  None
+        #val_labels_tensor =  None
+        return tokens_tensor#, val_tokens_tensor, train_labels_tensor, val_labels_tensor
     
 
 def get_data_loaders(sources, 
@@ -138,11 +142,12 @@ def get_data_loaders(sources,
                 truncation_length=truncation_length)
 
             unlabelled_size += len(train_features) + len(val_features)
+            
             source_features.append(train_features)
             source_labels.append(train_labels)
             val_features_list.append(val_features)
             val_labels_list.append(val_labels)
-        
+
         # fetch labelled target train val test dataset
         labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, _, _, abusive_ratio = get_target_dataset(
             target_labelled,
@@ -163,28 +168,39 @@ def get_data_loaders(sources,
         
         # concatenate datasets
         source_dataset = TensorDataset(combined_source_features, combined_source_labels)
-        
+
         del source_features
         del source_labels
         gc.collect()
 
         # fetch unlabelled target dataset
-        unlabelled_target_dataset_features_train, unlabelled_target_dataset_features_val, _, _ = fetch_dataset(
+        unlabelled_target_dataset_features = fetch_dataset(
             target_unlabelled,
             labelled = False,
             target = True,
+            seed = seed,
+            unlabelled_size = unlabelled_size,
+            stratify_unlabelled = stratify_unlabelled,
+            abusive_ratio = abusive_ratio)
+
+        unlabelled_target_dataset_features2 = fetch_dataset(
+            target_unlabelled,
+            labelled = False,
+            target = True,
+            seed = seed,
             unlabelled_size = unlabelled_size,
             stratify_unlabelled = stratify_unlabelled,
             abusive_ratio = abusive_ratio)
         
         # combine source dataset and unlabelled target dataset into one dataset
-        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features_val)
+        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
+        
         sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=batch_size, drop_last=False)
         train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=num_workers)            
         #train_dataloader = DataLoader(concatenated_train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+        
         del concatenated_train_dataset
-        del unlabelled_target_dataset_features_train
-        del unlabelled_target_dataset_features_val
+        del unlabelled_target_dataset_features
         gc.collect()
 
         # create test dataloader
@@ -216,38 +232,53 @@ def create_model(device, truncation_length):
 
 
 def train_dann(config, checkpoint_dir=None):
+    seed= 123
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    target_labelled= "telegram_gold"
+    target_unlabelled= "telegram_unlabeled"
+    sources= [
+            "germeval2018", 
+            "germeval2019"
+        ]
+    target_train_split = 0.05
+    validation_split= 0.1
+    batch_size= 16
+    num_workers= 4
+    stratify_unlabelled= True
+
+    truncation_length= 512
     
-    epochs = config["epochs"]
-    
-    model = create_model(device, config["truncation_length"])
+    model = create_model(device, truncation_length)
 
     model.to(device)
     
+    train_loader, test_loader = get_data_loaders(
+        sources = sources,
+        target_labelled = target_labelled,
+        target_unlabelled = target_unlabelled,
+        target_train_split = target_train_split, 
+        validation_split = validation_split, 
+        batch_size = batch_size, 
+        num_workers = num_workers,
+        stratify_unlabelled = stratify_unlabelled,
+        seed = seed,
+        truncation_length = truncation_length
+    )
+
+    criterion = nn.BCEWithLogitsLoss()
+
+    gamma = config["gamma"]
+
     optimizer = optim.Adam(
-        model.parameters(), lr=config["lr"].sample())
+        model.parameters(), lr=config["lr"], betas=(config["beta1"],config["beta2"]))
 
     if checkpoint_dir:
         model_state, optimizer_state = torch.load(
             os.path.join(checkpoint_dir, "checkpoint"))
         model.load_state_dict(model_state)
         optimizer.load_state_dict(optimizer_state)
-
-    train_loader, test_loader = get_data_loaders(
-        sources = config["sources"],
-        target_labelled = config["target_labelled"],
-        target_unlabelled = config["target_unlabelled"],
-        target_train_split = config["target_train_split"], 
-        validation_split = config["validation_split"], 
-        batch_size = config["batch_size"], 
-        num_workers = config["num_workers"],
-        stratify_unlabelled = config["stratify_unlabelled"],
-        seed = config["seed"],
-        truncation_length = config["truncation_length"]
-    )
-    criterion = nn.BCEWithLogitsLoss()
-
-    for epoch in range(epochs):  # loop over the dataset multiple times
+    
+    for epoch in range(config["epochs"]):  # loop over the dataset multiple times
         #train(model, optimizer, train_loader, config, epoch, epochs)
         model.train()
         for i, data in enumerate(train_loader):
@@ -261,16 +292,13 @@ def train_dann(config, checkpoint_dir=None):
             source_batch, unlabelled_target_features = data
 
             p = float(i + epoch * len_dataloader) / epochs / len_dataloader
-            alpha = 2. / (1. + np.exp(-10 * p)) - 1
+            alpha = 2. / (1. + np.exp(-gamma * p)) - 1
 
             # training model using source data
             source_features = source_batch[0][0].to(device)
             source_labels = source_batch[1][0].to(device)
 
-            batch_size = len(source_labels)
-
-            domain_label = torch.zeros(batch_size)
-            domain_label = domain_label.float().to(device)
+            domain_label = torch.zeros_like(source_labels).to(device)
 
             class_output, domain_output = model(input_data=source_features, alpha=alpha)
 
@@ -280,15 +308,11 @@ def train_dann(config, checkpoint_dir=None):
             # training model using target data
             unlabelled_target_features = unlabelled_target_features[0].to(device)
 
-            batch_size = len(unlabelled_target_features)
-
-            domain_label = torch.ones(batch_size)
-            domain_label = domain_label.float().to(device)
+            domain_label = torch.ones_like(source_features).to(device)
 
             _, domain_output = model(input_data=unlabelled_target_features, alpha=alpha)
             loss_t_domain = criterion(domain_output, domain_label)
             loss = loss_t_domain + loss_s_domain + loss_s_label
-
             loss.backward()
             optimizer.step()
 
@@ -325,38 +349,43 @@ def train_dann(config, checkpoint_dir=None):
     print("Finished Training")
 
 if __name__ == "__main__":
-    sched = ASHAScheduler()
-
     config_dict = {
-        "seed": 123,
-        "lr": tune.loguniform(1e-4, 1e-2),
-        "target_labelled": "telegram_gold",
-        "target_unlabelled": "telegram_unlabeled",
-        "sources": [
-                "germeval2018", 
-                "germeval2019"
-            ],
-        "target_train_split": 0.05,
-        "validation_split": 0.1,
-        "batch_size": 8,
-        "num_workers": 2,
-        "epochs": 10,
-        "stratify_unlabelled": True,
-        "truncation_length": 512
+        "epochs" : 10,
+        "lr": tune.uniform(1e-6, 1e-1),
+        "gamma": tune.randint(1, 100),
+        "beta1": tune.uniform(0.7, 0.999),
+        "beta2": tune.uniform(0.9, 0.99999),
+    }
+    initial_parameter_suggestion = {
+        "lr": 0.01,
+        "gamma": 10,
+        "beta1": 0.9,
+        "beta2": 0.999
     }
 
-    train_dann(config_dict)
+    algo = TuneBOHB(
+        #points_to_evaluate=initial_parameter_suggestion
+        )
+
+    bohb = HyperBandForBOHB(
+        max_t=10)
+
     result = tune.run(
         train_dann,
         metric="loss",
         mode="min",
         name="dann",
-        scheduler=sched,
+        scheduler=bohb,
+        search_alg = algo,
         resources_per_trial={
-            "cpu": 2,
-            "gpu": 2  # set this for GPUs
+            "cpu": 4,
+            "gpu": 1  # set this for GPUs
         },
-        num_samples=10,
+        stop={
+            "training_iteration" : 10
+        },
+        time_budget_s=43200,
+        num_samples=1,
         config=config_dict)
 
     print("Best config is:", result.best_config)

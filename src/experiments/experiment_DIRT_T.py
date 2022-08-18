@@ -310,10 +310,10 @@ class experiment_DIRT_T(experiment_base):
         gc.collect()
 
         # fetch unlabelled target dataset
-        unlabelled_target_dataset_features_train, unlabelled_target_dataset_features_val, _, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+        unlabelled_target_dataset_features = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
         
         # combine source dataset and unlabelled target dataset into one dataset
-        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features_train)
+        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
         
         sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=self.batch_size, drop_last=False)
         self.train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=self.num_workers)            

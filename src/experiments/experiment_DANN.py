@@ -85,10 +85,10 @@ class experiment_DANN(experiment_base):
                 source_features = source_batch[0][0].to(self.device)
                 source_labels = source_batch[1][0].to(self.device)
                 
-                batch_size = len(source_labels)
+                #batch_size = len(source_labels)
 
-                domain_label = torch.zeros(batch_size)
-                domain_label = domain_label.float().to(self.device)
+                domain_label = torch.zeros_like(source_labels).to(self.device)
+                #domain_label = domain_label.float()
 
                 class_output, domain_output = self.model(input_data=source_features, alpha=alpha)
                 
@@ -98,10 +98,10 @@ class experiment_DANN(experiment_base):
                 # training model using target data
                 unlabelled_target_features = unlabelled_target_features[0].to(self.device)
 
-                batch_size = len(unlabelled_target_features)
+                #batch_size = len(unlabelled_target_features)
 
-                domain_label = torch.ones(batch_size)
-                domain_label = domain_label.float().to(self.device)
+                domain_label = torch.ones_like(source_labels).to(self.device)
+                #domain_label = domain_label.float().to(self.device)
 
                 _, domain_output = self.model(input_data=unlabelled_target_features, alpha=alpha)
                 loss_t_domain = self.loss_domain(domain_output, domain_label)
@@ -178,10 +178,10 @@ class experiment_DANN(experiment_base):
 
         # fetch unlabelled target dataset
         
-        unlabelled_target_dataset_features_train, unlabelled_target_dataset_features_val, _, _ = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
+        unlabelled_target_dataset_features = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
         
         # combine source dataset and unlabelled target dataset into one dataset
-        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features_train)
+        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
 
         sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=self.batch_size, drop_last=False)
         self.train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=self.num_workers)            

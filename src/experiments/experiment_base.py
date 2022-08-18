@@ -165,6 +165,7 @@ class experiment_base(ABC):
             val_tokens_tensor =  torch.from_numpy(val_tokens_array)
             train_labels_tensor =  torch.from_numpy(train_labels_array).float()
             val_labels_tensor =  torch.from_numpy(val_labels_array).float()
+            return train_tokens_tensor, val_tokens_tensor, train_labels_tensor, val_labels_tensor
         elif labelled == True and target == True:
             #map neutral to 0 and abusive to 1
             label_df = dset_df["label"].map(label2id)
@@ -178,14 +179,13 @@ class experiment_base(ABC):
             test_labels_tensor =  torch.from_numpy(test_labels_array).float()
             return train_tokens_tensor, test_tokens_tensor, train_labels_tensor, test_labels_tensor
         else:
-            train_tokens_array, val_tokens_array = train_test_split(tokens_array, test_size = self.validation_split, random_state = self.seed)
+            #train_tokens_array, val_tokens_array = train_test_split(tokens_array, test_size = self.validation_split, random_state = self.seed)
             
-            train_tokens_tensor =  torch.from_numpy(train_tokens_array)
-            val_tokens_tensor =  torch.from_numpy(val_tokens_array)
-            train_labels_tensor =  None
-            val_labels_tensor =  None
+            tokens_tensor =  torch.from_numpy(tokens_array)
+            #val_tokens_tensor =  torch.from_numpy(val_tokens_array)
+            #val_labels_tensor =  None
 
-        return train_tokens_tensor, val_tokens_tensor, train_labels_tensor, val_labels_tensor
+            return tokens_tensor
 
     def load_basic_settings(self):
         # data settings
