@@ -229,8 +229,7 @@ def create_model(device, truncation_length):
     model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device)  
     
     return model
-
-
+      
 def train_dann(config, checkpoint_dir=None):
     seed= 123
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -242,8 +241,8 @@ def train_dann(config, checkpoint_dir=None):
         ]
     target_train_split = 0.05
     validation_split= 0.1
-    batch_size= 16
-    num_workers= 4
+    batch_size= 4
+    num_workers= 2
     stratify_unlabelled= True
 
     truncation_length= 512
@@ -271,14 +270,21 @@ def train_dann(config, checkpoint_dir=None):
 
     optimizer = optim.Adam(
         model.parameters(), lr=config["lr"], betas=(config["beta1"],config["beta2"]))
+    epoch = 0
 
     if checkpoint_dir:
-        model_state, optimizer_state = torch.load(
-            os.path.join(checkpoint_dir, "checkpoint"))
-        model.load_state_dict(model_state)
-        optimizer.load_state_dict(optimizer_state)
+      path = os.path.join(checkpoint_dir, "checkpoint")
+      checkpoint = torch.load(path)
+
+      #model_state, optimizer_state = torch.load(
+      #    os.path.join(checkpoint_dir, "checkpoint"))
+      model.load_state_dict(checkpoint["model_state_dict"])
+      #optimizer.load_state_dict(optimizer_state)
+      optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+      epoch = checkpoint["epoch"]
     
-    for epoch in range(config["epochs"]):  # loop over the dataset multiple times
+    epochs = config["epochs"]
+    while True:  # loop over the dataset multiple times
         #train(model, optimizer, train_loader, config, epoch, epochs)
         model.train()
         for i, data in enumerate(train_loader):
@@ -308,11 +314,12 @@ def train_dann(config, checkpoint_dir=None):
             # training model using target data
             unlabelled_target_features = unlabelled_target_features[0].to(device)
 
-            domain_label = torch.ones_like(source_features).to(device)
+            domain_label = torch.ones(len(source_features)).float().to(device)
 
             _, domain_output = model(input_data=unlabelled_target_features, alpha=alpha)
             loss_t_domain = criterion(domain_output, domain_label)
             loss = loss_t_domain + loss_s_domain + loss_s_label
+
             loss.backward()
             optimizer.step()
 
@@ -341,9 +348,13 @@ def train_dann(config, checkpoint_dir=None):
         # parameter in future iterations.
         with tune.checkpoint_dir(step=epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "checkpoint")
-            torch.save(
-                (model.state_dict(), optimizer.state_dict()), path)
+            torch.save({
+              "epoch": epoch,
+              "model_state_dict": model.state_dict(),
+              "optimizer_state_dict": optimizer.state_dict()
 
+            }, path)
+        epoch += 1
         #tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
         tune.report(loss=avg_val_loss)
     print("Finished Training")
@@ -369,6 +380,7 @@ if __name__ == "__main__":
 
     bohb = HyperBandForBOHB(
         max_t=10)
+    stopper = tune.stopper.MaximumIterationStopper(10)
 
     result = tune.run(
         train_dann,
@@ -378,14 +390,12 @@ if __name__ == "__main__":
         scheduler=bohb,
         search_alg = algo,
         resources_per_trial={
-            "cpu": 4,
+            "cpu": 2,
             "gpu": 1  # set this for GPUs
         },
-        stop={
-            "training_iteration" : 10
-        },
+        stop=stopper,
         time_budget_s=43200,
-        num_samples=1,
+        num_samples=3,
         config=config_dict)
 
     print("Best config is:", result.best_config)
