@@ -322,7 +322,7 @@ def train_dann(config, checkpoint_dir=None):
 
             loss.backward()
             optimizer.step()
-            break
+
         #val_loss = test(model, test_loader)
 
         model.eval()
@@ -338,6 +338,7 @@ def train_dann(config, checkpoint_dir=None):
                 predicted = torch.round(torch.sigmoid(outputs)).int()
 
                 loss = criterion(predicted, labels)
+
                 val_loss += loss.cpu().numpy()
                 val_steps += 1
 
@@ -381,7 +382,7 @@ if __name__ == "__main__":
     bohb = HyperBandForBOHB(
         max_t=10)
     stopper = tune.stopper.MaximumIterationStopper(10)
-    train_dann(config_dict)
+
     result = tune.run(
         train_dann,
         metric="loss",
