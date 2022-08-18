@@ -332,7 +332,7 @@ def train_dann(config, checkpoint_dir=None):
         with torch.no_grad():
             for i, data in enumerate(test_loader, 0):
                 inputs, labels = data
-                inputs, labels = inputs[0].int().to(device), labels[0].to(device)
+                inputs, labels = inputs[0].to(device), labels[0].int().to(device)
 
                 outputs = model.inference(inputs)
                 predicted = torch.round(torch.sigmoid(outputs)).int()
