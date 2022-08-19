@@ -285,7 +285,6 @@ def train_dann(config, checkpoint_dir=None):
     
     epochs = config["epochs"]
     while True:  # loop over the dataset multiple times
-        #train(model, optimizer, train_loader, config, epoch, epochs)
         model.train()
         for i, data in enumerate(train_loader):
 
@@ -323,8 +322,6 @@ def train_dann(config, checkpoint_dir=None):
             loss.backward()
             optimizer.step()
 
-        #val_loss = test(model, test_loader)
-
         model.eval()
         # Validation loss
         val_loss = 0.0
@@ -332,16 +329,15 @@ def train_dann(config, checkpoint_dir=None):
         with torch.no_grad():
             for i, data in enumerate(test_loader, 0):
                 inputs, labels = data
-                inputs, labels = inputs[0].to(device), labels[0].int().to(device)
+                inputs, labels = inputs[0].to(device), labels[0].to(device)
 
                 outputs = model.inference(inputs)
-                predicted = torch.round(torch.sigmoid(outputs)).int()
+                predicted = torch.round(torch.sigmoid(outputs))
 
                 loss = criterion(predicted, labels)
 
                 val_loss += loss.cpu().numpy()
                 val_steps += 1
-
         avg_val_loss =  (val_loss / val_steps)
 
         # Here we save a checkpoint. It is automatically registered with
