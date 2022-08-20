@@ -237,7 +237,11 @@ def train_dann(config, checkpoint_dir=None):
     target_unlabelled= "telegram_unlabeled"
     sources= [
             "germeval2018", 
-            "germeval2019"
+            "germeval2019",
+            "hasoc2019",
+            "hasoc2020",
+            "ihs_labelled",
+            "covid_2021"
         ]
     target_train_split = 0.05
     validation_split= 0.1
@@ -265,7 +269,7 @@ def train_dann(config, checkpoint_dir=None):
     )
 
     criterion = nn.BCEWithLogitsLoss()
-
+    
     gamma = config["gamma"]
 
     optimizer = optim.Adam(
@@ -283,7 +287,7 @@ def train_dann(config, checkpoint_dir=None):
       optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
       epoch = checkpoint["epoch"]
     
-    epochs = config["epochs"]
+    epochs = 10
     while True:  # loop over the dataset multiple times
         model.train()
         for i, data in enumerate(train_loader):
@@ -358,41 +362,35 @@ def train_dann(config, checkpoint_dir=None):
 
 if __name__ == "__main__":
     config_dict = {
-        "epochs" : 10,
-        "lr": tune.uniform(1e-6, 1e-1),
+        "lr": tune.loguniform(1e-6, 1),
         "gamma": tune.randint(1, 100),
-        "beta1": tune.uniform(0.7, 0.999),
-        "beta2": tune.uniform(0.9, 0.99999),
-    }
-    initial_parameter_suggestion = {
-        "lr": 0.01,
-        "gamma": 10,
-        "beta1": 0.9,
-        "beta2": 0.999
+        "beta1": tune.loguniform(0.7, 0.999),
+        "beta2": tune.loguniform(0.9, 0.99999),
     }
 
     algo = TuneBOHB(
-        #points_to_evaluate=initial_parameter_suggestion
+        metric = "loss",
+        mode = "min"
         )
 
     bohb = HyperBandForBOHB(
+        time_attr="training_iteration",
+        metric = "loss",
+        mode = "min",
         max_t=10)
-    stopper = tune.stopper.MaximumIterationStopper(10)
+    #stopper = tune.stopper.MaximumIterationStopper(10)
 
     result = tune.run(
         train_dann,
-        metric="loss",
-        mode="min",
         name="dann",
         scheduler=bohb,
         search_alg = algo,
         resources_per_trial={
-            "cpu": 2,
+            "cpu": 8,
             "gpu": 1  # set this for GPUs
         },
-        stop=stopper,
-        time_budget_s=43200,
-        num_samples=3,
+        time_budget_s=64800,
+        num_samples=-1,
         config=config_dict)
 
     print("Best config is:", result.best_config)
