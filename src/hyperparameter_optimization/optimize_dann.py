@@ -383,17 +383,17 @@ if __name__ == "__main__":
     result = tune.run(
         train_dann,
         name="dann",
+        metric = "loss",
+        mode = "min",
         scheduler=bohb,
         search_alg = algo,
         resources_per_trial={
-            "cpu": 8,
+            "cpu": 2,
             "gpu": 1  # set this for GPUs
         },
-        time_budget_s=64800,
+        time_budget_s=80000,
         num_samples=-1,
         config=config_dict)
-
-    print("Best config is:", result.best_config)
 
     best_trial = result.get_best_trial("loss", "min", "last")
     print("Best trial config: {}".format(best_trial.config))
