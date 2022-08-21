@@ -383,8 +383,6 @@ if __name__ == "__main__":
     result = tune.run(
         train_dann,
         name="dann",
-        metric = "loss",
-        mode = "min",
         scheduler=bohb,
         search_alg = algo,
         resources_per_trial={
