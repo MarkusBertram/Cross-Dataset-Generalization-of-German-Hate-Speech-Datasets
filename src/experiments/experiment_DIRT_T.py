@@ -288,8 +288,10 @@ class experiment_DIRT_T(experiment_base):
         # fetch source datasets
         source_features = []
         source_labels = []
+        self.unlabelled_size = 0
         for source_name in self.sources:
             train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False)
+            self.unlabelled_size += len(train_features) + len(val_features)
             source_features.append(train_features)
             source_labels.append(train_labels)
             
