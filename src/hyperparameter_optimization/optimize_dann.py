@@ -397,5 +397,3 @@ if __name__ == "__main__":
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(
         best_trial.last_result["loss"]))
-    print("Best trial final validation accuracy: {}".format(
-        best_trial.last_result["accuracy"]))
