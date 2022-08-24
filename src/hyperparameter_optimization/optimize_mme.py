@@ -26,7 +26,7 @@ from torch.utils.data.sampler import BatchSampler, RandomSampler
 from src.model import *
 from ray.tune.schedulers import AsyncHyperBandScheduler
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from src.model.DANN_model import DANN_model
+from src.model.MME_model import MME_model
 import sys
 from ray.tune.suggest.bohb import TuneBOHB
 from ray.tune.schedulers import HyperBandForBOHB
@@ -156,18 +156,21 @@ def get_data_loaders(sources,
             seed,
             truncation_length=truncation_length)
         
-        unlabelled_size += len(labelled_target_features_train)
-
-        source_features.append(labelled_target_features_train)
-        source_labels.append(labelled_target_labels_train)
         val_features_list.append(labelled_target_features_val)
         val_labels_list.append(labelled_target_labels_val)
-
+        
         combined_source_features = torch.cat(source_features)
         combined_source_labels = torch.cat(source_labels)
-        
+
+         # create labelled target dataloader
+        labelled_target_dataset_train = TensorDataset(labelled_target_features_train, labelled_target_labels_train)
+        sampler = BatchSampler(RandomSampler(labelled_target_dataset_train), batch_size=min(batch_size, len(labelled_target_dataset_train)), drop_last=True)
+        labelled_target_dataloader = DataLoader(dataset=labelled_target_dataset_train, sampler = sampler, num_workers=num_workers)
+         
         # concatenate datasets
         source_dataset = TensorDataset(combined_source_features, combined_source_labels)
+        sampler = BatchSampler(RandomSampler(source_dataset), batch_size=min(batch_size, len(labelled_target_dataset_train)), drop_last=False)
+        source_dataloader = DataLoader(dataset=source_dataset, sampler = sampler, num_workers=num_workers)
 
         del source_features
         del source_labels
@@ -182,15 +185,9 @@ def get_data_loaders(sources,
             unlabelled_size = unlabelled_size,
             stratify_unlabelled = stratify_unlabelled,
             abusive_ratio = abusive_ratio)
-        
-        # combine source dataset and unlabelled target dataset into one dataset
-        concatenated_train_dataset = CustomConcatDataset(source_dataset, unlabelled_target_dataset_features)
-        
-        sampler = BatchSampler(RandomSampler(concatenated_train_dataset), batch_size=batch_size, drop_last=False)
-        train_dataloader = DataLoader(dataset=concatenated_train_dataset, sampler = sampler, num_workers=num_workers)            
-        #train_dataloader = DataLoader(concatenated_train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        
-        del concatenated_train_dataset
+        unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features)
+        sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=2 * min(batch_size, len(labelled_target_dataset_train)), drop_last=True)
+        unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=num_workers)            
         del unlabelled_target_dataset_features
         gc.collect()
 
@@ -199,12 +196,12 @@ def get_data_loaders(sources,
         combined_val_features = torch.cat(val_features_list)
         combined_val_labels = torch.cat(val_labels_list)
         labelled_target_dataset_test = TensorDataset(combined_val_features, combined_val_labels)
-        sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=batch_size, drop_last=False)
+        sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=min(batch_size, len(labelled_target_dataset_train)), drop_last=False)
         test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=num_workers)               
         del labelled_target_dataset_test
         gc.collect()
 
-        return train_dataloader, test_dataloader
+        return source_dataloader, labelled_target_dataloader, unlabelled_target_dataloader, test_dataloader
 
 def create_model(device, truncation_length):
     from src.model.feature_extractors import BERT_cnn
@@ -213,15 +210,12 @@ def create_model(device, truncation_length):
     
     from src.model.task_classifiers import DANN_task_classifier
     task_classifier = DANN_task_classifier()
-     
-    from src.model.domain_classifiers import DANN_domain_classifier
-    domain_classifier = DANN_domain_classifier()
 
-    model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device)  
+    model = MME_model(feature_extractor, task_classifier, output_hidden_states).to(device)  
     
     return model
       
-def train_dann(config, checkpoint_dir=None):
+def train_mme(config, checkpoint_dir=None):
     seed= 123
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     target_labelled= "telegram_gold"
@@ -246,7 +240,7 @@ def train_dann(config, checkpoint_dir=None):
 
     model.to(device)
     
-    train_loader, test_loader = get_data_loaders(
+    source_dataloader, labelled_target_dataloader, unlabelled_target_dataloader, test_loader = get_data_loaders(
         sources = sources,
         target_labelled = target_labelled,
         target_unlabelled = target_unlabelled,
@@ -261,106 +255,141 @@ def train_dann(config, checkpoint_dir=None):
 
     criterion = nn.BCEWithLogitsLoss()
     
-    gamma = config["gamma"]
+    params = [{
+            "params": model.feature_extractor.parameters(), "lr": config["lr"]
+        }]
+    optimizer_g = optim.Adam(
+        params,
+        betas=(config["beta1"],config["beta2"])
+    )
+    params = [{
+        "params": model.task_classifier.parameters(), "lr": config["lr"]
+    }]
 
-    optimizer = optim.Adam(
-        model.parameters(), lr=config["lr"], betas=(config["beta1"],config["beta2"]))
-    epoch = 0
+    optimizer_f = optim.Adam(
+        params,
+        betas=(config["beta1"],config["beta2"])
+    )
+    
+    step = 0
 
     if checkpoint_dir:
       path = os.path.join(checkpoint_dir, "checkpoint")
       checkpoint = torch.load(path)
 
-      #model_state, optimizer_state = torch.load(
-      #    os.path.join(checkpoint_dir, "checkpoint"))
       model.load_state_dict(checkpoint["model_state_dict"])
-      #optimizer.load_state_dict(optimizer_state)
-      optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-      epoch = checkpoint["epoch"]
+      optimizer_f.load_state_dict(checkpoint["optimizer_f_state_dict"])
+      optimizer_g.load_state_dict(checkpoint["optimizer_g_state_dict"])
+      step = checkpoint["step"]
     
     for name, param in model.named_parameters():
         if "bert" in name:
             param.requires_grad = False
 
-    epochs = 10
+    eta = config["eta"]
+    lamda = config["lamda"]
+
+    data_iter_s = iter(source_dataloader)
+    data_iter_t = iter(labelled_target_dataloader)
+    data_iter_t_unl = iter(unlabelled_target_dataloader)
+    len_train_source = len(source_dataloader)
+    len_train_target = len(labelled_target_dataloader)
+    len_train_target_semi = len(unlabelled_target_dataloader)
+
+    del source_dataloader
+    del labelled_target_dataloader
+    del unlabelled_target_dataloader
+    gc.collect()
+
     while True:  # loop over the dataset multiple times
         model.train()
-        for i, data in enumerate(train_loader):
+           
+        if step % len_train_target == 0:
+            data_iter_t = iter(labelled_target_dataloader)
+        if step % len_train_target_semi == 0:
+            data_iter_t_unl = iter(unlabelled_target_dataloader)
+        if step % len_train_source == 0:
+            data_iter_s = iter(source_dataloader)
+        
+        data_s = next(data_iter_s)
+        data_t = next(data_iter_t)
+        data_t_unl = next(data_iter_t_unl) 
 
-            len_dataloader = len(train_loader)
+        source_features = data_s[0][0].to(device)
+        source_labels = data_s[1][0].to(device)
+        labelled_target_features = data_t[0][0].to(device)
+        labelled_target_labels = data_t[1][0].to(device)
+        unlabelled_target_features = data_t_unl[0][0].to(device)
+        
+        optimizer_g.zero_grad()
+        optimizer_f.zero_grad()
+
+        data = torch.cat((source_features, labelled_target_features), 0)
+        target = torch.cat((source_labels, labelled_target_labels), 0)
+
+        output = model(data)
+
+        loss = criterion(output, target)
+        loss.backward(retain_graph=True)
+
+        optimizer_g.step()
+        optimizer_f.step()
+
+        optimizer_g.zero_grad()
+        optimizer_f.zero_grad()
+
+        out_t1 = model(unlabelled_target_features, reverse = True, eta = eta)
+        # conditional entropy
+        # https://github.com/VisionLearningGroup/SSDA_MME/blob/81c3a9c321f24204db7223405662d4d16b22b17c/utils/loss.py#L36
+        loss_t = lamda * torch.mean(torch.sigmoid(out_t1)*F.logsigmoid(out_t1+1e-5))
+
+        loss_t.backward()
+        optimizer_f.step()
+        optimizer_g.step()
+
+        if step % len_train_source == 0:
+            model.eval()
+            # Validation loss
+            val_loss = 0.0
+            val_steps = 0
+            with torch.no_grad():
+                for i, data in enumerate(test_loader, 0):
+                    inputs, labels = data
+                    inputs, labels = inputs[0].to(device), labels[0].to(device)
+
+                    outputs = model.inference(inputs)
+                    predicted = torch.round(torch.sigmoid(outputs))
+
+                    loss = criterion(predicted, labels)
+
+                    val_loss += loss.cpu().numpy()
+                    val_steps += 1
+            avg_val_loss =  (val_loss / val_steps)
+
+            # Here we save a checkpoint. It is automatically registered with
+            # Ray Tune and will potentially be passed as the `checkpoint_dir`
+            # parameter in future iterations.
+            with tune.checkpoint_dir(step=step) as checkpoint_dir:
+                path = os.path.join(checkpoint_dir, "checkpoint")
+                torch.save({
+                "step": step,
+                "model_state_dict": model.state_dict(),
+                "optimizer_f_state_dict": optimizer_f.state_dict(),
+                "optimizer_g_state_dict": optimizer_g.state_dict()
+
+                }, path)
             
-            # zero the parameter gradients
-            optimizer.zero_grad()
-
-            # get the inputs; data is a list of [inputs, labels]
-            source_batch, unlabelled_target_features = data
-
-            p = float(i + epoch * len_dataloader) / epochs / len_dataloader
-            alpha = 2. / (1. + np.exp(-gamma * p)) - 1
-
-            # training model using source data
-            source_features = source_batch[0][0].to(device)
-            source_labels = source_batch[1][0].to(device)
-
-            domain_label = torch.zeros_like(source_labels).to(device)
-
-            class_output, domain_output = model(input_data=source_features, alpha=alpha)
-
-            loss_s_label = criterion(class_output, source_labels)
-            loss_s_domain = criterion(domain_output, domain_label)
-
-            # training model using target data
-            unlabelled_target_features = unlabelled_target_features[0].to(device)
-
-            domain_label = torch.ones(len(source_features)).float().to(device)
-
-            _, domain_output = model(input_data=unlabelled_target_features, alpha=alpha)
-            loss_t_domain = criterion(domain_output, domain_label)
-            loss = loss_t_domain + loss_s_domain + loss_s_label
-
-            loss.backward()
-            optimizer.step()
-
-        model.eval()
-        # Validation loss
-        val_loss = 0.0
-        val_steps = 0
-        with torch.no_grad():
-            for i, data in enumerate(test_loader, 0):
-                inputs, labels = data
-                inputs, labels = inputs[0].to(device), labels[0].to(device)
-
-                outputs = model.inference(inputs)
-                predicted = torch.round(torch.sigmoid(outputs))
-
-                loss = criterion(predicted, labels)
-
-                val_loss += loss.cpu().numpy()
-                val_steps += 1
-        avg_val_loss =  (val_loss / val_steps)
-
-        # Here we save a checkpoint. It is automatically registered with
-        # Ray Tune and will potentially be passed as the `checkpoint_dir`
-        # parameter in future iterations.
-        with tune.checkpoint_dir(step=epoch) as checkpoint_dir:
-            path = os.path.join(checkpoint_dir, "checkpoint")
-            torch.save({
-              "epoch": epoch,
-              "model_state_dict": model.state_dict(),
-              "optimizer_state_dict": optimizer.state_dict()
-
-            }, path)
-        epoch += 1
-        #tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
-        tune.report(loss=avg_val_loss)
-    print("Finished Training")
+            tune.report(loss=avg_val_loss)
+        
+        step += 1
 
 if __name__ == "__main__":
     config_dict = {
-        "lr": tune.loguniform(1e-6, 1),
-        "gamma": tune.randint(1, 100),
-        "beta1": tune.loguniform(0.7, 0.999),
-        "beta2": tune.loguniform(0.9, 0.99999),
+        "lr": tune.loguniform(1e-5, 1e-4),
+        "beta1": tune.loguniform(0.88, 0.999),
+        "beta2": tune.loguniform(0.99, 0.9999),
+        "eta": tune.loguniform(0.1, 100),
+        "lamda": tune.loguniform(0.01, 1),
     }
 
     algo = TuneBOHB(
@@ -372,12 +401,11 @@ if __name__ == "__main__":
         time_attr="training_iteration",
         metric = "loss",
         mode = "min",
-        max_t=10)
-    #stopper = tune.stopper.MaximumIterationStopper(10)
-
+        max_t=73530)
+    
     result = tune.run(
-        train_dann,
-        name="dann",
+        train_mme,
+        name="mme",
         scheduler=bohb,
         search_alg = algo,
         resources_per_trial={
