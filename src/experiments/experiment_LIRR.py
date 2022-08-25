@@ -135,7 +135,7 @@ class experiment_LIRR(experiment_base):
             domain_label_target = torch.zeros_like(ul_tgt_domain_classifier_output).to(self.device)
             loss_transfer += self.loss_cls(ul_tgt_domain_classifier_output, domain_label_target)
 
-            total_loss = loss_transfer + loss_inv + torch.sqrt((loss_inv - loss_env) ** 2) * 0.1
+            total_loss = loss_inv + self.lambda_risk * torch.sqrt((loss_inv - loss_env) ** 2) + self.lambda_rep * loss_transfer
 
             self.main_optimizer.zero_grad()
             self.dis_optimizer.zero_grad()
@@ -173,33 +173,17 @@ class experiment_LIRR(experiment_base):
         self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
         self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cnn")
         self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
-        self.multiplication = self.current_experiment.get("multiplication", 50000)
-        self.lamda = self.current_experiment.get("lamda", 0.1)
-        self.eta = self.current_experiment.get("eta", 1.0)
+        self.lambda_risk = self.current_experiment.get("lambda_risk", 1.0)
+        self.lambda_rep = self.current_experiment.get("lambda_rep", 1.0)
 
     def create_model(self):
-        
-        if self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            #import .model.feature_extractors
-            feature_extractor = BERT_cnn(self.truncation_length)
-            output_hidden_states = False
-        elif self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn(self.truncation_length)
-            output_hidden_states = True
-        else:
-            raise ValueError("Can't find the feature extractor name. \
-            Please specify bert_cnn or bert_cnn as key in experiment settings of the current experiment.")
-        
+        from src.model.feature_extractors import BERT_cnn
+        feature_extractor = BERT_cnn(self.truncation_length)
+        output_hidden_states = True
 
-        if self.task_classifier.lower() == "dann_task_classifier":
-            from src.model.task_classifiers import DANN_task_classifier
-            task_classifier_1 = DANN_task_classifier()
-            task_classifier_2 = DANN_task_classifier()
-        else:
-            raise ValueError("Can't find the task classifier name. \
-            Please specify the task classifier class name as key in experiment settings of the current experiment.")
+        from src.model.task_classifiers import DANN_task_classifier
+        task_classifier_1 = DANN_task_classifier()
+        task_classifier_2 = DANN_task_classifier()
 
         self.model = LIRR_model(feature_extractor_module = feature_extractor, domain_classifier= task_classifier_1, domain_invariant_predictor = task_classifier_2, output_hidden_states=output_hidden_states).to(self.device)
 
@@ -238,9 +222,7 @@ class experiment_LIRR(experiment_base):
         unlabelled_target_dataset_features = self.fetch_dataset(self.target_unlabelled, labelled = False, target = True)
         unlabelled_target_dataset = TensorDataset(unlabelled_target_dataset_features)
         sampler = BatchSampler(RandomSampler(unlabelled_target_dataset), batch_size=self.batch_size, drop_last=True)
-        self.unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=self.num_workers)            
-        
-        
+        self.unlabelled_target_dataloader = DataLoader(dataset=unlabelled_target_dataset, sampler = sampler, num_workers=self.num_workers)
 
         # create test dataloader
         labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)

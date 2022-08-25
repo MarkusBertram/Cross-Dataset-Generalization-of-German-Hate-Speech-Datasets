@@ -28,33 +28,27 @@ class ReverseLayerF(Function):
 class EnvPredictor(nn.Module):
     def __init__(self, in_features, bottleneck_dim=1024):
         super(EnvPredictor, self).__init__()
-        self.dropout1 = nn.Dropout(p=0.1)
-        self.dropout2 = nn.Dropout(p=0.1)
-        self.bottleneck = nn.Linear(in_features=in_features+1, out_features=bottleneck_dim)
-        self.fc = nn.Linear(in_features=bottleneck_dim, out_features=1)
-        self.flatten = nn.Flatten(start_dim = 0)
-        self.num_class = 2
 
+        self.envpredictor = nn.Sequential()
+        self.envpredictor.add_module('e_fc1', nn.Linear(in_features+1, 100))
+        self.envpredictor.add_module('e_relu1', nn.ReLU())
+        self.envpredictor.add_module('e_drop1', nn.Dropout())
+        self.envpredictor.add_module('e_fc2', nn.Linear(100, 100))
+        self.envpredictor.add_module('e_relu2', nn.ReLU())
+        self.envpredictor.add_module('e_fc3', nn.Linear(100, 1))
+        self.envpredictor.add_module('e_flatten', nn.Flatten(start_dim = 0))
 
-    def forward(self, x, env, temp=1, cosine=False):
+    def forward(self, x, env):
         env_embedding = {
             'src':torch.zeros(x.size(0), 1).cuda(), 
             'tgt':torch.ones(x.size(0), 1).cuda()
         }
 
         x1 = torch.cat([x, env_embedding[env]], 1)
-        drop_x = self.dropout2(x1)
-        encodes = torch.nn.functional.relu(self.bottleneck(drop_x), inplace=False)
-        drop_x = self.dropout2(encodes)
-        if cosine:
-    #       cosine classifer
-            normed_x = nn.functional.normalize(drop_x, p=2, dim=1)
-            logits = self.fc(normed_x) / temp
-            logits = self.flatten(logits)
-        else:
-            logits = self.fc(drop_x) / temp
-            logits = self.flatten(logits)
-        return logits
+
+        x = self.envpredictor(x1)
+
+        return x
 
 class LIRR_model(nn.Module):
     def __init__(self, feature_extractor_module, domain_classifier, domain_invariant_predictor, output_hidden_states):
@@ -69,9 +63,7 @@ class LIRR_model(nn.Module):
         self.domain_classifier = domain_classifier
         self.domain_invariant_predictor = domain_invariant_predictor
 
-        #self.task_classifier = task_classifier_module
-
-    def forward(self, input_data, env = 'src', reverse = False, eta = 0.1):#, #eta = 0.1):
+    def forward(self, input_data, env = 'src', reverse = False, eta = 1.0):
         bert_output = self.bert(input_ids=input_data[:,0], attention_mask=input_data[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
         
         feature_extractor_output = self.feature_extractor(bert_output)
@@ -80,9 +72,6 @@ class LIRR_model(nn.Module):
 
         if reverse == True:
             feature_extractor_output = ReverseLayerF.apply(feature_extractor_output, eta)
-            # feature_extractor_output = ## Relu?
-            ### Relu?
-            ## bottleneck?
 
         domain_classifier_output = self.domain_classifier(feature_extractor_output)
         

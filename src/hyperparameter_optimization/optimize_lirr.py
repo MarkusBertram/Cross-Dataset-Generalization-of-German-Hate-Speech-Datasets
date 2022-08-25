@@ -26,7 +26,7 @@ from torch.utils.data.sampler import BatchSampler, RandomSampler
 from src.model import *
 from ray.tune.schedulers import AsyncHyperBandScheduler
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from src.model.MME_model import MME_model
+from src.model.LIRR_model import LIRR_model
 import sys
 from ray.tune.suggest.bohb import TuneBOHB
 from ray.tune.schedulers import HyperBandForBOHB
@@ -211,11 +211,11 @@ def create_model(device, truncation_length):
     from src.model.task_classifiers import DANN_task_classifier
     task_classifier = DANN_task_classifier()
 
-    model = MME_model(feature_extractor, task_classifier, output_hidden_states).to(device)  
+    model = LIRR_model(feature_extractor, task_classifier, output_hidden_states).to(device)  
     
     return model
       
-def train_mme(config, checkpoint_dir=None):
+def train_lirr(config, checkpoint_dir=None):
     seed= 123
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     target_labelled= "telegram_gold"
@@ -252,42 +252,41 @@ def train_mme(config, checkpoint_dir=None):
         seed = seed,
         truncation_length = truncation_length
     )
-
-    criterion = nn.BCEWithLogitsLoss()
-    
-    params = [{
-            "params": model.feature_extractor.parameters(), "lr": config["lr"]
-        }]
-    optimizer_g = optim.Adam(
-        params,
-        betas=(config["beta1"],config["beta2"])
-    )
-    params = [{
-        "params": model.task_classifier.parameters(), "lr": config["lr"]
-    }]
-
-    optimizer_f = optim.Adam(
-        params,
-        betas=(config["beta1"],config["beta2"])
-    )
     
     step = 0
+
+    # setting up optimizers
+    main_optimizer = optim.Adam(
+        [
+        {"params": model.feature_extractor.parameters(), "lr": config["lr"]},
+        {"params": model.domain_dependant_predictor.parameters(), "lr": config["lr"]},
+        {"params": model.domain_invariant_predictor.parameters(), "lr": config["lr"]}
+        ],
+        betas=(config["beta1"],config["beta2"])
+    )
+
+    dis_optimizer = optim.Adam(
+        [
+        {"params": model.domain_classifier.parameters(), "lr": config["lr"]}
+        ],
+        betas=(config["beta1"],config["beta2"])
+    )
 
     if checkpoint_dir:
       path = os.path.join(checkpoint_dir, "checkpoint")
       checkpoint = torch.load(path)
 
       model.load_state_dict(checkpoint["model_state_dict"])
-      optimizer_f.load_state_dict(checkpoint["optimizer_f_state_dict"])
-      optimizer_g.load_state_dict(checkpoint["optimizer_g_state_dict"])
+      main_optimizer.load_state_dict(checkpoint["main_optimizer_state_dict"])
+      dis_optimizer.load_state_dict(checkpoint["dis_optimizer_state_dict"])
       step = checkpoint["step"]
     
     for name, param in model.named_parameters():
         if "bert" in name:
             param.requires_grad = False
 
-    eta = config["eta"]
-    lamda = config["lamda"]
+    loss_cls = nn.BCEWithLogitsLoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     data_iter_s = iter(source_dataloader)
     data_iter_t = iter(labelled_target_dataloader)
@@ -295,6 +294,9 @@ def train_mme(config, checkpoint_dir=None):
     len_train_source = len(source_dataloader)
     len_train_target = len(labelled_target_dataloader)
     len_train_target_semi = len(unlabelled_target_dataloader)
+
+    lambda_risk = config["lambda_risk"]
+    lambda_rep = config["lambda_rep"]
 
     while True:  # loop over the dataset multiple times
         model.train()
@@ -316,31 +318,37 @@ def train_mme(config, checkpoint_dir=None):
         labelled_target_labels = data_t[1][0].to(device)
         unlabelled_target_features = data_t_unl[0][0].to(device)
         
-        optimizer_g.zero_grad()
-        optimizer_f.zero_grad()
+        src_domain_dependant_output, src_domain_classifier_output, src_class_output = model(source_features, 'src')
+        l_tgt_domain_dependant_output, _, l_tgt_class_output = model(labelled_target_features, 'tgt')
+        _, ul_tgt_domain_classifier_output, _ = model(unlabelled_target_features)
+        
+        # Classification Loss
+        loss_cls_src = loss_cls(src_class_output, source_labels) / 2.
+        loss_cls_tgt = loss_cls(l_tgt_class_output, labelled_target_labels) / 2.
+        loss_inv = loss_cls_src + loss_cls_tgt
 
-        data = torch.cat((source_features, labelled_target_features), 0)
-        target = torch.cat((source_labels, labelled_target_labels), 0)
+        # Env prediction loss
+        loss_env = 0
+        loss_env += loss_cls(src_domain_dependant_output, source_labels) / 2.
+        loss_env += loss_cls(l_tgt_domain_dependant_output, labelled_target_labels) / 2.
 
-        output = model(data)
+        #DANN loss
+        loss_transfer = 0
+        # Source:
+        domain_label_target = torch.ones_like(src_domain_classifier_output).to(device)
+        loss_transfer += loss_cls(src_domain_classifier_output, domain_label_target)
 
-        loss = criterion(output, target)
-        loss.backward(retain_graph=True)
+        # Target:
+        domain_label_target = torch.zeros_like(ul_tgt_domain_classifier_output).to(device)
+        loss_transfer += loss_cls(ul_tgt_domain_classifier_output, domain_label_target)
 
-        optimizer_g.step()
-        optimizer_f.step()
+        total_loss = loss_inv + lambda_risk * torch.sqrt((loss_inv - loss_env) ** 2) + lambda_rep * loss_transfer
 
-        optimizer_g.zero_grad()
-        optimizer_f.zero_grad()
-
-        out_t1 = model(unlabelled_target_features, reverse = True, eta = eta)
-        # conditional entropy
-        # https://github.com/VisionLearningGroup/SSDA_MME/blob/81c3a9c321f24204db7223405662d4d16b22b17c/utils/loss.py#L36
-        loss_t = lamda * torch.mean(torch.sigmoid(out_t1)*F.logsigmoid(out_t1+1e-5))
-
-        loss_t.backward()
-        optimizer_f.step()
-        optimizer_g.step()
+        main_optimizer.zero_grad()
+        dis_optimizer.zero_grad()
+        total_loss.backward()
+        main_optimizer.step()
+        dis_optimizer.step()
 
         if step % len_train_source == 0:
             model.eval()
@@ -369,8 +377,8 @@ def train_mme(config, checkpoint_dir=None):
                 torch.save({
                 "step": step,
                 "model_state_dict": model.state_dict(),
-                "optimizer_f_state_dict": optimizer_f.state_dict(),
-                "optimizer_g_state_dict": optimizer_g.state_dict()
+                "main_optimizer_state_dict": main_optimizer.state_dict(),
+                "dis_optimizer_state_dict": dis_optimizer.state_dict()
 
                 }, path)
             
@@ -383,8 +391,8 @@ if __name__ == "__main__":
         "lr": tune.loguniform(1e-5, 1e-4),
         "beta1": tune.loguniform(0.88, 0.999),
         "beta2": tune.loguniform(0.99, 0.9999),
-        "eta": tune.loguniform(0.1, 100),
-        "lamda": tune.loguniform(0.01, 1),
+        "lambda_risk": tune.loguniform(0.1, 1),
+        "lambda_rep": tune.loguniform(0.01, 1),
     }
 
     algo = TuneBOHB(
@@ -399,8 +407,8 @@ if __name__ == "__main__":
         max_t=73530)
     
     result = tune.run(
-        train_mme,
-        name="mme",
+        train_lirr,
+        name="lirr",
         scheduler=bohb,
         search_alg = algo,
         resources_per_trial={
