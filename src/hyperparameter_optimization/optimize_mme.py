@@ -342,7 +342,7 @@ def train_mme(config, checkpoint_dir=None):
         optimizer_f.step()
         optimizer_g.step()
 
-        if step % len_train_source == 0:
+        if step % len_train_source == len_train_source-1:
             model.eval()
             # Validation loss
             val_loss = 0.0
