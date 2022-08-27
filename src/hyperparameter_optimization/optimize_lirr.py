@@ -208,10 +208,13 @@ def create_model(device, truncation_length):
     feature_extractor = BERT_cnn(truncation_length)
     output_hidden_states = True
     
+    from src.model.domain_classifiers import DANN_domain_classifier
+    domain_classifier = DANN_domain_classifier()
+
     from src.model.task_classifiers import DANN_task_classifier
     task_classifier = DANN_task_classifier()
 
-    model = LIRR_model(feature_extractor, task_classifier, output_hidden_states).to(device)  
+    model = LIRR_model(feature_extractor, domain_classifier, task_classifier, output_hidden_states).to(device)  
     
     return model
       
