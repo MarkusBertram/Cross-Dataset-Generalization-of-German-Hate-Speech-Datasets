@@ -152,34 +152,17 @@ class experiment_MDAN(experiment_base):
 
     def create_model(self):
         
-        if self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            #import .model.feature_extractors
-            feature_extractor = BERT_cnn(self.truncation_length)
-            output_hidden_states = False
-        elif self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn(self.truncation_length)
-            output_hidden_states = True
-        else:
-            raise ValueError("Can't find the feature extractor name. \
-            Please specify bert_cnn or bert_cnn as key in experiment settings of the current experiment.")
+        from src.model.feature_extractors import BERT_cnn
+        #import .model.feature_extractors
+        feature_extractor = BERT_cnn(self.truncation_length)
+        output_hidden_states = True
+
+        from src.model.task_classifiers import DANN_task_classifier
+        task_classifier = DANN_task_classifier()
+       
+        from src.model.domain_classifiers import DANN_domain_classifier
+        domain_classifier = DANN_domain_classifier()
         
-
-        if self.task_classifier.lower() == "dann_task_classifier":
-            from src.model.task_classifiers import DANN_task_classifier
-            task_classifier = DANN_task_classifier()
-        else:
-            raise ValueError("Can't find the task classifier name. \
-            Please specify the task classifier class name as key in experiment settings of the current experiment.")
-            
-        if self.domain_classifier.lower() == "dann_domain_classifier":
-            from src.model.domain_classifiers import DANN_domain_classifier
-            domain_classifier = DANN_domain_classifier()
-        else:
-            raise ValueError("Can't find the domain classifier name. \
-            Please specify the domain classifier class name as key in experiment settings of the current experiment.")
-
         self.model = MDAN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states, len(self.source_dataloader_list)).to(self.device)
 
     def create_dataloader(self):
