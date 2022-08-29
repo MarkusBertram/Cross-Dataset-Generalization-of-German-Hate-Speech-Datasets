@@ -95,17 +95,7 @@ class experiment_M3SDA(experiment_base):
         for name, param in self.model.named_parameters():
             if "bert" in name:
                 param.requires_grad = False
-
-        source_loss = {}
-        for i in range(N):
-            source_loss[i] = {}
-            for j in range(1, 3):
-                source_loss[i][str(j)] = {}
-                source_loss[i][str(j)]['loss'] = []
-                source_loss[i][str(j)]['ac'] = []
         
-        min_ = len(self.unlabelled_target_dataloader)
-
         for epoch in range(1, self.epochs + 1):
             # https://github.com/tsxce/Moment-Matching-for-Multi-Source-Domain-Adaptation-M3SDA/blob/9f70e69113fefca0a6da30c91ebcf94f0cae682f/train.py#L86
             
@@ -300,7 +290,6 @@ class experiment_M3SDA(experiment_base):
     def create_criterion(self) -> None:
         self.loss_extractor = nn.BCEWithLogitsLoss()
         self.loss_l1 = nn.L1Loss()
-        self.loss_l2 = nn.MSELoss()
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
