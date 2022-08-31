@@ -30,9 +30,8 @@ class DIRT_T_model(nn.Module):
         self.task_classifier = task_classifier_module
         self.domain_classifier = domain_classifier_module
 
-    def forward(self, input_features):
-        #bert_output = self.bert(input_ids=input_data[:,0], attention_mask=input_data[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
-        feature_extractor_output = self.feature_extractor(input_features, input_is_bert = False)#(bert_output)
+    def forward(self, input_features, input_is_bert = True):
+        feature_extractor_output = self.feature_extractor(input_features, input_is_bert)
 
         class_output = self.task_classifier(feature_extractor_output)
         

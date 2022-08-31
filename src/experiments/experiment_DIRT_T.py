@@ -125,10 +125,6 @@ class experiment_DIRT_T(experiment_base):
 
                 source_bert_output = self.bert(input_ids=source_input_ids, attention_mask=source_attention_mask, return_dict = False, output_hidden_states=self.output_hidden_states)
                 target_bert_output = self.bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
-
-                if self.output_hidden_states == False:
-                    source_bert_output = source_bert_output[0][:,0,:]
-                    target_bert_output = target_bert_output[0][:,0,:]
                 
                 source_class_output, source_domain_output = self.model(input_features=source_bert_output)
                 target_class_output, target_domain_output = self.model(input_features=target_bert_output)

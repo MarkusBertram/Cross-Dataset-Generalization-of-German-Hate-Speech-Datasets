@@ -54,10 +54,11 @@ class VATLoss(nn.Module):
 
         self.loss_func_nll = KLDivWithLogits()
 
-    def forward(self, x, p, model):
+    def forward(self, bert_output, p, model):
         # x: input features
         # p: task classifier softmax probabilities of input features x
-
+        stacked_output = torch.stack(bert_output[2])
+        x = torch.swapaxes(stacked_output, 0, 1)
         # get random vector of size x
         eps = torch.randn_like(x)
         # normalize random vector and multiply by e-6
@@ -65,7 +66,7 @@ class VATLoss(nn.Module):
 
         eps.requires_grad = True
         # calculate output of x + random vector
-        eps_p = model(x + eps)[0]
+        eps_p = model(x + eps, input_is_bert=False)[0]
         # calculate KL divergence of output of x + random vector and output of x
         loss  = self.loss_func_nll(eps_p, p.detach())
 
@@ -79,7 +80,7 @@ class VATLoss(nn.Module):
         x_adv = x + self.radius * eps_adv
         x_adv = x_adv.detach()
 
-        p_adv, _ = model.forward(x_adv)
+        p_adv, _ = model.forward(x_adv, input_is_bert=False)
         loss     = self.loss_func_nll(p_adv, p.detach())
 
         return loss
