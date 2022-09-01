@@ -518,7 +518,7 @@ if __name__ == "__main__":
         "lr": tune.loguniform(1e-6, 1e-4),
         "beta1": tune.loguniform(0.8, 0.99),
         "beta2": tune.loguniform(0.99, 0.9999),
-        "lambda_d": tune.loguniform(0, 1e-3),
+        "lambda_d": tune.loguniform(1e-3, 1e-1),
         "lambda_s": tune.uniform(0, 1),
         "lambda_t": tune.loguniform(1e-3, 1e-1)#,
         #"beta": tune.loguniform(1e-5, 1e-1),
