@@ -370,8 +370,8 @@ def train_dirt_t(config, checkpoint_dir=None):
     lambda_d = config["lambda_d"]
     lambda_s = config["lambda_s"]
     lambda_t = config["lambda_t"]
-    beta = config["beta"]
-    polyak_factor = config["polyak_factor"]
+    #beta = config["beta"]
+    #polyak_factor = config["polyak_factor"]
 
     epochs = 10
     while True:  # loop over the dataset multiple times
@@ -412,7 +412,7 @@ def train_dirt_t(config, checkpoint_dir=None):
             disc(target_domain_output, torch.zeros_like(target_domain_output))
             )
 
-            loss = crossE_loss +lambda_d*domain_loss + lambda_d*disc_loss +  lambda_s*vat_src_loss + lambda_t*vat_tgt_loss + lambda_t*conditionE_loss
+            loss = crossE_loss + lambda_d*domain_loss + lambda_d*disc_loss +  lambda_s*vat_src_loss + lambda_t*vat_tgt_loss + lambda_t*conditionE_loss
             optimizer.zero_grad(set_to_none=True)
 
             loss.backward()
@@ -420,7 +420,6 @@ def train_dirt_t(config, checkpoint_dir=None):
             optimizer.step()
             
             model.eval()
-
         # Validation loss
         val_loss = 0.0
         val_steps = 0
@@ -451,13 +450,12 @@ def train_dirt_t(config, checkpoint_dir=None):
             }, path)
         step += 1
         #tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
-        tune.report(loss=avg_val_loss)
+        tune.report(loss=avg_val_loss)       
 
 #         ############ DIRT_T Training
 
 #         teacher = copy.deepcopy(model)
-        
-
+    
 #         for param in teacher.parameters():
 #             param.requires_grad = False
 
@@ -511,20 +509,20 @@ def train_dirt_t(config, checkpoint_dir=None):
 #             # https://discuss.pytorch.org/t/copying-weights-from-one-net-to-another/1492/17
 #             for target_param, param in zip(teacher.parameters(), model.parameters()):
 #                 target_param.data.copy_(polyak_factor*param.data + target_param.data*(1.0 - polyak_factor))
-
+    
         
     print("Finished Training")
 
 if __name__ == "__main__":
     config_dict = {
-        "lr": tune.loguniform(1e-6, 1),
-        "beta1": tune.loguniform(0.7, 0.999),
-        "beta2": tune.loguniform(0.9, 0.99999),
-        "lambda_d": tune.loguniform(1e-5, 1e-1),
-        "lambda_s": tune.loguniform(1e-1, 1e1),
-        "lambda_t": tune.loguniform(1e-5, 1e-1),
-        "beta": tune.loguniform(1e-5, 1e-1),
-        "polyak_factor": tune.loguniform(0.99, 0.9999)
+        "lr": tune.loguniform(1e-6, 1e-4),
+        "beta1": tune.loguniform(0.8, 0.99),
+        "beta2": tune.loguniform(0.99, 0.9999),
+        "lambda_d": tune.loguniform(1e-3, 0),
+        "lambda_s": tune.uniform(0, 1),
+        "lambda_t": tune.loguniform(1e-3, 1e-1)#,
+        #"beta": tune.loguniform(1e-5, 1e-1),
+        #"polyak_factor": tune.loguniform(0.99, 0.9999)
     }
 
     algo = TuneBOHB(
