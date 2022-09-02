@@ -520,12 +520,14 @@ def train_dirt_t(config):
     print("Finished Training")
 
 if __name__ == "__main__":
-    config_dict = { 
+    config_dict = {
+      "train_loop_config": {
             "lambda_d": tune.loguniform(1e-3, 1e-1),
             "lambda_s": tune.uniform(0, 1),
             "lambda_t": tune.loguniform(1e-3, 1e-1),
             "beta": tune.loguniform(1e-5, 1e-1),
             "polyak_factor": tune.loguniform(0.99, 0.9999)
+      }
     }
 
     trainer = TorchTrainer(
@@ -533,8 +535,7 @@ if __name__ == "__main__":
         train_loop_config=config_dict,
         scaling_config=ScalingConfig(
             num_workers=1,  # Number of workers to use for data parallelism.
-            use_gpu = True,
-            trainer_resources={"GPU":1, "CPU": 2}
+            use_gpu = True
         )
     )
 
