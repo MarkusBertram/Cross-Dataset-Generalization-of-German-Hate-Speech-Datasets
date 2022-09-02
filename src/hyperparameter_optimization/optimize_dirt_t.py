@@ -15,6 +15,7 @@ import ray
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 import random
+from ray.air.config import ScalingConfig
 from src.utils.utils import fetch_import_module
 import pandas as pd
 from src.experiments.experiment_base import cleanTweets
@@ -32,7 +33,13 @@ from ray.tune.suggest.bohb import TuneBOHB
 from ray.tune.schedulers import HyperBandForBOHB
 from transformers import BertModel
 import copy
-
+from ray.air import session
+from ray.air.checkpoint import Checkpoint
+from ray.tune.tuner import Tuner, TuneConfig
+from ray.air.config import RunConfig
+from ray.train.torch import TorchCheckpoint, TorchTrainer
+from ray import train
+from ray.tune.search.hyperopt import HyperOptSearch
 class VATLoss(nn.Module):
 
     """ Virtual Adversarial Training Loss function
@@ -303,7 +310,7 @@ def create_model(device, truncation_length):
     
     return model
       
-def train_dirt_t(config, checkpoint_dir=None):
+def train_dirt_t(config):
     seed= 123
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     target_labelled= "telegram_gold"
@@ -322,10 +329,14 @@ def train_dirt_t(config, checkpoint_dir=None):
     num_workers= 2
     stratify_unlabelled= True
 
+    lr =  1.4e-5
+    beta1 = 0.913
+    beta2 = 0.993
+
     truncation_length= 512
     
     model = create_model(device, truncation_length)
-
+    model = train.torch.prepare_model(model)
     model.to(device)
     
     train_loader, test_loader = get_data_loaders(
@@ -344,17 +355,17 @@ def train_dirt_t(config, checkpoint_dir=None):
     criterion = nn.BCEWithLogitsLoss()
     
     optimizer = optim.Adam(
-        model.parameters(), lr=config["lr"], betas=(config["beta1"],config["beta2"]))
+        model.parameters(), lr=lr, betas=(beta1, beta2))
     step = 0
 
-    if checkpoint_dir:
-      path = os.path.join(checkpoint_dir, "checkpoint")
-      checkpoint = torch.load(path)
+    # To restore a checkpoint, use `session.get_checkpoint()`.
+    loaded_checkpoint = session.get_checkpoint()
+    if loaded_checkpoint:
+        with loaded_checkpoint.as_directory() as loaded_checkpoint_dir:
+            model_state, optimizer_state, step = torch.load(os.path.join(loaded_checkpoint_dir, "checkpoint.pt"))
+            model.load_state_dict(model_state)
+            optimizer.load_state_dict(optimizer_state)
 
-      model.load_state_dict(checkpoint["model_state_dict"])
-      optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-      step = checkpoint["step"]
-    
     for name, param in model.named_parameters():
         if "bert" in name:
             param.requires_grad = False
@@ -370,187 +381,188 @@ def train_dirt_t(config, checkpoint_dir=None):
     lambda_d = config["lambda_d"]
     lambda_s = config["lambda_s"]
     lambda_t = config["lambda_t"]
-    #beta = config["beta"]
-    #polyak_factor = config["polyak_factor"]
+    beta = config["beta"]
+    polyak_factor = config["polyak_factor"]
 
     epochs = 10
     while True:  # loop over the dataset multiple times
         model.train()
-        for i, (source_batch, unlabelled_target_features) in enumerate(train_loader):
-                            
-            #source_features = source_batch[0][0].to(device)
-            source_labels = source_batch[1][0].to(device)
+        if not loaded_checkpoint:
+            for epoch in range(1, epochs):
+                for i, (source_batch, unlabelled_target_features) in enumerate(train_loader):
+                                    
+                    #source_features = source_batch[0][0].to(device)
+                    source_labels = source_batch[1][0].to(device)
 
-            source_input_ids = source_batch[0][0][:,0].to(device)
-            source_attention_mask = source_batch[0][0][:,1].to(device)
+                    source_input_ids = source_batch[0][0][:,0].to(device)
+                    source_attention_mask = source_batch[0][0][:,1].to(device)
 
-            unlabelled_target_features = unlabelled_target_features[0].to(device)
+                    unlabelled_target_features = unlabelled_target_features[0].to(device)
 
-            source_bert_output = bert(input_ids=source_input_ids, attention_mask=source_attention_mask, return_dict = False, output_hidden_states=output_hidden_states)
-            target_bert_output = bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=output_hidden_states)
-            
-            source_class_output, source_domain_output = model(input_features=source_bert_output)
-            target_class_output, target_domain_output = model(input_features=target_bert_output)
+                    source_bert_output = bert(input_ids=source_input_ids, attention_mask=source_attention_mask, return_dict = False, output_hidden_states=output_hidden_states)
+                    target_bert_output = bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=output_hidden_states)
+                    
+                    source_class_output, source_domain_output = model(input_features=source_bert_output)
+                    target_class_output, target_domain_output = model(input_features=target_bert_output)
 
-            # Cross-Entropy Loss of Source Domain, Source Generalization Error
-            crossE_loss = crossE(source_class_output, source_labels)
+                    # Cross-Entropy Loss of Source Domain, Source Generalization Error
+                    crossE_loss = crossE(source_class_output, source_labels)
 
-            # conditional entropy with respect to target distribution, enforces cluster assumption
-            conditionE_loss = conditionE(target_class_output)               
+                    # conditional entropy with respect to target distribution, enforces cluster assumption
+                    conditionE_loss = conditionE(target_class_output)               
 
-            # Domain Discriminator, Divergence of Source and Target Domain
-            domain_loss = .5*(
-            disc(source_domain_output,torch.zeros_like(source_domain_output)) + 
-            disc(target_domain_output, torch.ones_like(target_domain_output))
-            )
-            
-            vat_src_loss = src_vat(source_bert_output, source_class_output, model)
-            vat_tgt_loss = tgt_vat(target_bert_output, target_class_output, model)
+                    # Domain Discriminator, Divergence of Source and Target Domain
+                    domain_loss = .5*(
+                    disc(source_domain_output,torch.zeros_like(source_domain_output)) + 
+                    disc(target_domain_output, torch.ones_like(target_domain_output))
+                    )
+                    
+                    vat_src_loss = src_vat(source_bert_output, source_class_output, model)
+                    vat_tgt_loss = tgt_vat(target_bert_output, target_class_output, model)
 
-            disc_loss = 0.5 *(
-            disc(source_domain_output,torch.ones_like(source_domain_output)) + 
-            disc(target_domain_output, torch.zeros_like(target_domain_output))
-            )
+                    disc_loss = 0.5 *(
+                    disc(source_domain_output,torch.ones_like(source_domain_output)) + 
+                    disc(target_domain_output, torch.zeros_like(target_domain_output))
+                    )
 
-            loss = crossE_loss + lambda_d*domain_loss + lambda_d*disc_loss +  lambda_s*vat_src_loss + lambda_t*vat_tgt_loss + lambda_t*conditionE_loss
-            optimizer.zero_grad(set_to_none=True)
+                    loss = crossE_loss + lambda_d*domain_loss + lambda_d*disc_loss +  lambda_s*vat_src_loss + lambda_t*vat_tgt_loss + lambda_t*conditionE_loss
+                    optimizer.zero_grad(set_to_none=True)
 
-            loss.backward()
+                    loss.backward()
 
-            optimizer.step()
-            
-            model.eval()
-        # Validation loss
-        val_loss = 0.0
-        val_steps = 0
-        with torch.no_grad():
-            for i, data in enumerate(test_loader, 0):
-                inputs, labels = data
-                inputs, labels = inputs[0].to(device), labels[0].to(device)
+                    optimizer.step()   
 
-                outputs = model.inference(inputs)
-                predicted = torch.round(torch.sigmoid(outputs))
+        ############ DIRT_T Training
 
-                loss = criterion(predicted, labels)
-
-                val_loss += loss.cpu().numpy()
-                val_steps += 1
-        avg_val_loss =  (val_loss / val_steps)
-
-        # Here we save a checkpoint. It is automatically registered with
-        # Ray Tune and will potentially be passed as the `checkpoint_dir`
-        # parameter in future iterations.
-        with tune.checkpoint_dir(step=step) as checkpoint_dir:
-            path = os.path.join(checkpoint_dir, "checkpoint")
-            torch.save({
-            "step": step,
-            "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict()
-
-            }, path)
-        step += 1
-        #tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
-        tune.report(loss=avg_val_loss)       
-
-#         ############ DIRT_T Training
-
-#         teacher = copy.deepcopy(model)
+        teacher = copy.deepcopy(model)
     
-#         for param in teacher.parameters():
-#             param.requires_grad = False
+        for param in teacher.parameters():
+            param.requires_grad = False
 
-#         #optimizer   = optim.Adam(model.parameters(), lr=lr, betas=(beta1, beta2))
-#         #optimizer2  = WeightEMA(teacher_params, student_params)#DelayedWeight(teacher_params, student_params)
+        #optimizer   = optim.Adam(model.parameters(), lr=lr, betas=(beta1, beta2))
+        #optimizer2  = WeightEMA(teacher_params, student_params)#DelayedWeight(teacher_params, student_params)
         
-#         crossE      = nn.BCEWithLogitsLoss().to(device)
-#         conditionE  = ConditionalEntropy().to(device)
-#         tgt_vat     = VATLoss().to(device)#VATLoss(model, radius=radius).to(device)
-#         dirt        = KLDivWithLogits() #F.kl_div().to(device)#KLDivWithLogits()    
+        crossE      = nn.BCEWithLogitsLoss().to(device)
+        conditionE  = ConditionalEntropy().to(device)
+        tgt_vat     = VATLoss().to(device)#VATLoss(model, radius=radius).to(device)
+        dirt        = KLDivWithLogits() #F.kl_div().to(device)#KLDivWithLogits()    
 
-#   #     teacher.eval()
-#         with torch.no_grad():
-#             for name, param in model.named_parameters():
-#                 if "bert" in name:
-#                     param.requires_grad = False
-#         with torch.no_grad():
-#             for name, param in teacher.named_parameters():
-#                 if "bert" in name:
-#                     param.requires_grad = False
+  #     teacher.eval()
+        with torch.no_grad():
+            for name, param in model.named_parameters():
+                if "bert" in name:
+                    param.requires_grad = False
+        with torch.no_grad():
+            for name, param in teacher.named_parameters():
+                if "bert" in name:
+                    param.requires_grad = False
 
-#         for epoch in range(1, epochs + 1):
-#             model.train()
+        while True:
+            model.train()
 
-#             for i, (source_batch, unlabelled_target_features) in enumerate(train_loader):
+            for i, (source_batch, unlabelled_target_features) in enumerate(train_loader):
 
-#                 optimizer.zero_grad(set_to_none=True)
-#                 #optimizer2.zero_grad()
+                optimizer.zero_grad(set_to_none=True)
+                #optimizer2.zero_grad()
 
-#                 unlabelled_target_features = unlabelled_target_features[0].to(device)
-#                 target_bert_output = bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=output_hidden_states)
+                unlabelled_target_features = unlabelled_target_features[0].to(device)
+                target_bert_output = bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=output_hidden_states)
 
-#                 if output_hidden_states == False:
-#                     target_bert_output = target_bert_output[0][:,0,:]
+                if output_hidden_states == False:
+                    target_bert_output = target_bert_output[0][:,0,:]
 
-#                 target_class_output, target_domain_output = model(input_features=target_bert_output)
-#                 teacher_target_class_output, teacher_target_domain_output = teacher(input_features=target_bert_output)
+                target_class_output, target_domain_output = model(input_features=target_bert_output)
+                teacher_target_class_output, teacher_target_domain_output = teacher(input_features=target_bert_output)
 
-#                 conditionE_loss = conditionE(target_class_output) # conditional entropy
-#                 dirt_loss       = dirt(target_class_output, teacher_target_class_output)
+                conditionE_loss = conditionE(target_class_output) # conditional entropy
+                dirt_loss       = dirt(target_class_output, teacher_target_class_output)
 
-#                 vat_tgt_loss    = tgt_vat(target_bert_output, target_class_output, model)
+                vat_tgt_loss    = tgt_vat(target_bert_output, target_class_output, model)
 
-#                 loss = lambda_t*conditionE_loss + lambda_t*vat_tgt_loss + beta*dirt_loss 
+                loss = lambda_t*conditionE_loss + lambda_t*vat_tgt_loss + beta*dirt_loss 
                 
-#                 loss.backward()
-#                 optimizer.step()
-#                 #optimizer2.step()
+                loss.backward()
+                optimizer.step()
+                #optimizer2.step()
 
-#             # polyak averaging
-#             # https://discuss.pytorch.org/t/copying-weights-from-one-net-to-another/1492/17
-#             for target_param, param in zip(teacher.parameters(), model.parameters()):
-#                 target_param.data.copy_(polyak_factor*param.data + target_param.data*(1.0 - polyak_factor))
-    
+            # polyak averaging
+            # https://discuss.pytorch.org/t/copying-weights-from-one-net-to-another/1492/17
+            for target_param, param in zip(teacher.parameters(), model.parameters()):
+                target_param.data.copy_(polyak_factor*param.data + target_param.data*(1.0 - polyak_factor))
+
+
+            model.eval()
+            # Validation loss
+            val_loss = 0.0
+            val_steps = 0
+            with torch.no_grad():
+                for i, data in enumerate(test_loader, 0):
+                    inputs, labels = data
+                    inputs, labels = inputs[0].to(device), labels[0].to(device)
+
+                    outputs = model.inference(inputs)
+                    predicted = torch.round(torch.sigmoid(outputs))
+
+                    loss = criterion(predicted, labels)
+
+                    val_loss += loss.cpu().numpy()
+                    val_steps += 1
+            avg_val_loss =  (val_loss / val_steps)
+
+            step += 1
+
+            os.makedirs("my_model", exist_ok=True)
+            torch.save(
+                (model.state_dict(), optimizer.state_dict(), step), "my_model/checkpoint.pt")
+            checkpoint = Checkpoint.from_directory("my_model")
+            session.report({"loss": avg_val_loss}, checkpoint=checkpoint)
         
     print("Finished Training")
 
 if __name__ == "__main__":
-    config_dict = {
-        "lr": tune.loguniform(1e-6, 1e-4),
-        "beta1": tune.loguniform(0.8, 0.99),
-        "beta2": tune.loguniform(0.99, 0.9999),
-        "lambda_d": tune.loguniform(1e-3, 1e-1),
-        "lambda_s": tune.uniform(0, 1),
-        "lambda_t": tune.loguniform(1e-3, 1e-1)#,
-        #"beta": tune.loguniform(1e-5, 1e-1),
-        #"polyak_factor": tune.loguniform(0.99, 0.9999)
+    config_dict = { 
+            "lambda_d": tune.loguniform(1e-3, 1e-1),
+            "lambda_s": tune.uniform(0, 1),
+            "lambda_t": tune.loguniform(1e-3, 1e-1),
+            "beta": tune.loguniform(1e-5, 1e-1),
+            "polyak_factor": tune.loguniform(0.99, 0.9999)
     }
 
-    algo = TuneBOHB(
-        metric = "loss",
-        mode = "min"
+    trainer = TorchTrainer(
+        train_loop_per_worker=train_dirt_t,
+        train_loop_config=config_dict,
+        scaling_config=ScalingConfig(
+            num_workers=1,  # Number of workers to use for data parallelism.
+            use_gpu = True,
+            trainer_resources={"GPU":1, "CPU": 2}
         )
+    )
 
-    bohb = HyperBandForBOHB(
-        time_attr="training_iteration",
-        metric = "loss",
-        mode = "min",
-        max_t=10)
-    #stopper = tune.stopper.MaximumIterationStopper(10)
+    asha_scheduler = ASHAScheduler(
+        max_t=10,
+        grace_period=1,
+    )
 
-    result = tune.run(
-        train_dirt_t,
-        name="dann",
-        scheduler=bohb,
-        search_alg = algo,
-        resources_per_trial={
-            "cpu": 2,
-            "gpu": 1  # set this for GPUs
-        },
-        time_budget_s=80000,
+    search_alg = HyperOptSearch()
+    tune_config = TuneConfig(
+        metric="loss",
+        mode="min",
         num_samples=-1,
-        config=config_dict)
+        search_alg=search_alg,
+        scheduler= asha_scheduler
+    )
 
-    best_trial = result.get_best_trial("loss", "min", "last")
-    print("Best trial config: {}".format(best_trial.config))
-    print("Best trial final validation loss: {}".format(
-        best_trial.last_result["loss"]))
+    tuner = Tuner(
+        trainer,
+        param_space=config_dict,
+        tune_config=tune_config
+    )
+
+    # Execute tuning.
+    result_grid = tuner.fit()
+
+    # Fetch the best result.
+    best_result = result_grid.get_best_result()
+    print("Best Result:", best_result)
+
+    print("Best trial config: {}".format(best_result.config))
