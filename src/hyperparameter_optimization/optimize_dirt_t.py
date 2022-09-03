@@ -541,7 +541,6 @@ if __name__ == "__main__":
 
     asha_scheduler = ASHAScheduler(
         max_t=10,
-        grace_period=1,
     )
 
     search_alg = HyperOptSearch()
