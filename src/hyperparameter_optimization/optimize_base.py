@@ -229,8 +229,6 @@ def train_base(config, checkpoint_dir=None):
 
     criterion = nn.BCEWithLogitsLoss()
     
-    gamma = config["gamma"]
-
     optimizer = optim.Adam(
         model.parameters(), lr=config["lr"], betas=(config["beta1"],config["beta2"]))
     epoch = 0
@@ -250,21 +248,14 @@ def train_base(config, checkpoint_dir=None):
         if "bert" in name:
             param.requires_grad = False
 
-    epochs = 10
     while True:  # loop over the dataset multiple times
         model.train()
-        for i, data in enumerate(train_loader):
-
-            len_dataloader = len(train_loader)
-            
+        for i, data in enumerate(train_loader):            
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # get the inputs; data is a list of [inputs, labels]
             source_batch = data
-
-            p = float(i + epoch * len_dataloader) / epochs / len_dataloader
-            alpha = 2. / (1. + np.exp(-gamma * p)) - 1
 
             # training model using source data
             source_features = source_batch[0][0].to(device)
@@ -317,7 +308,6 @@ def train_base(config, checkpoint_dir=None):
 if __name__ == "__main__":
     config_dict = {
         "lr": tune.loguniform(1e-6, 1),
-        "gamma": tune.randint(1, 100),
         "beta1": tune.loguniform(0.7, 0.999),
         "beta2": tune.loguniform(0.9, 0.99999),
     }
