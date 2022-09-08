@@ -44,18 +44,14 @@ class experiment_base(ABC):
         self,
         basic_settings: Dict,
         exp_settings: Dict,
-        #log_path: str,
         writer: SummaryWriter,
     ) -> NoReturn:
-        #self.log_path = log_path
         self.writer = writer
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained('deepset/gbert-base')
         self.basic_settings = basic_settings
         self.exp_settings = exp_settings
         self.abusive_ratio = None
-        #basic_settings.update(exp_settings)
-        #self.basic_settings = basic_settings
 
     @abstractmethod
     def train(self):
@@ -98,24 +94,6 @@ class experiment_base(ABC):
         self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}/{now}", avg_test_acc)
         self.writer.add_scalar(f"F1_score/Test/{self.exp_name}/{now}", f1score.item())
 
-        # add hparams
-        self.writer.add_hparams(
-            {
-                "lr": self.lr,
-                "epochs": self.epochs,
-                "batchsize": self.batch_size,
-                "target_train_split": self.target_train_split,
-                "stratify_unlabelled": self.stratify_unlabelled
-
-            },
-
-            {
-                "hparam/Accuracy/Test": avg_test_acc,
-                "hparam/F1_score/Test": f1score.item()
-            },
-            run_name = self.exp_name
-        )
-
     def get_target_dataset(self):
 
         # fetch labelled target dataset and split labelled target dataset into train and test
@@ -126,7 +104,7 @@ class experiment_base(ABC):
         # further split train set into train and val
         labelled_target_features_train, labelled_target_features_val, labelled_target_labels_train, labelled_target_labels_val = train_test_split(labelled_target_dataset_features_train, labelled_target_dataset_labels_train, test_size = self.validation_split, random_state = self.seed, stratify = labelled_target_dataset_labels_train)
         
-        return labelled_target_features_train, labelled_target_labels_train.float(), labelled_target_features_val, labelled_target_labels_val.float(), labelled_target_dataset_features_test, labelled_target_dataset_labels_test.float()
+        return labelled_target_features_train, labelled_target_labels_train.float(), None, None, labelled_target_dataset_features_test, labelled_target_dataset_labels_test.float()
     
     def preprocess(self, batch):
         batch = cleanTweets(batch)
@@ -178,13 +156,9 @@ class experiment_base(ABC):
             train_labels_tensor =  torch.from_numpy(train_labels_array).float()
             test_labels_tensor =  torch.from_numpy(test_labels_array).float()
             return train_tokens_tensor, test_tokens_tensor, train_labels_tensor, test_labels_tensor
-        else:
-            #train_tokens_array, val_tokens_array = train_test_split(tokens_array, test_size = self.validation_split, random_state = self.seed)
-            
-            tokens_tensor =  torch.from_numpy(tokens_array)
-            #val_tokens_tensor =  torch.from_numpy(val_tokens_array)
-            #val_labels_tensor =  None
+        else:           
 
+            tokens_tensor =  torch.from_numpy(tokens_array)
             return tokens_tensor
 
     def load_basic_settings(self):
@@ -192,7 +166,6 @@ class experiment_base(ABC):
         # self.labelled_size = self.basic_settings.get("labelled_size", 3000)
         self.target_labelled = self.basic_settings.get("target_labelled", "telegram_gold")
         self.target_unlabelled = self.basic_settings.get("target_unlabelled", "telegram_unlabeled")
-        #self.unlabelled_size = self.basic_settings.get("unlabelled_size", 200000)
         self.validation_split = self.basic_settings.get("validation_split", 0.1)
         self.target_train_split = self.basic_settings.get("target_train_split", 0.05)
         self.sources = self.basic_settings.get("sources", [
@@ -204,31 +177,16 @@ class experiment_base(ABC):
             "covid_2021"
         ])
         self.truncation_length = self.basic_settings.get("truncation_length", 512)
-        self.num_workers = self.basic_settings.get("num_workers", 8)
+        self.num_workers = self.basic_settings.get("num_workers", 2)
         # training settings
         self.freeze_BERT_weights = self.basic_settings.get("freeze_BERT_weights", True)
         self.stratify_unlabelled  = self.basic_settings.get("stratify_unlabelled", True)
         # training settings
-        self.epochs = self.basic_settings.get("epochs", 100)
-        self.batch_size = self.basic_settings.get("batch_size", 128)
-        self.weight_decay = self.basic_settings.get("weight_decay", 1e-4)
-        self.metric = self.basic_settings.get("metric", 10)
-        self.lr = self.basic_settings.get("lr", 0.1)
-        self.nesterov = self.basic_settings.get("nesterov", False)
-        self.momentum = self.basic_settings.get("momentum", 0.9)
-        self.lr_sheduler = self.basic_settings.get("lr_sheduler", True)
-        self.num_classes = self.basic_settings.get("num_classes", 10)
-        self.validation_split = self.basic_settings.get("validation_split", 0.3)
-        self.validation_source = self.basic_settings.get(
-            "validation_source", "test"
-        )
-        self.test_after_each_epoch = self.basic_settings.get("test_after_each_epoch", False)
+        self.epochs = self.basic_settings.get("epochs", 10)
+        self.batch_size = self.basic_settings.get("batch_size", 4)
+        self.num_classes = self.basic_settings.get("num_classes", 2)
         self.verbose = self.basic_settings.get("verbose", False)
         self.seed = self.basic_settings.get("seed", 123)
-        # self.criterion = self.basic_settings.get("criterion", "crossentropy")
-        #self.metric = self.basic_settings.get("metric", "accuracy")
-        
-        #self.set_sampler(self.oracle)
         pass
     
     @abstractmethod
@@ -242,10 +200,6 @@ class experiment_base(ABC):
     @abstractmethod
     def create_model(self) -> NoReturn:
         pass
-
-    # @abstractmethod
-    # def create_plots(self) -> NoReturn:
-    #     pass
 
     @abstractmethod
     def perform_experiment(self):

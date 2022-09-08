@@ -131,21 +131,19 @@ class experiment_MME(experiment_base):
         params = [{
             "params": self.model.feature_extractor.parameters(), "lr": self.lr
         }]
-        self.optimizer_g = optim.SGD(
+        self.optimizer_g = optim.Adam(
             params,
-            momentum = self.momentum,
-            weight_decay=self.weight_decay,
-            nesterov = self.nesterov
+            lr=self.lr,
+            betas = (self.beta1, self.beta2)
         )
         params = [{
             "params": self.model.task_classifier.parameters(), "lr": self.lr
         }]
 
-        self.optimizer_f = optim.SGD(
+        self.optimizer_f = optim.Adam(
             params,
-            momentum = self.momentum,
-            weight_decay=self.weight_decay,
-            nesterov = self.nesterov
+            lr=self.lr,
+            betas = (self.beta1, self.beta2)
         )
 
 

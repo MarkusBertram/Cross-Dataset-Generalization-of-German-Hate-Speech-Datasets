@@ -117,8 +117,8 @@ class experiment_DANN(experiment_base):
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
             self.model.parameters(),
-            weight_decay=self.weight_decay,
             lr=self.lr,
+            betas = (self.beta1, self.beta2)
         )
 
     def create_criterion(self) -> None:
@@ -127,10 +127,11 @@ class experiment_DANN(experiment_base):
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
-        self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
-        self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cnn")
-        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
-        self.domain_classifier = self.current_experiment.get("domain_classifier", "DANN_domain_classifier")
+        self.exp_name = self.current_experiment.get("exp_name", "DANN")
+        self.lr = self.current_experiment.get("lr", 6.7e-5)
+        self.beta1 = self.current_experiment.get("beta1", 0.911)
+        self.beta2 = self.current_experiment.get("beta2", 0.998)
+        self.gamma = self.current_experiment.get("gamma", 10)
         
     def create_model(self):
         

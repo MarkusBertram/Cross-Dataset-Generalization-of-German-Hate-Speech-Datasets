@@ -285,7 +285,7 @@ class experiment_M3SDA(experiment_base):
         self.extractor_optimizer = optim.Adadelta(self.model.feature_extractor.parameters(), lr=self.lr)
         self.predictor_optimizers = []
         for i in range(len(self.source_dataloader_list)):
-            self.predictor_optimizers.append(optim.Adam(list(self.model.task_classifiers[i][0].parameters()) + list(self.model.task_classifiers[i][1].parameters()), lr = self.lr))
+            self.predictor_optimizers.append(optim.Adam(list(self.model.task_classifiers[i][0].parameters()) + list(self.model.task_classifiers[i][1].parameters()), lr = self.lr, betas = (self.beta1, self.beta2)))
 
     def create_criterion(self) -> None:
         self.loss_extractor = nn.BCEWithLogitsLoss()

@@ -136,7 +136,7 @@ class experiment_MDAN(experiment_base):
                 self.optimizer.step()
                 
     def create_optimizer(self) -> None:
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, betas = (self.beta1, self.beta2))
 
     def create_criterion(self) -> None:
         self.bce_loss = nn.BCEWithLogitsLoss()

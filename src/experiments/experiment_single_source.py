@@ -92,8 +92,8 @@ class experiment_single_source(experiment_base):
     def create_optimizer(self) -> None:
         self.optimizer = optim.Adam(
             self.model.parameters(),
-            weight_decay=self.weight_decay,
             lr=self.lr,
+            betas = (self.beta1, self.beta2)
         )
 
     def create_criterion(self) -> None:

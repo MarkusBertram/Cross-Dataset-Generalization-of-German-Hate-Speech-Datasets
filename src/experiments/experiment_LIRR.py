@@ -150,18 +150,14 @@ class experiment_LIRR(experiment_base):
             {"params": self.model.domain_dependant_predictor.parameters(), "lr": self.lr},
             {"params": self.model.domain_invariant_predictor.parameters(), "lr": self.lr}
             ],
-            momentum = self.momentum,
-            weight_decay=self.weight_decay,
-            nesterov = self.nesterov
+            betas = (self.beta1, self.beta2)
         )
 
         self.dis_optimizer = optim.SGD(
             [
             {"params": self.model.domain_classifier.parameters(), "lr": self.lr}
             ],
-            momentum = self.momentum,
-            weight_decay=self.weight_decay,
-            nesterov = self.nesterov
+            betas = (self.beta1, self.beta2)
         )
 
 
