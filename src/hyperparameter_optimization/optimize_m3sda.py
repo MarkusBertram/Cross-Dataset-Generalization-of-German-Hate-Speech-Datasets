@@ -79,8 +79,6 @@ def get_target_dataset(target_labelled, target_train_split, validation_split, se
         target_train_split=target_train_split
         )
 
-    #labelled_target_features_train, _, labelled_target_labels_train, _ =  train_test_split(labelled_target_dataset_features_val, labelled_target_dataset_labels_val, test_size = (1-target_train_split), random_state = seed, stratify = labelled_target_dataset_labels)
-
     # further split train set into train and val
     labelled_target_features_train, labelled_target_features_val, labelled_target_labels_train, labelled_target_labels_val = train_test_split(labelled_target_dataset_features_train, labelled_target_dataset_labels_train, test_size = validation_split, random_state = seed, stratify = labelled_target_dataset_labels_train)
     
@@ -137,14 +135,10 @@ def fetch_dataset(dataset_name, labelled = True, target = False, validation_spli
         train_labels_tensor =  torch.from_numpy(train_labels_array).float()
         test_labels_tensor =  torch.from_numpy(test_labels_array).float()
         return train_tokens_tensor, test_tokens_tensor, train_labels_tensor, test_labels_tensor, abusive_ratio
-    else:
-        #train_tokens_array, val_tokens_array = train_test_split(tokens_array, test_size = validation_split, random_state = seed)
-        
+    else:        
         tokens_tensor =  torch.from_numpy(tokens_array)
-        #val_tokens_tensor =  torch.from_numpy(val_tokens_array)
-        #train_labels_tensor =  None
-        #val_labels_tensor =  None
-        return tokens_tensor#, val_tokens_tensor, train_labels_tensor, val_labels_tensor
+
+        return tokens_tensor
     
 
 def get_data_loaders(sources, 
@@ -289,7 +283,7 @@ def train_m3sda(config, checkpoint_dir=None):
     )
     predictor_optimizers = []
     for i in range(N):
-        predictor_optimizers.append(optim.Adam(list(model.task_classifiers[i][0].parameters()) + list(model.task_classifiers[i][1].parameters()), lr = config["lr"]))
+        predictor_optimizers.append(optim.Adam(list(model.task_classifiers[i][0].parameters()) + list(model.task_classifiers[i][1].parameters()), lr = config["lr"], betas= (config["beta1"], config["beta2"])))
 
     if checkpoint_dir:
         path = os.path.join(checkpoint_dir, "checkpoint")

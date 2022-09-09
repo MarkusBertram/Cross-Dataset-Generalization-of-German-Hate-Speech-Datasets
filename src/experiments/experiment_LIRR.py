@@ -166,11 +166,12 @@ class experiment_LIRR(experiment_base):
         
     # overrides load_settings
     def load_exp_settings(self) -> None:
-        self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
-        self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cnn")
-        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
-        self.lambda_risk = self.current_experiment.get("lambda_risk", 1.0)
-        self.lambda_rep = self.current_experiment.get("lambda_rep", 1.0)
+        self.exp_name = self.current_experiment.get("exp_name", "lirr_cnn")   
+        self.lambda_risk = self.current_experiment.get("lambda_risk", 0.69)
+        self.lambda_rep = self.current_experiment.get("lambda_rep", 0.05)
+        self.lr = self.current_experiment.get("lr", 8.176e-5)
+        self.beta1 = self.current_experiment.get("beta1", 0.956)
+        self.beta2 = self.current_experiment.get("beta1", 0.997)
 
     def create_model(self):
         from src.model.feature_extractors import BERT_cnn

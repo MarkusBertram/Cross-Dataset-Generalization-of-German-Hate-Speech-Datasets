@@ -143,12 +143,12 @@ class experiment_MDAN(experiment_base):
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
-        self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
-        self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cnn")
-        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
-        self.domain_classifier = self.current_experiment.get("domain_classifier", "DANN_domain_classifier")
-        self.gamma = self.current_experiment.get("gamma", 10)
-        self.mu = self.current_experiment.get("mu", 1e-2)
+        self.exp_name = self.current_experiment.get("exp_name", "MDAN_cnn")   
+        self.gamma = self.current_experiment.get("gamma", 52)
+        self.mu = self.current_experiment.get("mu", 0.002)
+        self.lr = self.current_experiment.get("lr", 2.95e-5)
+        self.beta1 = self.current_experiment.get("beta1", 0.92)
+        self.beta2 = self.current_experiment.get("beta1", 0.993)
 
     def create_model(self):
         

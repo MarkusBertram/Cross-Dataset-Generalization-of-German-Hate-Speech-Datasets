@@ -163,14 +163,11 @@ class experiment_DIRT_T(experiment_base):
 
         for param in self.teacher.parameters():
             param.requires_grad = False
-
-        #self.optimizer   = optim.Adam(self.model.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
-        #self.optimizer2  = WeightEMA(teacher_params, student_params)#DelayedWeight(teacher_params, student_params)
         
         self.crossE      = nn.BCEWithLogitsLoss().to(self.device)
         self.conditionE  = ConditionalEntropy().to(self.device)
-        self.tgt_vat     = VATLoss().to(self.device)#VATLoss(self.model, radius=self.radius).to(self.device)
-        self.dirt        = KLDivWithLogits() #F.kl_div().to(self.device)#KLDivWithLogits()    
+        self.tgt_vat     = VATLoss().to(self.device)
+        self.dirt        = KLDivWithLogits()
 
   #     self.teacher.eval()
         with torch.no_grad():
@@ -188,7 +185,6 @@ class experiment_DIRT_T(experiment_base):
             for i, (source_batch, unlabelled_target_features) in enumerate(self.train_dataloader):
 
                 self.optimizer.zero_grad(set_to_none=True)
-                #self.optimizer2.zero_grad()
 
                 unlabelled_target_features = unlabelled_target_features[0].to(self.device)
                 target_bert_output = self.bert(input_ids=unlabelled_target_features[:,0], attention_mask=unlabelled_target_features[:,1], return_dict = False, output_hidden_states=self.output_hidden_states)
@@ -208,21 +204,15 @@ class experiment_DIRT_T(experiment_base):
                 
                 loss.backward()
                 self.optimizer.step()
-                #self.optimizer2.step()
 
             # polyak averaging
             # https://discuss.pytorch.org/t/copying-weights-from-one-net-to-another/1492/17
             for target_param, param in zip(self.teacher.parameters(), self.model.parameters()):
-                target_param.data.copy_(0.998*param.data + target_param.data*(1.0 - 0.998))
-
-
+                target_param.data.copy_(self.polyak_factor*param.data + target_param.data*(1.0 - self.polyak_factor))
 
     def create_optimizer(self) -> None:
         params = list(self.model.feature_extractor.parameters()) + list(self.model.task_classifier.parameters()) + list(self.model.domain_classifier.parameters()) 
         self.optimizer = optim.Adam(params, lr=self.lr, betas=(self.beta1, self.beta2))
-
-        params = list(self.model.feature_extractor.parameters()) + list(self.model.domain_classifier.parameters())
-        #self.optimizer2 = optim.Adam(params, lr = self.lr, betas=(self.beta1, self.beta2))   
            
     def create_criterion(self) -> None:
         self.crossE      = nn.BCEWithLogitsLoss().to(self.device)
@@ -233,50 +223,30 @@ class experiment_DIRT_T(experiment_base):
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
-        self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
-        self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cnn")
-        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
-        self.domain_classifier = self.current_experiment.get("domain_classifier", "DANN_domain_classifier")
-        self.beta = self.current_experiment.get("beta", 0.01)
-        self.beta1 = self.current_experiment.get("beta1", 0.5)
-        self.beta2 = self.current_experiment.get("beta1", 0.999)
+        self.exp_name = self.current_experiment.get("exp_name", "DIRT_T_cnn")
+        self.lr = self.current_experiment.get("lr", 1.4e-05)
+        self.beta = self.current_experiment.get("beta", 0.0006)
+        self.beta1 = self.current_experiment.get("beta1", 0.913)
+        self.beta2 = self.current_experiment.get("beta1", 0.993)
         self.radius = self.current_experiment.get("radius", 1)
-        self.lambda_d = self.current_experiment.get("lambda_d", 0.01)
-        self.lambda_s = self.current_experiment.get("lambda_s", 1)
-        self.lambda_t = self.current_experiment.get("lambda_t", 0.01)
-        #self.xi = self.current_experiment.get("xi", 0.01)
-        #self.eps = self.current_experiment.get("eps", 0.01)
-        #self.ip = self.current_experiment.get("ip", 0.01)
+        self.lambda_d = self.current_experiment.get("lambda_d", 0.006)
+        self.lambda_s = self.current_experiment.get("lambda_s", 0.774)
+        self.lambda_t = self.current_experiment.get("lambda_t", 0.016)
+        self.polyak_factor = self.current_experiment.get("polyak_factor", 0.998)
 
     def create_model(self):
         
-        if self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            #import .model.feature_extractors
-            feature_extractor = BERT_cnn(self.truncation_length)
-            self.output_hidden_states = False
-        elif self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn(self.truncation_length)
-            self.output_hidden_states = True
-        else:
-            raise ValueError("Can't find the feature extractor name. \
-            Please specify bert_cnn or bert_cnn as key in experiment settings of the current experiment.")
-        
+        from src.model.feature_extractors import BERT_cnn
+        #import .model.feature_extractors
+        feature_extractor = BERT_cnn(self.truncation_length)
+        self.output_hidden_states = True
 
-        if self.task_classifier.lower() == "dann_task_classifier":
-            from src.model.task_classifiers import DANN_task_classifier
-            task_classifier = DANN_task_classifier()
-        else:
-            raise ValueError("Can't find the task classifier name. \
-            Please specify the task classifier class name as key in experiment settings of the current experiment.")
+        from src.model.task_classifiers import DANN_task_classifier
+        task_classifier = DANN_task_classifier()
             
-        if self.domain_classifier.lower() == "dann_domain_classifier":
-            from src.model.domain_classifiers import DANN_domain_classifier
-            domain_classifier = DANN_domain_classifier()
-        else:
-            raise ValueError("Can't find the domain classifier name. \
-            Please specify the domain classifier class name as key in experiment settings of the current experiment.")
+        from src.model.domain_classifiers import DANN_domain_classifier
+        domain_classifier = DANN_domain_classifier()
+        
         self.bert = BertModel.from_pretrained("deepset/gbert-base").to(self.device)
         self.model = DIRT_T_model(feature_extractor, task_classifier, domain_classifier, self.output_hidden_states).to(self.device)
 

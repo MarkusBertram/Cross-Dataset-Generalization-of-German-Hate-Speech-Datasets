@@ -152,35 +152,21 @@ class experiment_MME(experiment_base):
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
-        self.exp_name = self.current_experiment.get("exp_name", "standard_name")   
-        self.feature_extractor = self.current_experiment.get("feature_extractor", "BERT_cnn")
-        self.task_classifier = self.current_experiment.get("task_classifier", "DANN_task_classifier")
-        self.multiplication = self.current_experiment.get("multiplication", 50000)
-        self.lamda = self.current_experiment.get("lamda", 0.1)
-        self.eta = self.current_experiment.get("eta", 1.0)
+        self.exp_name = self.current_experiment.get("exp_name", "MME_cnn")   
+        self.lamda = self.current_experiment.get("lamda", 0.014)
+        self.eta = self.current_experiment.get("eta", 0.36)
+        self.lr = self.current_experiment.get("lr", 8.89e-5)
+        self.beta1 = self.current_experiment.get("beta1", 0.888)
+        self.beta2 = self.current_experiment.get("beta1", 0.999)
 
     def create_model(self):
         
-        if self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            #import .model.feature_extractors
-            feature_extractor = BERT_cnn(self.truncation_length)
-            output_hidden_states = False
-        elif self.feature_extractor.lower() == "bert_cnn":
-            from src.model.feature_extractors import BERT_cnn
-            feature_extractor = BERT_cnn(self.truncation_length)
-            output_hidden_states = True
-        else:
-            raise ValueError("Can't find the feature extractor name. \
-            Please specify bert_cnn or bert_cnn as key in experiment settings of the current experiment.")
+        from src.model.feature_extractors import BERT_cnn
+        feature_extractor = BERT_cnn(self.truncation_length)
+        output_hidden_states = True
         
-
-        if self.task_classifier.lower() == "dann_task_classifier":
-            from src.model.task_classifiers import DANN_task_classifier
-            task_classifier = DANN_task_classifier()
-        else:
-            raise ValueError("Can't find the task classifier name. \
-            Please specify the task classifier class name as key in experiment settings of the current experiment.")
+        from src.model.task_classifiers import DANN_task_classifier
+        task_classifier = DANN_task_classifier()
 
         self.model = MME_model(feature_extractor, task_classifier, output_hidden_states).to(self.device)
 
