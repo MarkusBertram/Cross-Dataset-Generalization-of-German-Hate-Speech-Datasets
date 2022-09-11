@@ -364,8 +364,8 @@ if __name__ == "__main__":
         "gamma": tune.randint(1, 100),
         "beta1": tune.loguniform(0.88, 0.999),
         "beta2": tune.loguniform(0.99, 0.9999),
-        "bottleneck_dim": tune.loguniform(50, 1000),
-        "layer_size": tune.loguniform(1, 1000)
+        "bottleneck_dim": tune.lograndint(50, 2000),
+        "layer_size": tune.lograndint(1, 1000)
     }
 
     algo = TuneBOHB(
