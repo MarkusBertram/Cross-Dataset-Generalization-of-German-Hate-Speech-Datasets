@@ -27,7 +27,7 @@ class ReverseLayerF(Function):
         return output, None
 
 class DANN_model(nn.Module):
-    def __init__(self, feature_extractor_module, task_classifier_module, domain_classifier_module, output_hidden_states):
+    def __init__(self, feature_extractor_module, task_classifier_module, domain_classifier_module):
         super(DANN_model, self).__init__()
         self.bert = BertModel.from_pretrained("deepset/gbert-base")
         self.output_hidden_states = True

@@ -3,13 +3,13 @@ from torch import nn
 import gc
 
 class BERT_cnn(nn.Module):
-    def __init__(self, truncation_length):
+    def __init__(self, bottleneck_dim = 768):
         super(BERT_cnn, self).__init__()
         # truncation length = 512
         self.feature_extractor_conv = nn.Conv2d(in_channels=13, out_channels=13, kernel_size=(3, 768), padding = (1,0))
         self.feature_extractor_relu = nn.ReLU()
         self.feature_extractor_pool = nn.MaxPool1d(kernel_size=3)
-        self.feature_extractor_fc = nn.Linear(2210, 768)
+        self.feature_extractor_fc = nn.Linear(2210, bottleneck_dim)
         self.feature_extractor_dropout = nn.Dropout(0.1)
         self.feature_extractor_flat = nn.Flatten()
        

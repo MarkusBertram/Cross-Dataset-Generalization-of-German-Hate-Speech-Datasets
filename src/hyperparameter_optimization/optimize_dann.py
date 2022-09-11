@@ -206,16 +206,16 @@ def get_data_loaders(sources,
 
         return train_dataloader, test_dataloader
 
-def create_model(device, truncation_length):
+def create_model(device, bottleneck_dim, layer_size):
     from src.model.feature_extractors import BERT_cnn
-    feature_extractor = BERT_cnn(truncation_length)
+    feature_extractor = BERT_cnn(bottleneck_dim)
     output_hidden_states = True
     
     from src.model.task_classifiers import DANN_task_classifier
-    task_classifier = DANN_task_classifier()
+    task_classifier = DANN_task_classifier(bottleneck_dim, layer_size)
      
     from src.model.domain_classifiers import DANN_domain_classifier
-    domain_classifier = DANN_domain_classifier()
+    domain_classifier = DANN_domain_classifier(bottleneck_dim, layer_size)
 
     model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device)  
     
@@ -241,8 +241,11 @@ def train_dann(config, checkpoint_dir=None):
     stratify_unlabelled= True
 
     truncation_length= 512
-    
-    model = create_model(device, truncation_length)
+
+    bottleneck_dim = config["bottleneck_dim"]
+    layer_size = config["layer_size"]
+
+    model = create_model(device, bottleneck_dim, layer_size)
 
     model.to(device)
     
@@ -357,10 +360,12 @@ def train_dann(config, checkpoint_dir=None):
 
 if __name__ == "__main__":
     config_dict = {
-        "lr": tune.loguniform(1e-6, 1),
+        "lr": tune.loguniform(1e-6, 1e-4),
         "gamma": tune.randint(1, 100),
-        "beta1": tune.loguniform(0.7, 0.999),
-        "beta2": tune.loguniform(0.9, 0.99999),
+        "beta1": tune.loguniform(0.88, 0.999),
+        "beta2": tune.loguniform(0.99, 0.9999),
+        "bottleneck_dim": tune.loguniform(50, 1000),
+        "layer_size": tune.loguniform(1, 1000)
     }
 
     algo = TuneBOHB(
