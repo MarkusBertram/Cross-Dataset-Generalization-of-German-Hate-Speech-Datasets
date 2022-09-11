@@ -209,7 +209,6 @@ def get_data_loaders(sources,
 def create_model(device, bottleneck_dim, layer_size):
     from src.model.feature_extractors import BERT_cnn
     feature_extractor = BERT_cnn(bottleneck_dim)
-    output_hidden_states = True
     
     from src.model.task_classifiers import DANN_task_classifier
     task_classifier = DANN_task_classifier(bottleneck_dim, layer_size)
@@ -217,7 +216,7 @@ def create_model(device, bottleneck_dim, layer_size):
     from src.model.domain_classifiers import DANN_domain_classifier
     domain_classifier = DANN_domain_classifier(bottleneck_dim, layer_size)
 
-    model = DANN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states).to(device)  
+    model = DANN_model(feature_extractor, task_classifier, domain_classifier).to(device)  
     
     return model
       
