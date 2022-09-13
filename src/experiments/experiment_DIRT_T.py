@@ -239,7 +239,6 @@ class experiment_DIRT_T(experiment_base):
         from src.model.feature_extractors import BERT_cnn
         #import .model.feature_extractors
         feature_extractor = BERT_cnn(self.bottleneck_dim)
-        self.output_hidden_states = True
 
         from src.model.task_classifiers import DANN_task_classifier
         task_classifier = DANN_task_classifier(self.bottleneck_dim, self.layer_size)
@@ -248,7 +247,7 @@ class experiment_DIRT_T(experiment_base):
         domain_classifier = DANN_domain_classifier(self.bottleneck_dim, self.layer_size)
         
         self.bert = BertModel.from_pretrained("deepset/gbert-base").to(self.device)
-        self.model = DIRT_T_model(feature_extractor, task_classifier, domain_classifier, self.output_hidden_states).to(self.device)
+        self.model = DIRT_T_model(feature_extractor, task_classifier, domain_classifier).to(self.device)
 
     def create_dataloader(self):
         # fetch source datasets

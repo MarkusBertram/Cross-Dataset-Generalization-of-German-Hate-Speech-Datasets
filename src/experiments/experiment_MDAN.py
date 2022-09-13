@@ -163,7 +163,7 @@ class experiment_MDAN(experiment_base):
         from src.model.domain_classifiers import DANN_domain_classifier
         domain_classifier = DANN_domain_classifier(self.bottleneck_dim, self.layer_size)
         
-        self.model = MDAN_model(feature_extractor, task_classifier, domain_classifier, output_hidden_states, len(self.source_dataloader_list)).to(self.device)
+        self.model = MDAN_model(feature_extractor, task_classifier, domain_classifier, len(self.source_dataloader_list)).to(self.device)
 
     def create_dataloader(self):
         # fetch source datasets

@@ -12,10 +12,10 @@ import sys
 from torch.autograd import Function
 
 class labelled_only_model(nn.Module):
-    def __init__(self, feature_extractor_module, task_classifier_module, output_hidden_states):
+    def __init__(self, feature_extractor_module, task_classifier_module):
         super(labelled_only_model, self).__init__()
         self.bert = BertModel.from_pretrained("deepset/gbert-base")
-        self.output_hidden_states = output_hidden_states
+        self.output_hidden_states = True
         self.feature_extractor = feature_extractor_module
         self.task_classifier = task_classifier_module
 

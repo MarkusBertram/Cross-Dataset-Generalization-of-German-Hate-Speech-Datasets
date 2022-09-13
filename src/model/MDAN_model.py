@@ -26,10 +26,10 @@ class ReverseLayerF(Function):
         return grad_input
 
 class MDAN_model(nn.Module):
-    def __init__(self, feature_extractor_module, task_classifier_module, domain_classifier_module, output_hidden_states, num_src_domains):
+    def __init__(self, feature_extractor_module, task_classifier_module, domain_classifier_module, num_src_domains):
         super(MDAN_model, self).__init__()
         self.bert = BertModel.from_pretrained("deepset/gbert-base")
-        self.output_hidden_states = output_hidden_states
+        self.output_hidden_states = True
         self.feature_extractor = feature_extractor_module
         self.task_classifier = task_classifier_module
         self.num_src_domains = num_src_domains

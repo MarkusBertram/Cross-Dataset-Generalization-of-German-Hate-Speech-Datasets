@@ -176,13 +176,12 @@ class experiment_LIRR(experiment_base):
     def create_model(self):
         from src.model.feature_extractors import BERT_cnn
         feature_extractor = BERT_cnn(self.bottleneck_dim)
-        output_hidden_states = True
 
         from src.model.task_classifiers import DANN_task_classifier
         task_classifier_1 = DANN_task_classifier(self.bottleneck_dim, self.layer_size)
         task_classifier_2 = DANN_task_classifier(self.bottleneck_dim, self.layer_size)
 
-        self.model = LIRR_model(feature_extractor_module = feature_extractor, domain_classifier= task_classifier_1, domain_invariant_predictor = task_classifier_2, output_hidden_states=output_hidden_states).to(self.device)
+        self.model = LIRR_model(feature_extractor_module = feature_extractor, domain_classifier= task_classifier_1, domain_invariant_predictor = task_classifier_2, bottleneck_dim = self.bottleneck_dim).to(self.device)
 
     def create_dataloader(self):
         # fetch source datasets

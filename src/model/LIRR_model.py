@@ -51,15 +51,15 @@ class EnvPredictor(nn.Module):
         return x
 
 class LIRR_model(nn.Module):
-    def __init__(self, feature_extractor_module, domain_classifier, domain_invariant_predictor, output_hidden_states):
+    def __init__(self, feature_extractor_module, domain_classifier, domain_invariant_predictor, bottleneck_dim):
         super(LIRR_model, self).__init__()
         self.bert = BertModel.from_pretrained("deepset/gbert-base")
-        self.output_hidden_states = output_hidden_states
+        self.output_hidden_states = True
         self.feature_extractor = feature_extractor_module
         # TODO
         # specify in_features depending on last layer of feature_extractor
 
-        self.domain_dependant_predictor = EnvPredictor(in_features = 768)
+        self.domain_dependant_predictor = EnvPredictor(in_features = bottleneck_dim)
         self.domain_classifier = domain_classifier
         self.domain_invariant_predictor = domain_invariant_predictor
 

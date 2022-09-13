@@ -22,10 +22,10 @@ class Noise_layer(nn.Module):
         return input + self.noise
 
 class DIRT_T_model(nn.Module):
-    def __init__(self, feature_extractor_module, task_classifier_module, domain_classifier_module, output_hidden_states):
+    def __init__(self, feature_extractor_module, task_classifier_module, domain_classifier_module):
         super(DIRT_T_model, self).__init__()
         self.bert = BertModel.from_pretrained("deepset/gbert-base")
-        self.output_hidden_states = output_hidden_states
+        self.output_hidden_states = True
         self.feature_extractor = feature_extractor_module
         self.task_classifier = task_classifier_module
         self.domain_classifier = domain_classifier_module
