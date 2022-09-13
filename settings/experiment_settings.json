@@ -12,10 +12,11 @@
             "ihs_labelled",
             "covid_2021"
         ],
-        "unlabelled_size": 20000,
         "stratify_unlabelled": true,
         "equal_labelled_size": false,
         "epochs": 10,
+        "bottleneck_dim": 850,
+        "layer_size": 850,
         "batch_size": 4,
         "truncation_length" : 512,
         "validation_split": 0.1,

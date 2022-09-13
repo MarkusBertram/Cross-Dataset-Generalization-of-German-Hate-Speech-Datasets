@@ -179,6 +179,8 @@ class experiment_base(ABC):
         self.truncation_length = self.basic_settings.get("truncation_length", 512)
         self.num_workers = self.basic_settings.get("num_workers", 2)
         # training settings
+        self.bottleneck_dim = self.basic_settings.get("bottleneck_dim", 850)
+        self.layer_size = self.basic_settings.get("layer_size", 850)
         self.freeze_BERT_weights = self.basic_settings.get("freeze_BERT_weights", True)
         self.stratify_unlabelled  = self.basic_settings.get("stratify_unlabelled", True)
         # training settings

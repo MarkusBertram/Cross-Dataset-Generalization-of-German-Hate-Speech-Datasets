@@ -162,11 +162,11 @@ class experiment_MME(experiment_base):
     def create_model(self):
         
         from src.model.feature_extractors import BERT_cnn
-        feature_extractor = BERT_cnn(self.truncation_length)
+        feature_extractor = BERT_cnn(self.bottleneck_dim)
         output_hidden_states = True
         
         from src.model.task_classifiers import DANN_task_classifier
-        task_classifier = DANN_task_classifier()
+        task_classifier = DANN_task_classifier(self.bottleneck_dim, self.layer_size)
 
         self.model = MME_model(feature_extractor, task_classifier, output_hidden_states).to(self.device)
 
