@@ -168,8 +168,11 @@ class experiment_MDAN(experiment_base):
     def create_dataloader(self):
         # fetch source datasets
         source_datasets = []
+        self.unlabelled_size = 0
         for source_name in self.sources:
             train_features, val_features, train_labels, val_labels = self.fetch_dataset(source_name, labelled = True, target = False)
+            self.unlabelled_size += len(train_features) + len(val_features)
+            # discard validation features and labels
             source_datasets.append(TensorDataset(train_features, train_labels))
         
         labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
