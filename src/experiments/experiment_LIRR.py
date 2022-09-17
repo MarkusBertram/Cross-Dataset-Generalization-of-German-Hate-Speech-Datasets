@@ -144,7 +144,7 @@ class experiment_LIRR(experiment_base):
             self.dis_optimizer.step()
 
     def create_optimizer(self) -> None:
-        self.main_optimizer = optim.SGD(
+        self.main_optimizer = optim.Adam(
             [
             {"params": self.model.feature_extractor.parameters(), "lr": self.lr},
             {"params": self.model.domain_dependant_predictor.parameters(), "lr": self.lr},
@@ -153,7 +153,7 @@ class experiment_LIRR(experiment_base):
             betas = (self.beta1, self.beta2)
         )
 
-        self.dis_optimizer = optim.SGD(
+        self.dis_optimizer = optim.Adam(
             [
             {"params": self.model.domain_classifier.parameters(), "lr": self.lr}
             ],

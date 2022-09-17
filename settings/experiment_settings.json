@@ -28,19 +28,8 @@
         },
         "exp_settings": [
           {
-            "exp_type": "source_combined",
-            "exp_name": "source_combined_cnn",
-            "lr": 5.2e-5,
-            "beta1": 0.875,
-            "beta2": 0.945
-          },
-          {
-            "exp_type": "DANN",
-            "exp_name": "DANN_cnn",
-            "lr": 6.7e-5,
-            "beta1": 0.911,
-            "beta2": 0.998,
-            "gamma": 10
+            "exp_type": "LIRR",
+            "exp_name": "LIRR_cnn"
           }
         ]
       }
