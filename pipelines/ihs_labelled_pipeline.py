@@ -6,8 +6,6 @@ data_path = Path(__file__).resolve().parents[1] / 'data' / 'ihs_labelled'
 
 train = data_path / 'iHS-data_anno.tsv'
 
-unlabeled = data_path / 'tweets.csv'
-
 def get_labeled_data():
     dset_list = list()
     with open(train, 'r', encoding="utf-8") as file:
