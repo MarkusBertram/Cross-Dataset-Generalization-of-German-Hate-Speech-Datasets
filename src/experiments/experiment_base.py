@@ -13,7 +13,7 @@ import itertools
 from numpy.random import default_rng
 import numpy as np
 from torchmetrics import F1Score
-
+from sklearn.metrics import matthews_corrcoef
 from src.utils.utils import (fetch_import_module, get_tweet_timestamp,
                          preprocess_text, print_data_example,
                          separate_text_by_classes)
@@ -88,11 +88,13 @@ class experiment_base(ABC):
         outputs = torch.cat(predictions)
         targets = torch.cat(targets)
         f1score = f1(outputs, targets)
+        mccscore = matthews_corrcoef(np.array(targets), np.array(outputs))
 
         now = datetime.now()
 
         self.writer.add_scalar(f"Accuracy/Test/{self.exp_name}/{now}", avg_test_acc)
         self.writer.add_scalar(f"F1_score/Test/{self.exp_name}/{now}", f1score.item())
+        self.writer.add_scalar(f"MCC/Test/{self.exp_name}/{now}", mccscore)
 
     def get_target_dataset(self):
 
