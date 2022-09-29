@@ -83,7 +83,6 @@ class experiment_single_source(experiment_base):
                 loss = self.criterion(class_output, target_labels)
 
                 total_loss += loss.item()
-                
                 loss.backward()
                 self.optimizer.step()
 
@@ -101,8 +100,10 @@ class experiment_single_source(experiment_base):
 
     # overrides load_settings
     def load_exp_settings(self) -> None:
-        self.exp_name = self.current_experiment.get("exp_name", "single_source")   
         self.source_name = self.current_experiment.get("source_name", "germeval2018")
+        self.target_name = self.current_experiment.get("target_name", "telegram_gold")
+        self.fair = self.current_experiment.get("fair", False)
+        self.exp_name = f"single_source_{self.source_name}_{self.target_name}_fair_{str(self.fair)}"
         self.lr = self.current_experiment.get("lr", 5.2e-5)
         self.beta1 = self.current_experiment.get("beta1", 0.875)
         self.beta2 = self.current_experiment.get("beta2", 0.945)
@@ -118,40 +119,68 @@ class experiment_single_source(experiment_base):
         self.model = labelled_only_model(feature_extractor, task_classifier).to(self.device)
 
     def create_dataloader(self):
-        # fetch source datasets
-        source_features = []
-        source_labels = []
 
-        train_features, val_features, train_labels, val_labels = self.fetch_dataset(self.source_name, labelled = True, target = False)
-        source_features.append(train_features)
-        source_labels.append(train_labels)
+        ####### fetch source dataset
 
-        # fetch labelled target dataset
-        labelled_target_features_train, labelled_target_labels_train, labelled_target_features_val, labelled_target_labels_val, labelled_target_features_test, labelled_target_labels_test = self.get_target_dataset()
-        
-        source_features.append(labelled_target_features_train)
-        source_labels.append(labelled_target_labels_train)
+        # fetch datasets
+        label2id = {"neutral": 0, "abusive":1}
+        # import dataset pipeline
+        source_module = fetch_import_module(self.source_name)
+        # execute get_data_binary in pipeline
+        dset_list_of_dicts = source_module.get_data_binary()
+        # convert list to dataframe
+        dset_df = pd.DataFrame(dset_list_of_dicts)
 
-        combined_source_features = torch.cat(source_features)
-        combined_source_labels = torch.cat(source_labels)
-        
-        # concatenate datasets
-        source_combined_dataset = TensorDataset(combined_source_features, combined_source_labels)
-        
-        del source_features
-        del source_labels
-        gc.collect()
+        # tokenize each row in dataframe
+        tokens_df = dset_df.apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
+
+        source_tokens_array = np.array(tokens_df[["input_ids", "attention_mask"]].values.tolist())
+        #map neutral to 0 and abusive to 1
+        source_label_df = dset_df["label"].map(label2id)
+        source_labels_array = np.array(source_label_df.values.tolist())
+
+        # "fair" is the scenario where all datasets have the same training and test size
+        # "unfair" is the scenario where 80% of each total dataset is used for train, 20% for test
+        if self.fair == True:
+            train_size = 919
+            test_size = 230
+        else:
+            train_size = 0.8
+            test_size = 0.2
+
+        source_features_train, source_features_test, source_labels_train, source_labels_test = train_test_split(source_tokens_array, source_labels_array, train_size = train_size, test_size = test_size, random_state=self.seed, stratify = source_labels_array)
+
+        train_dataset = TensorDataset(torch.from_numpy(source_features_train), torch.from_numpy(source_labels_train).float())
+
+        if self.source_name == self.target_name:
+            test_dataset = TensorDataset(torch.from_numpy(source_features_test), torch.from_numpy(source_labels_test).float())
+        else:
+            # import dataset pipeline
+            target_module = fetch_import_module(self.target_name)
+            # execute get_data_binary in pipeline
+            target_dset_list_of_dicts = target_module.get_data_binary()
+            # convert list to dataframe
+            target_dset_df = pd.DataFrame(target_dset_list_of_dicts)
+
+            # tokenize each row in dataframe
+            target_tokens_df = target_dset_df.apply(lambda row: self.preprocess(row.text), axis='columns', result_type='expand')
+
+            target_tokens_array = np.array(target_tokens_df[["input_ids", "attention_mask"]].values.tolist())
+            #map neutral to 0 and abusive to 1
+            target_label_df = target_dset_df["label"].map(label2id)
+            target_labels_array = np.array(target_label_df.values.tolist())
+            
+            target_features_train, target_features_test, target_labels_train, target_labels_test = train_test_split(target_tokens_array, target_labels_array, train_size=train_size, test_size = test_size, random_state=self.seed, stratify = target_labels_array)
+
+            test_dataset = TensorDataset(torch.from_numpy(target_features_test), torch.from_numpy(target_labels_test).float())
 
         # create train dataloader
-        sampler = BatchSampler(RandomSampler(source_combined_dataset), batch_size=self.batch_size, drop_last=False)
-        self.train_dataloader = DataLoader(dataset=source_combined_dataset, sampler = sampler, num_workers=self.num_workers)            
+        sampler = BatchSampler(RandomSampler(train_dataset), batch_size=self.batch_size, drop_last=False)
+        self.train_dataloader = DataLoader(dataset=train_dataset, sampler = sampler, num_workers=self.num_workers)            
 
         # create test dataloader
-        labelled_target_dataset_test = TensorDataset(labelled_target_features_test, labelled_target_labels_test)
-        sampler = BatchSampler(RandomSampler(labelled_target_dataset_test), batch_size=self.batch_size, drop_last=False)
-        self.test_dataloader = DataLoader(dataset=labelled_target_dataset_test, sampler = sampler, num_workers=self.num_workers)               
-        del labelled_target_dataset_test
-        gc.collect()
+        sampler = BatchSampler(RandomSampler(test_dataset), batch_size=self.batch_size, drop_last=False)
+        self.test_dataloader = DataLoader(dataset=test_dataset, sampler = sampler, num_workers=self.num_workers)               
 
     # ovlossides perform_experiment
     def perform_experiment(self):
