@@ -23,15 +23,15 @@
         "target_train_split": 0.05,
         "num_workers": 2,
         "seed": 123,
-        "freeze_BERT_weights": true,
-        "save_model": true
+        "freeze_BERT_weights": true        
         },
         "exp_settings": [
           {
             "exp_type": "single_source",
             "source_name": "telegram_gold",
             "target_name": "telegram_gold",
-            "fair": true
+            "fair": true,
+            "save_model": true
           },
           {
             "exp_type": "LIRR",

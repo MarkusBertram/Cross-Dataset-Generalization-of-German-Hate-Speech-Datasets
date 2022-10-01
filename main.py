@@ -10,6 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 import gc
 import random
 import numpy as np
+from pathlib import Path
 import sys
 def run_experiments(config):
     #log_file = Path(log_dir / "results.csv")
@@ -82,20 +83,7 @@ def run_experiments(config):
                 current_exp = experiment_M3SDA(
                     basic_settings, exp_setting, writer#, log_path, writer
                 )
-            current_exp.perform_experiment()
-
-            # try:
-            #     current_exp.perform_experiment()
-            #     del current_exp
-            #     gc.collect()
-
-            # except Exception as e:
-            #     name = exp_setting["exp_name"]
-            #     print("\n\n")
-            #     print("**********" * 12)
-            #     print(f"Experiment {name} failed with Exception {e}")
-            #     print("**********" * 12)
-            #     print("\n\n")          
+            current_exp.perform_experiment()     
 
 def main():
     parser = argparse.ArgumentParser(

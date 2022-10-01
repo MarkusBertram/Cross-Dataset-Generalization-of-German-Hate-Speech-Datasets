@@ -28,11 +28,4 @@ datasets:
     non-hate-label: NEUTRAL 
   # telegram_unlabeled:
   #   unlabeled-dataset: True
-  #   non-hate-label: none 
-models:
-  single-source unsupervised:
-    - ADDA
-  single-source semi-supervised:
-    - MME
-  multi-source unsupervised:
-    - DCTN
+  #   non-hate-label: none

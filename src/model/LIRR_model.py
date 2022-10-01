@@ -56,8 +56,6 @@ class LIRR_model(nn.Module):
         self.bert = BertModel.from_pretrained("deepset/gbert-base")
         self.output_hidden_states = True
         self.feature_extractor = feature_extractor_module
-        # TODO
-        # specify in_features depending on last layer of feature_extractor
 
         self.domain_dependant_predictor = EnvPredictor(in_features = bottleneck_dim)
         self.domain_classifier = domain_classifier

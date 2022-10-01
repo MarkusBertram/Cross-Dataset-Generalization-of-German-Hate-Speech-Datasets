@@ -12,6 +12,7 @@ from src.utils.utils import (fetch_import_module, get_tweet_timestamp,
                          separate_text_by_classes)
 
 import pandas as pd
+from pathlib import Path
 from torchmetrics import F1Score
 import yaml
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -107,7 +108,8 @@ class experiment_single_source(experiment_base):
         self.lr = self.current_experiment.get("lr", 5.2e-5)
         self.beta1 = self.current_experiment.get("beta1", 0.875)
         self.beta2 = self.current_experiment.get("beta2", 0.945)
-        
+        self.save_model = self.current_experiment.get("save_model", False)
+
     def create_model(self):
         
         from src.model.feature_extractors import BERT_cnn
@@ -207,3 +209,9 @@ class experiment_single_source(experiment_base):
         
         # perform test
         self.test()
+
+        if self.save_model == True:
+            path_state_dict = Path(f"./model_state_dicts/{self.exp_name}")
+            path_state_dict.mkdir(parents=True, exist_ok=True)
+            torch.save(self.model.state_dict(), path_state_dict)
+
