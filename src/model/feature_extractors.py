@@ -27,6 +27,8 @@ class BERT_cnn(nn.Module):
         x = self.feature_extractor_dropout(x)
         x = self.feature_extractor_pool(x)
         x = self.feature_extractor_dropout(x)
+        if x.size(dim=0) == 13 and x.size(dim=1) == 170:
+            x = x.unsqueeze(0)
         x = self.feature_extractor_flat(x)
         x = self.feature_extractor_dropout(x)
         x = self.feature_extractor_fc(x)
