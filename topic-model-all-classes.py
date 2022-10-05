@@ -110,8 +110,8 @@ if __name__ == "__main__":
     embedding_path = "embeddings/cc.de.300.bin"
     now = datetime.now()
     fname = now.strftime("%Y-%m-%d_%H-%M-%S")
-    result_file = 'tools/cluwords/cluwords/multi_embedding/results/{}/matrix_w.txt'.format(fname)
-    cluword_path = 'tools/cluwords/cluwords/multi_embedding/results/{}/result_topic_10.txt'.format(fname)
+    result_file = 'src/tools/cluwords/cluwords/multi_embedding/results/{}/matrix_w.txt'.format(fname)
+    cluword_path = 'src/tools/cluwords/cluwords/multi_embedding/results/{}/result_topic_10.txt'.format(fname)
     sample_path = ''+fname
     
     # precleaning of datasets
