@@ -7,7 +7,7 @@ These methods are used in CluWord Topic model evaluation.
 This starts by specifying a data path where the CluWords models are saved.
 """
 
-DATASETS_PATH = 'tools/cluwords/cluwords/multi_embedding/datasets/'
+DATASETS_PATH = 'src/tools/cluwords/cluwords/multi_embedding/datasets/'
 
 # if sampling of data sets was done this preserves our subsampling
 def save_samples(samples, name):

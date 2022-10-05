@@ -126,8 +126,8 @@ def get_cluword_labels(cluword_path, num_topics):
 def getContentMultiple(data, exclude, dataset_names, embedding_path,n=2000,on_distribution=False,components=20,file_suffix="all",language='english'):
     # constants
     fname = strftime("%y%m%d", gmtime()) + "-" + "-".join(dataset_names).replace(" ","_")
-    result_file = 'tools/cluwords/cluwords/multi_embedding/results/{}/matrix_w.txt'.format(fname)
-    cluword_path = 'tools/cluwords/cluwords/multi_embedding/results/{}/result_topic_10.txt'.format(fname)
+    result_file = 'src/tools/cluwords/cluwords/multi_embedding/results/{}/matrix_w.txt'.format(fname)
+    cluword_path = 'src/tools/cluwords/cluwords/multi_embedding/results/{}/result_topic_10.txt'.format(fname)
     sample_path = ''+fname
     
     # precleaning of data
