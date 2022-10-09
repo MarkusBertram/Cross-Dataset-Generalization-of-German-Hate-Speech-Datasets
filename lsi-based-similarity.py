@@ -139,7 +139,7 @@ if __name__ == "__main__":
     datasets = []
     for dset in dataset_names:
         dset_module = fetch_import_module(dset)
-        datasets.append(dset_module.get_labeled_data())
+        datasets.append(dset_module.get_data_binary())
 
     print("\n --- Calculating LSI-based Intra-dataset class similarity... ---")
     title = ""

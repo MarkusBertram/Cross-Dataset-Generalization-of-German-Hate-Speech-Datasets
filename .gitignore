@@ -63,3 +63,13 @@ model_state_dicts/*
 cross_runs/cross-dataset/drive-download-20221004T093906Z-001.zip
 telegram_runs/target_telegram_neu/drive-download-20221004T094457Z-001.zip
 runs/Oct04_11-20-42_9e02022ad242-20221005T091642Z-001.zip
+runs/Oct05_09-30-52_d97d0ff781d2-20221005T102856Z-001.zip
+test5.ipynb
+runs/drive-download-20221006T093902Z-001.zip
+runs/Oct05_10-39-50_37c4075f37b4-20221005T194723Z-001.zip
+runs/Oct06_09-51-47_6db0ba8f5d8b-20221007T100622Z-001.zip
+drive*
+oct*
+runs/drive-download-20221007T200940Z-001.zip
+runs/ALT/Oct05_10-39-50_37c4075f37b4-20221005T194723Z-001.zip
+runs/ALT/Oct06_09-51-47_6db0ba8f5d8b-20221007T100622Z-001.zip

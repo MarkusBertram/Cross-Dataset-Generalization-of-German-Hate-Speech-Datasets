@@ -104,8 +104,8 @@ if __name__ == "__main__":
     hate_classes = True
     for dset in dataset_names:
         dset_module = fetch_import_module(dset)
-        datasets.append(dset_module.get_labeled_data())
-        non_hate_labels = config['datasets'][dset]['non-hate-label']
+        datasets.append(dset_module.get_data_binary())
+        non_hate_labels = "neutral"#config['datasets'][dset]['non-hate-label']
         if isinstance(non_hate_labels, str):
             exclude.append(non_hate_labels)
         elif isinstance(non_hate_labels, list):
